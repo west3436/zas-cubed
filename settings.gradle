@@ -43,5 +43,9 @@ include 'compat-jade'
 // The CC: Tweaked adapter (COMPAT-020 to COMPAT-022): part of zas_atmos in the release jar.
 include 'compat-cc'
 
+// The PneumaticCraft: Repressurized adapter (COMPAT-010 to COMPAT-013), bundled into the zas jar like
+// compat-mekanism.
+include 'compat-pneumaticcraft'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'

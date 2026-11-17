@@ -85,6 +85,12 @@ public final class Adapters {
         rows.add(new Row(
                 "accessories", "[1.1.0-beta.3,)", "io.github.west3436.zas.compat.accessories.AccessoriesCompat"));
 
+        // PneumaticCraft: Repressurized (COMPAT-010 to COMPAT-013): 8.0.3 is its first build for this
+        // Minecraft, and the API the adapter uses is the same in its newest. No upper bound: the
+        // adapter's GameTests run with the newest build too, every night (COMPAT-004).
+        rows.add(new Row(
+                "pneumaticcraft", "[8.0.3,)", "io.github.west3436.zas.compat.pneumaticcraft.PneumaticCraftCompat"));
+
         return rows;
     }
 

@@ -70,6 +70,9 @@ public final class ReleaseJarTests {
     /** The CC: Tweaked adapter's package, which is part of zas_atmos. */
     private static final String CC_ADAPTER = "io.github.west3436.zas.atmos.compat.cc";
 
+    /** The PneumaticCraft adapter's package. */
+    private static final String PNEUMATICCRAFT_ADAPTER = "io.github.west3436.zas.compat.pneumaticcraft";
+
     /** The Ad Astra adapter's package. */
     private static final String AD_ASTRA_ADAPTER = "io.github.west3436.zas.compat.adastra";
 
@@ -292,6 +295,44 @@ public final class ReleaseJarTests {
         h.assertValueEqual(status.row().entryClass(), CC_ADAPTER + ".CcCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the CC: Tweaked adapter's state");
         h.assertFalse(Adapters.isActive("computercraft"), "the CC: Tweaked adapter is on");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the PneumaticCraft adapter, and on a server without PneumaticCraft none
+     * of it loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its entry class was
+     * never asked for, and its data pack and settings file aren't there.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_pneumaticcraft_adapter_loads_without_pneumaticcraft(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("pneumaticcraft"), "PneumaticCraft is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            PNEUMATICCRAFT_ADAPTER.replace('.', '/') + "/PneumaticCraftCompat.class",
+            "datapacks/pneumaticcraft/pack.mcmeta",
+            "datapacks/pneumaticcraft/data/pneumaticcraft/zas/protection/pneumatic_helmet.json"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+
+        // zas went through its row and found no PneumaticCraft, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("pneumaticcraft"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for PneumaticCraft");
+        h.assertValueEqual(
+                status.row().entryClass(), PNEUMATICCRAFT_ADAPTER + ".PneumaticCraftCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the PneumaticCraft adapter's state");
+        h.assertFalse(Adapters.isActive("pneumaticcraft"), "the PneumaticCraft adapter is on");
+
+        // What the adapter would have added.
+        String pack = "mod/zas:datapacks/pneumaticcraft";
+        h.assertFalse(
+                h.getLevel().getServer().getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        h.assertFalse(
+                ModConfigs.getFileMap().containsKey("zas-pneumaticcraft-server.toml"), "its config file is registered");
         h.succeed();
     }
 

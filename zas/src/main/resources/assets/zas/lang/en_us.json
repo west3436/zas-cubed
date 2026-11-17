@@ -35,6 +35,9 @@
   "pack.zas.ad_astra": "ZAS³ Ad Astra",
   "pack.zas.ad_astra.description": "Suits and space mobs",
 
+  "pack.zas.pneumaticcraft": "ZAS³ PneumaticCraft",
+  "pack.zas.pneumaticcraft.description": "Pneumatic Armor",
+
   "hud.zas.pressure": "%s",
   "hud.zas.oxygen": "O₂ %s",
   "hud.zas.toxin": "%s %s",
