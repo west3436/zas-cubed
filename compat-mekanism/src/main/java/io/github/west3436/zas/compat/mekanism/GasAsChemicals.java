@@ -3,6 +3,8 @@ package io.github.west3436.zas.compat.mekanism;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasPurity;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p><b>In.</b> Any mapped chemical enters, whatever the store holds, as far as the store takes it:
  * a pipe stops at its pressure limit. An unmapped chemical is refused whole. The gas arrives at
- * {@link ChemicalUnits#STANDARD_TEMPERATURE}, since a chemical has no temperature, or at its
+ * {@link Millibuckets#STANDARD_TEMPERATURE}, since a chemical has no temperature, or at its
  * mapping's least temperature if that is higher, as steam's is. A radioactive chemical that a pack
  * mapped releases its radiation here, once, as it arrives (MEK-023).
  *
@@ -170,7 +172,7 @@ final class GasAsChemicals implements IChemicalHandler {
             if (gas == null) {
                 return 0;
             }
-            GasParcel probe = new GasParcel(Map.of(gas, PROBE_MOLES), ChemicalUnits.STANDARD_TEMPERATURE);
+            GasParcel probe = new GasParcel(Map.of(gas, PROBE_MOLES), Millibuckets.STANDARD_TEMPERATURE);
             long room = ChemicalGases.wholeMillibuckets(
                     store.fill(probe, IGasHandler.Action.SIMULATE).moles(gas));
             return (held == null ? 0 : held.millibuckets()) + room;
@@ -225,7 +227,7 @@ final class GasAsChemicals implements IChemicalHandler {
      */
     private long fill(IGasHandler store, ChemicalMapping mapping, long amount, boolean execute) {
         double factor = ChemicalGases.molesPerMillibucket();
-        double temperature = ChemicalUnits.STANDARD_TEMPERATURE;
+        double temperature = Millibuckets.STANDARD_TEMPERATURE;
         GasParcel would = store.fill(mapping.gas(amount, factor, temperature), IGasHandler.Action.SIMULATE);
         long whole = Math.min(amount, mapping.wholeMillibuckets(would.moles(), factor));
         if (whole <= 0 || !execute) {

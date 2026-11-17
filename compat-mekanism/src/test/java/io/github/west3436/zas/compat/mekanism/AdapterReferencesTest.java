@@ -58,13 +58,10 @@ class AdapterReferencesTest {
             PACKAGE + "MekanismCompat",
             PACKAGE + "MekanismVersions",
             PACKAGE + "MekanismSettings",
-            PACKAGE + "ChemicalUnits",
             PACKAGE + "ChemicalMapping",
             PACKAGE + "ChemicalMap",
             PACKAGE + "ChemicalMapFormat",
             PACKAGE + "ChemicalMapLoader",
-            // The connection's rule for mixtures (MEK-013).
-            PACKAGE + "GasPurity",
             // The venting's cap (MEK-021).
             PACKAGE + "VentBudget",
             // The heat exchange's arithmetic (MEK-040).
@@ -106,12 +103,6 @@ class AdapterReferencesTest {
             }
         }
         assertEquals(Set.of(), bad);
-        // The pure arithmetic names nothing but the JDK and itself (MEK-002).
-        assertEquals(
-                List.of(),
-                classes.get(PACKAGE + "ChemicalUnits").stream()
-                        .filter(r -> !r.startsWith("java/") && !r.equals(PACKAGE + "ChemicalUnits"))
-                        .toList());
     }
 
     /** A sanity check on the scanner, using this test's own class file, which references JUnit. */
