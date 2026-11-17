@@ -2,6 +2,8 @@ package io.github.west3436.zas.compat.ae2;
 
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEKeyType;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
@@ -24,6 +26,11 @@ import net.minecraft.world.level.Level;
  * a mixture going in is held as its gases (COMPAT-071). A key is the gas's id and nothing else: gas
  * in ME storage has no temperature or pressure, only an amount, in {@link GasUnits}.
  *
+ * <p><b>One key for each gas.</b> AE2 files keys by their primary key and compares those by
+ * identity, as it does a fluid's {@code Fluid}: a filter matches stored gas only if both give the
+ * same object. Keys come from saved data, packets, windows and EMI, each with its own id instance,
+ * so {@link #of} hands out one key for each gas id, and that key is its own primary key.
+ *
  * <p>A key may name a gas the server no longer defines, as a filter saved before a data pack was
  * removed does. It still loads, so the filter isn't lost, but no gas of it goes into a block.
  */
@@ -32,15 +39,21 @@ public final class GasKey extends AEKey {
     public static final MapCodec<GasKey> MAP_CODEC =
             ResourceLocation.CODEC.fieldOf("id").xmap(GasKey::of, GasKey::gas);
 
+    /**
+     * The keys in use, one for each gas id. Held weakly: a key nothing holds any more goes, so ids a
+     * client makes up don't pile up, and any key still held is the one {@link #of} returns.
+     */
+    private static final Interner<GasKey> KEYS = Interners.newWeakInterner();
+
     private final ResourceLocation gas;
 
     private GasKey(ResourceLocation gas) {
         this.gas = Objects.requireNonNull(gas, "gas");
     }
 
-    /** The key of a gas. */
+    /** The key of a gas: the same object for the same id, however the id was made. */
     public static GasKey of(ResourceLocation gas) {
-        return new GasKey(gas);
+        return KEYS.intern(new GasKey(gas));
     }
 
     /** The gas's id. */
@@ -65,9 +78,10 @@ public final class GasKey extends AEKey {
                 MAP_CODEC.codec().encodeStart(NbtOps.INSTANCE, this).getOrThrow();
     }
 
+    /** The key itself, which {@link #of} makes the one key of its gas. */
     @Override
     public Object getPrimaryKey() {
-        return gas;
+        return this;
     }
 
     @Override

@@ -42,6 +42,11 @@ import org.jetbrains.annotations.Nullable;
  * over stays where it was: in the store on the way out, and in the other mod, which never had a
  * fraction, on the way in. Nothing is made or lost.
  *
+ * <p><b>Not for blocks that read gas as gas.</b> A block in {@link FluidConnection#NO_FLUID_VIEW}
+ * that asks for the store's fluid handler is given none, as AE2's cable bus is: its buses reach the
+ * gas through the AE2 adapter, and through a fluid view as well its storage bus would list the same
+ * gas twice.
+ *
  * <p>The view asks for the block's gas handler anew on each call, so it is safe to keep, as other
  * mods' pipes do: a block that has gone, or changed into something else, holds nothing.
  */
@@ -75,11 +80,24 @@ final class GasAsFluids implements IFluidHandler {
     @Nullable
     static IFluidHandler of(
             Level level, BlockPos pos, BlockState state, @Nullable BlockEntity entity, @Nullable Direction side) {
-        if (!(level instanceof ServerLevel server) || FluidGases.sources().isEmpty()) {
+        if (!(level instanceof ServerLevel server) || FluidGases.sources().isEmpty() || asker(level, pos, side)) {
             return null;
         }
         IGasHandler store = level.getCapability(IGasHandler.BLOCK, pos, state, entity, side);
         return store == null || FluidConnection.isView(store) ? null : new GasAsFluids(server, pos, side);
+    }
+
+    /**
+     * Whether the block asking, the one on the face asked about, is in {@link
+     * FluidConnection#NO_FLUID_VIEW}: one that reaches the gas as gas, and through a fluid view
+     * would count it twice. A face with nothing loaded beyond it asks for nothing to be loaded.
+     */
+    private static boolean asker(Level level, BlockPos pos, @Nullable Direction side) {
+        if (side == null) {
+            return false;
+        }
+        BlockPos next = pos.relative(side);
+        return level.isLoaded(next) && level.getBlockState(next).is(FluidConnection.NO_FLUID_VIEW);
     }
 
     /** The block's gas handler now, or null if it has none of its own any more. */
