@@ -58,6 +58,8 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
 
 **PneumaticCraft: Repressurized** (8.0.3+): Pneumatic Armor works as a suit, and its air feeds your internals. Machines and tubes that leak fill the room with air, and heat blocks warm and cool the rooms they stand in.
 
+**NuclearCraft: Neoteric** (1.3.2+): its gases are ZAS³ gases, in its tanks and in our pipes, and the toxic ones need a gas mask. A fission reactor's heat warms the room it stands in, and the HEV suit works as a suit. With Nuclear Radiation, our masks keep its radioactive gas out.
+
 ## For mod developers
 
 The public API (`zas-api`) is what space, tech and survival mods can build on: read and change a zone's gas and heat, give a dimension its open air, offer a block's gas store to pipes, and make items that protect or supply breath. A mod can bundle it and still run when ZAS³ isn't installed. The Mekanism and Ad Astra adapters use the public API alone, so they double as worked examples. The guide and Javadoc are on the [wiki](https://github.com/west3436/zas-cubed/wiki).

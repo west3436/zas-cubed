@@ -9,6 +9,7 @@ import io.github.west3436.zas.compat.mekanism.MekanismCompat;
 import io.github.west3436.zas.compat.mekanism.MekanismSettings;
 import io.github.west3436.zas.compat.mekanism.MekanismVersions;
 import io.github.west3436.zas.compat.mekanism.mixin.MekanismMixinPlugin;
+import java.util.List;
 import mekanism.api.MekanismAPI;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -62,9 +63,15 @@ public final class MekanismUnsupportedTests {
         h.assertFalse(MekanismMixinPlugin.applies(), "the adapter's mixins apply to an unsupported Mekanism");
 
         // Nothing the adapter adds is there.
-        String pack = MekanismCompat.dataPackId("zas");
-        h.assertFalse(
-                h.getLevel().getServer().getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        for (String pack : List.of(MekanismCompat.dataPackId("zas"), "mod/zas:" + MekanismCompat.SHARED_GASES)) {
+            h.assertFalse(
+                    h.getLevel()
+                            .getServer()
+                            .getPackRepository()
+                            .getAvailableIds()
+                            .contains(pack),
+                    pack + " is offered");
+        }
         h.assertFalse(ModConfigs.getFileMap().containsKey(MekanismSettings.FILE), "its config file is registered");
         h.assertFalse(
                 GasProperties.isDefined(ResourceLocation.fromNamespaceAndPath("zas", "chlorine")),

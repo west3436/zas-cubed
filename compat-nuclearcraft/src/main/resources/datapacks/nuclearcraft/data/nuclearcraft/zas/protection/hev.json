@@ -1,0 +1,13 @@
+{
+  "items": [
+    "nuclearcraft:hev_helmet",
+    "nuclearcraft:hev_chestplate",
+    "nuclearcraft:hev_leggings",
+    "nuclearcraft:hev_boots"
+  ],
+  "min_pressure_kpa": 0,
+  "max_pressure_kpa": 1000000000.0,
+  "min_temperature_k": 0,
+  "max_temperature_k": 1000000000.0,
+  "sealed_breathing": true
+}

@@ -1,0 +1,8 @@
+{
+  "pack": {
+    "description": {
+      "translate": "pack.zas.shared_gases.description"
+    },
+    "pack_format": 48
+  }
+}

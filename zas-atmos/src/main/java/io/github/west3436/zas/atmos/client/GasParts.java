@@ -22,7 +22,8 @@ public final class GasParts {
     /**
      * Each gas's colour. Ours are after SS13's canisters. The gases the Mekanism adapter adds
      * (MEK-010) have the tint Mekanism gives the chemical each one is, read from Mekanism 10.7.19,
-     * so a gas is the same colour in a Mekanism tank and in our windows.
+     * so a gas is the same colour in a Mekanism tank and in our windows. Those the NuclearCraft
+     * adapter adds have NuclearCraft's fluid tints likewise.
      */
     private static final Map<String, Integer> COLOURS = Map.ofEntries(
             Map.entry("zas:oxygen", 0xFF2A79C8),
@@ -38,7 +39,22 @@ public final class GasParts {
             Map.entry("zas:sulfur_dioxide", 0xFFA99D90),
             Map.entry("zas:ethene", 0xFFEACCF9),
             Map.entry("zas:deuterium", 0xFFFF3232),
-            Map.entry("zas:tritium", 0xFF64FF70));
+            Map.entry("zas:tritium", 0xFF64FF70),
+            // The gases only NuclearCraft has (COMPAT-151): the tint NuclearCraft gives each one's
+            // fluid, read from NuclearCraft 1.3.11, without its alpha.
+            Map.entry("zas:argon", 0xFFFF75DD),
+            Map.entry("zas:neon", 0xFFFF9F7A),
+            Map.entry("zas:helium", 0xFFC57B81),
+            Map.entry("zas:helium_3", 0xFFCBBB67),
+            Map.entry("zas:nitric_oxide", 0xFFC9EEFF),
+            Map.entry("zas:nitrogen_dioxide", 0xFF782A10),
+            Map.entry("zas:fluorine", 0xFFD3C75D),
+            Map.entry("zas:ammonia", 0xFF7AC3A0),
+            Map.entry("zas:fluoromethane", 0xFF424C05),
+            Map.entry("zas:oxygen_difluoride", 0xFFEA1B01),
+            Map.entry("zas:diborane", 0xFF5DBBD6),
+            Map.entry("zas:sulfur_trioxide", 0xFFD3AE5D),
+            Map.entry("zas:radon", 0xFFFFFFFF));
 
     /** The colour of a gas that has none of its own, and of the gases a bar doesn't tell apart. */
     public static final int OTHER = 0xFFB0B0B0;

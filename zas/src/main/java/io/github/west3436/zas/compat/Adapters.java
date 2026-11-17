@@ -91,6 +91,12 @@ public final class Adapters {
         rows.add(new Row(
                 "pneumaticcraft", "[8.0.3,)", "io.github.west3436.zas.compat.pneumaticcraft.PneumaticCraftCompat"));
 
+        // NuclearCraft: Neoteric (COMPAT-150 to COMPAT-155): 1.3.2 is its first release after the 1.3.0
+        // betas and release candidates, and the fields of its fission controller that the adapter
+        // reads are the same in its newest. No upper bound: the adapter's GameTests run with the
+        // newest build too, every night (COMPAT-004).
+        rows.add(new Row("nuclearcraft", "[1.3.2,)", "io.github.west3436.zas.compat.nuclearcraft.NuclearCraftCompat"));
+
         return rows;
     }
 
