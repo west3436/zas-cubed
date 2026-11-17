@@ -54,5 +54,8 @@ include 'compat-pneumaticcraft'
 // compat-mekanism.
 include 'compat-aeronautics'
 
+// The Sable adapter (COMPAT-100 to COMPAT-102), bundled into the zas jar like compat-mekanism.
+include 'compat-sable'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'

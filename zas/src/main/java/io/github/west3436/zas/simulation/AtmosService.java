@@ -12,6 +12,7 @@ import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
+import io.github.west3436.zas.persistence.HostedChunks;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +26,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -99,7 +101,7 @@ public final class AtmosService {
                 }
             }
         });
-        gameBus.addListener((ChunkEvent.Unload e) -> {
+        HostedChunks.onUnload(gameBus, EventPriority.NORMAL, (ChunkEvent.Unload e) -> {
             AtmosService s = current;
             if (s != null
                     && e.getLevel() instanceof ServerLevel level

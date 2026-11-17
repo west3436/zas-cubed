@@ -15,6 +15,7 @@ import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.persistence.HostedChunks;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.Arrays;
@@ -30,6 +31,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -119,7 +121,7 @@ public final class Photosynthesis {
     /** Registers the listeners on the game event bus. Called once, from the mod constructor. */
     public static void register(IEventBus gameBus) {
         gameBus.addListener((ServerTickEvent.Post e) -> tick(e.getServer()));
-        gameBus.addListener(Photosynthesis::onChunkUnload);
+        HostedChunks.onUnload(gameBus, EventPriority.NORMAL, Photosynthesis::onChunkUnload);
         gameBus.addListener((LevelEvent.Unload e) -> LEVELS.remove(e.getLevel()));
         gameBus.addListener((ServerStoppedEvent e) -> LEVELS.clear());
     }

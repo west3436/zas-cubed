@@ -79,6 +79,9 @@ public final class ReleaseJarTests {
     /** The Create Aeronautics adapter's package. */
     private static final String AERONAUTICS_ADAPTER = "io.github.west3436.zas.compat.aeronautics";
 
+    /** The Sable adapter's package. */
+    private static final String SABLE_ADAPTER = "io.github.west3436.zas.compat.sable";
+
     /** The Ad Astra adapter's package. */
     private static final String AD_ASTRA_ADAPTER = "io.github.west3436.zas.compat.adastra";
 
@@ -366,6 +369,37 @@ public final class ReleaseJarTests {
         h.assertFalse(AmbientSeeds.registered().stream().anyMatch(r -> r.id().equals(seed)), "its seed is registered");
         h.assertFalse(
                 ModConfigs.getFileMap().containsKey("zas-aeronautics-server.toml"), "its config file is registered");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the Sable adapter and its hooks, and on a server without Sable none of it
+     * loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its entry class was never
+     * asked for.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_sable_adapter_loads_without_sable(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("sable"), "Sable is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            SABLE_ADAPTER.replace('.', '/') + "/SableCompat.class",
+            SABLE_ADAPTER.replace('.', '/') + "/mixin/MoveBlocksMixin.class",
+            SABLE_ADAPTER.replace('.', '/') + "/mixin/PlotSaveMixin.class",
+            "zas.sable.mixins.json"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+
+        // zas went through its row and found no Sable, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("sable"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for Sable");
+        h.assertValueEqual(status.row().entryClass(), SABLE_ADAPTER + ".SableCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Sable adapter's state");
+        h.assertFalse(Adapters.isActive("sable"), "the Sable adapter is on");
         h.succeed();
     }
 

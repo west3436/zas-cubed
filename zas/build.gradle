@@ -12,6 +12,7 @@ evaluationDependsOn(':compat-emi')
 evaluationDependsOn(':compat-pneumaticcraft')
 evaluationDependsOn(':compat-ae2')
 evaluationDependsOn(':compat-aeronautics')
+evaluationDependsOn(':compat-sable')
 
 // GameTests live in their own source set so they stay out of the mod jar.
 sourceSets {
@@ -23,10 +24,11 @@ sourceSets {
 
 // Source sets compiled elsewhere whose classes ship inside the zas jar. The viewer plugins and the
 // KubeJS plugin compile against zas, so zas only runs with them: it never compiles against them. So
-// does the AE2 adapter, which names gases and draws them as the viewers do, and the Aeronautics
-// adapter, which reads each dimension's ambient.
+// does the AE2 adapter, which names gases and draws them as the viewers do, the Aeronautics
+// adapter, which reads each dimension's ambient, and the Sable adapter, which saves and drops the
+// chunks Sable keeps itself.
 def viewers = [project(':compat-jei'), project(':compat-emi')]
-def onZas = viewers + [project(':compat-ae2'), project(':compat-aeronautics')]
+def onZas = viewers + [project(':compat-ae2'), project(':compat-aeronautics'), project(':compat-sable')]
 def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots'),
                 project(':compat-kubejs'), project(':compat-pneumaticcraft')]
         + onZas)

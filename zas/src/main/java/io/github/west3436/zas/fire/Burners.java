@@ -11,6 +11,7 @@ import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.fire.CarbonCombustion;
 import io.github.west3436.zas.engine.fire.FireSettings;
+import io.github.west3436.zas.persistence.HostedChunks;
 import io.github.west3436.zas.simulation.AtmosService;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -32,6 +33,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -100,7 +102,7 @@ public final class Burners {
     /** Registers the listeners on the game event bus. Called once, from the mod constructor. */
     public static void register(IEventBus gameBus) {
         gameBus.addListener(Burners::onChunkLoad);
-        gameBus.addListener(Burners::onChunkUnload);
+        HostedChunks.onUnload(gameBus, EventPriority.NORMAL, Burners::onChunkUnload);
         gameBus.addListener((LevelEvent.Unload e) -> LEVELS.remove(e.getLevel()));
         gameBus.addListener((ServerStoppedEvent e) -> LEVELS.clear());
         gameBus.addListener(Burners::onServerTick);

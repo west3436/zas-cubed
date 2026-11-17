@@ -3,10 +3,16 @@ package io.github.west3436.zas.provider;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryDeriver;
+import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.geometry.SubCells;
+import io.github.west3436.zas.simulation.AtmosService;
+import io.github.west3436.zas.simulation.DimensionAtmos;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ChunkHolder;
@@ -59,8 +65,77 @@ public final class PointResolver {
         }
     }
 
-    /** The cell an exact point resolves to. */
+    /**
+     * Where a point in a level may really be, for a mod that keeps blocks somewhere other than where
+     * they show (COMPAT-101): Sable shows a sub-level's blocks in the world while they sit in the
+     * level at its plot, so a point inside a sub-level's cabin is a point in that plot. Server thread.
+     */
+    @FunctionalInterface
+    public interface Projection {
+        /**
+         * The points a point may stand for, first the likeliest; empty when it stands for none.
+         *
+         * @param level the level
+         * @param point the point, as the world shows it
+         */
+        List<Vec3> project(ServerLevel level, Vec3 point);
+    }
+
+    private static final List<Projection> PROJECTIONS = new CopyOnWriteArrayList<>();
+
+    /**
+     * Adds a projection (COMPAT-101). From then on, on the server thread, an exact point that a
+     * projection maps onto a cell of a zone, or onto a cell whose atmosphere isn't known yet,
+     * resolves to that cell; a point it maps onto the open air resolves where it is.
+     */
+    public static void addProjection(Projection projection) {
+        PROJECTIONS.add(Objects.requireNonNull(projection, "projection"));
+    }
+
+    /**
+     * The cell an exact point resolves to. On the server thread a {@link Projection} may say the
+     * point stands for one elsewhere in the level: the first such cell that is in a zone, or whose
+     * atmosphere isn't known yet, is taken.
+     */
     public static Cell resolve(ServerLevel level, Vec3 point) {
+        if (!PROJECTIONS.isEmpty() && level.getServer().isSameThread()) {
+            for (Projection projection : PROJECTIONS) {
+                for (Vec3 there : projection.project(level, point)) {
+                    Cell cell = resolveHere(level, there);
+                    if (!inOpenAir(level, cell)) {
+                        return cell;
+                    }
+                }
+            }
+        }
+        return resolveHere(level, point);
+    }
+
+    /**
+     * Whether a cell is plainly in the open air: in no zone, in a loaded chunk whose zones are known,
+     * and not held at a breach. True as well where no chunk is loaded, since no block stands there,
+     * and without an engine for the level.
+     */
+    private static boolean inOpenAir(ServerLevel level, Cell cell) {
+        AtmosService service = AtmosService.current();
+        DimensionAtmos d = service == null ? null : service.dimension(level);
+        AtmosSnapshot table = d == null ? null : d.published();
+        if (table == null) {
+            return true;
+        }
+        long block = cell.pos().asLong();
+        if (table.zoneAt(block, cell.sub()) != null) {
+            return false;
+        }
+        long chunk = ChunkPos.asLong(cell.pos().getX() >> 4, cell.pos().getZ() >> 4);
+        if (!d.isChunkLoaded(chunk)) {
+            return true;
+        }
+        return !d.isSettling(chunk) && !table.heldAt(block, cell.sub());
+    }
+
+    /** The cell an exact point resolves to where it is. */
+    private static Cell resolveHere(ServerLevel level, Vec3 point) {
         BlockPos pos = BlockPos.containing(point);
         GeometryTable table = Geometries.tableIfReady();
         BlockState state = table == null ? null : blockState(level, pos);

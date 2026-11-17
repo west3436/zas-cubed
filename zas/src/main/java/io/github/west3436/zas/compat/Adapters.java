@@ -102,6 +102,11 @@ public final class Adapters {
         // (COMPAT-004). The range is AeronauticsVersions.SUPPORTED, which its mixin plugin reads.
         rows.add(new Row("aeronautics", "[1.3.0,)", "io.github.west3436.zas.compat.aeronautics.AeronauticsCompat"));
 
+        // Sable (COMPAT-100 to COMPAT-102): 2.0.0 is its first build of Sable 2, and what the
+        // adapter uses is the same in its newest. No upper bound: the adapter's GameTests run with
+        // the newest build every night (COMPAT-004).
+        rows.add(new Row("sable", "[2.0.0,)", "io.github.west3436.zas.compat.sable.SableCompat"));
+
         return rows;
     }
 
