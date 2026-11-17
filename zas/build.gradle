@@ -9,6 +9,7 @@ evaluationDependsOn(':compat-slots')
 evaluationDependsOn(':compat-kubejs')
 evaluationDependsOn(':compat-jei')
 evaluationDependsOn(':compat-emi')
+evaluationDependsOn(':compat-pneumaticcraft')
 evaluationDependsOn(':compat-ae2')
 
 // GameTests live in their own source set so they stay out of the mod jar.
@@ -25,7 +26,7 @@ sourceSets {
 def viewers = [project(':compat-jei'), project(':compat-emi')]
 def onZas = viewers + [project(':compat-ae2')]
 def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots'),
-                project(':compat-kubejs')]
+                project(':compat-kubejs'), project(':compat-pneumaticcraft')]
         + onZas)
         .collect { it.sourceSets.main }
 
@@ -84,6 +85,7 @@ dependencies {
     // Started by name (Adapters), so zas never compiles against them.
     runtimeOnly project(':compat-mekanism')
     runtimeOnly project(':compat-slots')
+    runtimeOnly project(':compat-pneumaticcraft')
     // Found by KubeJS, through the kubejs.plugins.txt that ships with it.
     runtimeOnly project(':compat-kubejs')
     onZas.each { runtimeOnly it }

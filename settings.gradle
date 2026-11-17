@@ -46,5 +46,9 @@ include 'compat-cc'
 // The Applied Energistics 2 adapter (COMPAT-070 to COMPAT-074), bundled into the zas jar likewise.
 include 'compat-ae2'
 
+// The PneumaticCraft: Repressurized adapter (COMPAT-010 to COMPAT-013), bundled into the zas jar like
+// compat-mekanism.
+include 'compat-pneumaticcraft'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'

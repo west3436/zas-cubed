@@ -99,6 +99,21 @@ class VersionGateTest {
         }
     }
 
+    /**
+     * The PneumaticCraft row against the versions its builds for 1.21.1 carry: 8.0.3 is the oldest
+     * it supports, and 8.0.2, the last build for 1.21.0, is below it.
+     */
+    @Test
+    void compat_002_the_pneumaticcraft_range_fits_its_real_versions() {
+        String pneumaticcraft = range("pneumaticcraft");
+        for (String version : List.of("8.0.3", "8.1.0", "8.2.24", "9.0.0")) {
+            assertEquals(Verdict.SUPPORTED, VersionGate.check(version, pneumaticcraft), version);
+        }
+        for (String version : List.of("8.0.2", "8.0.0", "7.0.0")) {
+            assertEquals(Verdict.UNSUPPORTED, VersionGate.check(version, pneumaticcraft), version);
+        }
+    }
+
     private static String range(String modId) {
         return Adapters.rows().stream()
                 .filter(row -> row.modId().equals(modId))
