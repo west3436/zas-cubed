@@ -38,6 +38,9 @@
   "pack.zas.pneumaticcraft": "ZAS³ PneumaticCraft",
   "pack.zas.pneumaticcraft.description": "Pneumatic Armor",
 
+  "zas.ae2.gases": "Gases",
+  "zas.ae2.gas_storage": "Gas storage",
+
   "hud.zas.pressure": "%s",
   "hud.zas.oxygen": "O₂ %s",
   "hud.zas.toxin": "%s %s",

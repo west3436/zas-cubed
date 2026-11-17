@@ -85,6 +85,11 @@ public final class Adapters {
         rows.add(new Row(
                 "accessories", "[1.1.0-beta.3,)", "io.github.west3436.zas.compat.accessories.AccessoriesCompat"));
 
+        // Applied Energistics 2 (COMPAT-070 to COMPAT-074): 19.0.24 is its first release for this
+        // Minecraft not marked alpha or beta, and the API the adapter uses is the same in its newest.
+        // No upper bound: the adapter's GameTests run with the newest build every night (COMPAT-004).
+        rows.add(new Row("ae2", "[19.0.24,)", "io.github.west3436.zas.compat.ae2.Ae2Compat"));
+
         // PneumaticCraft: Repressurized (COMPAT-010 to COMPAT-013): 8.0.3 is its first build for this
         // Minecraft, and the API the adapter uses is the same in its newest. No upper bound: the
         // adapter's GameTests run with the newest build too, every night (COMPAT-004).

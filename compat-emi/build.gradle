@@ -14,6 +14,13 @@ repositories {
         }
         filter { includeGroup 'dev.emi' }
     }
+    // AE2's API jar, for handing gases to AE2's screens (COMPAT-073).
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://modmaven.dev/' }
+        }
+        filter { includeGroup 'appeng' }
+    }
 }
 
 // The plugin compiles against the oldest EMI it supports, so it can't use anything newer by
@@ -50,6 +57,10 @@ dependencies {
     compileOnly project(':zas-api')
     // Compile-only, never bundled: the plugin is optional (NFR-022).
     compileOnly("dev.emi:emi-neoforge:${emi_version}+${minecraft_version}:api") { transitive = false }
+    // With AE2 too, the plugin gives AE2 a converter between gases in EMI and the AE2 adapter's gas
+    // keys. Only loaded with that adapter on, so AE2 is compiled against and never needed.
+    compileOnly project(':compat-ae2')
+    compileOnly("appeng:appliedenergistics2:${ae2_version}:api") { transitive = false }
 
     releaseJar project(':dist')
 }
