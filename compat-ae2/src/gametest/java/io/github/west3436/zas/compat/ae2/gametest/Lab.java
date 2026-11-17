@@ -66,8 +66,16 @@ final class Lab {
 
     /** A test tank at a place, holding up to some moles at a temperature. */
     TestTank tank(int x, int y, int z, double capacity, double temperature) {
+        return place(x, y, z, TestTank.put(abs(x, y, z), capacity, temperature));
+    }
+
+    /** A test tank whose handler is a view of another mod's storage ({@code GasHandlerView}). */
+    TestTank view(int x, int y, int z, double capacity, double temperature) {
+        return place(x, y, z, TestTank.putView(abs(x, y, z), capacity, temperature));
+    }
+
+    private TestTank place(int x, int y, int z, TestTank tank) {
         BlockPos pos = abs(x, y, z);
-        TestTank tank = TestTank.put(pos, capacity, temperature);
         tanks.add(pos);
         level.setBlockAndUpdate(pos, TestTank.BLOCK);
         level.invalidateCapabilities(pos);

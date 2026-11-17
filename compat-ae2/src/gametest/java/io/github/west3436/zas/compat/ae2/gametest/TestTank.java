@@ -1,5 +1,6 @@
 package io.github.west3436.zas.compat.ae2.gametest;
 
+import io.github.west3436.zas.api.capability.GasHandlerView;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -28,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>Registered from the GameTest source set, so it exists only in the tests' own runs.
  */
 @EventBusSubscriber(modid = "zas", bus = EventBusSubscriber.Bus.MOD)
-public final class TestTank implements IGasHandler {
+public class TestTank implements IGasHandler {
     /** The tanks, by where they are. A lodestone with none provides nothing. */
     private static final Map<BlockPos, TestTank> TANKS = new ConcurrentHashMap<>();
 
@@ -65,6 +66,23 @@ public final class TestTank implements IGasHandler {
         TestTank tank = new TestTank(capacity, temperature);
         TANKS.put(pos.immutable(), tank);
         return tank;
+    }
+
+    /**
+     * Puts a tank at a place that says it is a view of another mod's storage, as the fluid bridge's
+     * and the Mekanism adapter's handlers do.
+     */
+    static TestTank putView(BlockPos pos, double capacity, double temperature) {
+        TestTank tank = new View(capacity, temperature);
+        TANKS.put(pos.immutable(), tank);
+        return tank;
+    }
+
+    /** A tank that is a view of something else. */
+    private static final class View extends TestTank implements GasHandlerView {
+        View(double capacity, double temperature) {
+            super(capacity, temperature);
+        }
     }
 
     static void remove(BlockPos pos) {

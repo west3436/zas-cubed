@@ -192,6 +192,37 @@ public final class Ae2Tests {
         });
     }
 
+    /**
+     * A gas handler that is a view of another mod's storage, as the fluid bridge offers on a fluid
+     * tank and the Mekanism adapter on a chemical tank, is left alone: AE2 reaches that storage as
+     * its own kind, and through the view too it would count the gas twice. A storage bus shows
+     * nothing of it, an import bus takes nothing and an export bus puts nothing in.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = WAIT)
+    public static void compat_073_buses_leave_a_view_of_other_storage_alone(GameTestHelper h) {
+        Lab lab = new Lab(h, 7);
+        lab.view(0, 1, 0, 1000, T).with(O2, 5.0);
+        TestTank imported = lab.view(2, 1, 0, 1000, T).with(N2, 4.0);
+        TestTank store = lab.tank(1, 1, -1, 1000, T).with(CO2, 2.0);
+        TestTank exported = lab.view(1, 1, 1, 1000, T);
+        lab.cable(1, 1, 0);
+        IPart viewBus = lab.part(1, 1, 0, Direction.WEST, "storage_bus");
+        lab.part(1, 1, 0, Direction.NORTH, "storage_bus");
+        lab.part(1, 1, 0, Direction.EAST, "import_bus");
+        Lab.filter(lab.part(1, 1, 0, Direction.SOUTH, "export_bus"), CO2);
+        lab.energy(1, 2, 0);
+        h.runAfterDelay(100, () -> {
+            KeyCounter stored = Lab.stored(viewBus);
+            h.assertValueEqual(stored.get(GasKey.of(O2)), 0L, "the O2 in the view, seen by the network");
+            h.assertValueEqual(stored.get(GasKey.of(CO2)), 2000L, "the CO2 in the tank that isn't a view");
+            lab.close(imported.moles(N2), 4.0, "the N2 left in the view the import bus faces");
+            lab.close(exported.moles(CO2), 0, "the CO2 put into the view the export bus faces");
+            lab.close(store.moles(CO2), 2.0, "the CO2 left in store");
+            lab.done();
+            h.succeed();
+        });
+    }
+
     // ---- COMPAT-074: no gas from rounding --------------------------------------------------------
 
     /**

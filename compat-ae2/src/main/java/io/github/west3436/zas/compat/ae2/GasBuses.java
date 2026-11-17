@@ -10,9 +10,11 @@ import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.api.storage.StorageHelper;
+import io.github.west3436.zas.api.capability.GasHandlerView;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -23,7 +25,8 @@ import org.jetbrains.annotations.Nullable;
  * AE2's import, export and storage buses on a block that provides {@link IGasHandler} (COMPAT-073):
  * each bus asks for the capability on the face it touches, so it works on any mod's block that offers
  * it there. ZAS³'s own pipes, pipe caps, connector ports and large tanks offer it on a face that meets
- * a block that isn't a pipe part, so a bus can touch any of them.
+ * a block that isn't a pipe part, so a bus can touch any of them. A handler that is a {@link
+ * GasHandlerView} of another mod's storage is left alone.
  *
  * <p>Every move goes through {@link GasHandlerStorage}, which rounds without making or losing gas
  * (COMPAT-074).
@@ -34,20 +37,32 @@ final class GasBuses {
     /** The storage on the face a bus touches, its handler looked up anew each time it is used. */
     private static GasHandlerStorage storage(
             ServerLevel level, BlockPos pos, Direction side, boolean extractableOnly, @Nullable Runnable changed) {
-        BlockCapabilityCache<IGasHandler, @Nullable Direction> cache =
-                BlockCapabilityCache.create(IGasHandler.BLOCK, level, pos, side);
-        return new GasHandlerStorage(cache::getCapability, level, pos, extractableOnly, changed);
+        Supplier<@Nullable IGasHandler> handler = own(level, pos, side);
+        return new GasHandlerStorage(handler, level, pos, extractableOnly, changed);
     }
 
     /** A storage bus's view of the block. */
     static ExternalStorageStrategy external(ServerLevel level, BlockPos pos, Direction side) {
-        BlockCapabilityCache<IGasHandler, @Nullable Direction> cache =
-                BlockCapabilityCache.create(IGasHandler.BLOCK, level, pos, side);
+        Supplier<@Nullable IGasHandler> handler = own(level, pos, side);
         // The storage bus asks for a new wrapper when the block changes, and keeps none for a block
         // without the capability.
-        return (extractableOnly, changed) -> cache.getCapability() == null
-                ? null
-                : new GasHandlerStorage(cache::getCapability, level, pos, extractableOnly, changed);
+        return (extractableOnly, changed) ->
+                handler.get() == null ? null : new GasHandlerStorage(handler, level, pos, extractableOnly, changed);
+    }
+
+    /**
+     * The block's gas handler on a face, looked up anew each time, unless it is a view of another
+     * mod's storage ({@link GasHandlerView}): a fluid tank or a Mekanism chemical tank as gas. AE2
+     * reaches those through their own kind, its fluid buses or Applied Mekanistics', and through
+     * the view too it would count the same gas twice.
+     */
+    static Supplier<@Nullable IGasHandler> own(ServerLevel level, BlockPos pos, Direction side) {
+        BlockCapabilityCache<IGasHandler, @Nullable Direction> cache =
+                BlockCapabilityCache.create(IGasHandler.BLOCK, level, pos, side);
+        return () -> {
+            IGasHandler handler = cache.getCapability();
+            return handler instanceof GasHandlerView ? null : handler;
+        };
     }
 
     /** An import bus: gas out of the block into ME storage, each gas on its own. */
