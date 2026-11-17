@@ -35,6 +35,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -52,6 +53,12 @@ import org.jetbrains.annotations.Nullable;
  *       on with nothing to breathe from (no seal, no tank, or a tank that can't deliver) leaves
  *       them off and says why. A switch is checked on the entity's next tick, not at its turn in
  *       the check interval.
+ *   <li><b>Switching off on their own</b> (LIFE-029). As in vg, internals that are on switch off
+ *       at the entity's next breath check once there is nothing they could breathe from: the seal
+ *       is gone or no tank is found any more ({@link #offWithoutSource}). A player is told why, as
+ *       when the key refuses. A tank that is still there but can't deliver leaves them on, failing
+ *       (LIFE-046, CLIENT-009), so a refill picks up again. A player who respawns with nothing to
+ *       breathe from, such as after a death that dropped its gear, starts with them off.
  *   <li><b>The seal</b> (LIFE-021). They work only while the head slot, or the entity itself,
  *       seals its breathing ({@link WornProtection#sealedBreathing}).
  *   <li><b>The tank</b> (LIFE-028). They draw from the first internal supply found ({@link
@@ -130,11 +137,15 @@ public final class Internals {
 
     private Internals() {}
 
-    /** Registers the attachment and the toggle's payload. Called once, from the mod constructor. */
-    public static void register(IEventBus modBus) {
+    /**
+     * Registers the attachment, the toggle's payload and the check on respawn. Called once, from the
+     * mod constructor.
+     */
+    public static void register(IEventBus modBus, IEventBus gameBus) {
         ATTACHMENTS.register(modBus);
         modBus.addListener((RegisterPayloadHandlersEvent e) ->
                 e.registrar("1").playToServer(TogglePayload.TYPE, TogglePayload.STREAM_CODEC, Internals::handleToggle));
+        gameBus.addListener((PlayerEvent.PlayerRespawnEvent e) -> respawned(e.getEntity()));
     }
 
     // ---- The switch ----------------------------------------------------------------------
@@ -199,6 +210,41 @@ public final class Internals {
             return Component.translatable("message.zas.internals.no_tank");
         }
         return Component.translatable("message.zas.internals.empty");
+    }
+
+    /**
+     * Switches an entity's internals off if they are on and there is nothing they could breathe
+     * from any more: no seal, or no tank found (LIFE-029). A player is told why in its action bar,
+     * with the message the key gives when it refuses. A tank that is there but can't deliver leaves
+     * them on (LIFE-046). The breath check calls this before it decides the breath.
+     *
+     * @return whether they were switched off
+     */
+    public static boolean offWithoutSource(LivingEntity entity) {
+        if (!on(entity) || hasSource(entity)) {
+            return false;
+        }
+        Component why = failure(entity);
+        entity.setData(ON, false);
+        if (entity instanceof Player player) {
+            player.displayClientMessage(why, true);
+        }
+        return true;
+    }
+
+    /**
+     * After a player respawns: internals it kept through death switch off, without a word, if it
+     * came back with nothing to breathe from (LIFE-029). With its gear kept, they stay on.
+     */
+    public static void respawned(Player player) {
+        if (on(player) && !hasSource(player)) {
+            player.setData(ON, false);
+        }
+    }
+
+    /** Whether an entity has something internals could breathe from: a seal and a tank, delivering or not. */
+    private static boolean hasSource(LivingEntity entity) {
+        return WornProtection.sealedBreathing(entity) && find(entity).isPresent();
     }
 
     /** Handles the keybind's toggle on the server: only for the sender, and not for one dead or spectating (NFR-011). */

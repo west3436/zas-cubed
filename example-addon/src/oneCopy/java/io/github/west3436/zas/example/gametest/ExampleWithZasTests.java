@@ -10,29 +10,50 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.reaction.Reactions;
+import io.github.west3436.zas.api.relocation.Destination;
+import io.github.west3436.zas.api.relocation.RelocationOutcome;
+import io.github.west3436.zas.api.relocation.RelocationResult;
 import io.github.west3436.zas.example.AtmosphereAlarm;
 import io.github.west3436.zas.example.ExampleAddonMod;
 import io.github.west3436.zas.example.ExampleContent;
 import io.github.west3436.zas.example.ExampleHazards;
+import io.github.west3436.zas.example.ShipMover;
 import io.github.west3436.zas.example.ShutterBlockEntity;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.WallTorchBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * API-047: the example addon's extension points with ZAS³ behind them, on the server of built jars.
@@ -176,5 +197,108 @@ public final class ExampleWithZasTests {
                 .thenExecute(room::open)
                 .thenWaitUntil(room::assertAlarmHeard)
                 .thenSucceed();
+    }
+
+    /**
+     * The worked mover leaves nothing behind (API-065, CONT-156): a sealed room with a content airlock
+     * in its wall, a barrel of diamonds, a generator holding coal, and a torch and both controllers on
+     * its walls moves 6 blocks east. Nothing drops at either site, each item is in its block at the destination once, both of the
+     * airlock's blocks stand there, and the room arrives with them.
+     */
+    @GameTest(template = "empty", batch = "api_065_mover", timeoutTicks = WAIT_TICKS)
+    public static void api_065_the_mover_leaves_nothing_behind(GameTestHelper h) {
+        Room room = Room.build(h, Blocks.STONE, 14);
+        ServerLevel level = room.level();
+        BlockPos o = room.origin();
+        BlockState airlock =
+                content("airlock").defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST);
+        BlockPos lower = o.offset(4, 1, 2);
+        level.setBlockAndUpdate(lower, airlock);
+        level.setBlockAndUpdate(
+                lower.above(), airlock.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER));
+        BlockPos barrel = o.offset(1, 1, 1);
+        level.setBlockAndUpdate(barrel, Blocks.BARREL.defaultBlockState());
+        ((Container) level.getBlockEntity(barrel)).setItem(0, new ItemStack(Items.DIAMOND, 5));
+        BlockPos generator = o.offset(1, 1, 3);
+        level.setBlockAndUpdate(generator, content("generator").defaultBlockState());
+        BlockPos torch = o.offset(2, 2, 1); // on the north wall
+        level.setBlockAndUpdate(
+                torch, Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, Direction.SOUTH));
+        // The controllers hang on walls, as in a player's room.
+        BlockState areaController = content("area_air_controller")
+                .defaultBlockState()
+                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH);
+        BlockPos onNorthWall = o.offset(3, 2, 1);
+        level.setBlockAndUpdate(onNorthWall, areaController);
+        BlockState airlockController = content("airlock_controller")
+                .defaultBlockState()
+                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH);
+        BlockPos onSouthWall = o.offset(3, 2, 3);
+        level.setBlockAndUpdate(onSouthWall, airlockController);
+        room.addRadon(); // gas in the room has ZAS³ make it a zone
+
+        BoundingBox box = BoundingBox.fromCorners(o, o.offset(4, 4, 4));
+        Vec3i east = new Vec3i(6, 0, 0);
+        AABB bothSites = AABB.encapsulatingFullBlocks(o.offset(-2, -2, -2), o.offset(12, 6, 6));
+        AtomicReference<CompletableFuture<RelocationResult>> moved = new AtomicReference<>();
+        Runnable nothingDropped = () -> h.assertValueEqual(
+                level.getEntitiesOfClass(ItemEntity.class, bothSites), List.of(), "items dropped by the move");
+        h.startSequence()
+                .thenWaitUntil(() -> h.assertFalse(room.zone().breached(), "the room isn't sealed yet"))
+                .thenExecute(() -> {
+                    // The coal goes in now, or the generator would burn it while the room seals.
+                    ItemStack left = fuel(level, generator).insertItem(0, new ItemStack(Items.COAL, 2), false);
+                    h.assertTrue(left.isEmpty(), "the generator didn't take the coal");
+                    moved.set(ShipMover.move(level, box, Destination.offset(level, east)));
+
+                    // In the same tick: no block has ticked since the move.
+                    nothingDropped.run();
+                    for (BlockPos p : BlockPos.betweenClosed(o, o.offset(4, 4, 4))) {
+                        h.assertTrue(level.getBlockState(p).isAir(), "the mover left a block at " + p);
+                    }
+                    h.assertValueEqual(
+                            ((Container) level.getBlockEntity(barrel.offset(east))).countItem(Items.DIAMOND),
+                            5,
+                            "diamonds in the moved barrel");
+                    ItemStack coal = fuel(level, generator.offset(east)).getStackInSlot(0);
+                    h.assertTrue(coal.is(Items.COAL) && coal.getCount() == 2, "the moved generator's fuel: " + coal);
+                    h.assertValueEqual(
+                            level.getBlockState(lower.offset(east)), airlock, "the airlock's lower block, moved");
+                    h.assertValueEqual(
+                            level.getBlockState(lower.above().offset(east)),
+                            airlock.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER),
+                            "the airlock's upper block, moved");
+                    h.assertTrue(
+                            level.getBlockState(torch.offset(east)).is(Blocks.WALL_TORCH), "the torch didn't move");
+                    h.assertValueEqual(
+                            level.getBlockState(onNorthWall.offset(east)), areaController, "the area air controller");
+                    h.assertValueEqual(
+                            level.getBlockState(onSouthWall.offset(east)), airlockController, "the airlock controller");
+                })
+                .thenWaitUntil(() -> h.assertTrue(moved.get().isDone(), "the move hasn't completed"))
+                .thenExecute(() -> {
+                    h.assertValueEqual(moved.get().join().outcome(), RelocationOutcome.MOVED, "the move's outcome");
+                    Vec3 middle = room.middle().add(east.getX(), east.getY(), east.getZ());
+                    ZoneInfo arrived = Atmospheres.zoneAt(level, middle)
+                            .orElseThrow(() -> new GameTestAssertException("no room at the destination"));
+                    h.assertFalse(arrived.breached(), "the moved room is open");
+                    nothingDropped.run();
+                })
+                .thenSucceed();
+    }
+
+    private static Block content(String name) {
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath("zas_atmos", name);
+        return BuiltInRegistries.BLOCK
+                .getOptional(id)
+                .orElseThrow(() -> new GameTestAssertException(id + " isn't registered"));
+    }
+
+    private static IItemHandler fuel(ServerLevel level, BlockPos generator) {
+        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, generator, null);
+        if (handler == null) {
+            throw new GameTestAssertException("no fuel slot at " + generator);
+        }
+        return handler;
     }
 }
