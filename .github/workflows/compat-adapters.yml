@@ -153,6 +153,19 @@ jobs:
           # content off, so every test of the adapter runs.
           - adapter: kubejs (content off)
             task: ":compat-kubejs:runAdapterGameTestServer -Pcontent=off"
+          # COMPAT-070 to COMPAT-074: the AE2 adapter, with the oldest AE2 it
+          # supports and the newest. COMPAT-002: with the last build before the
+          # oldest, the adapter stays off. With the content off it still works
+          # on other mods' gas blocks, so only the tests with ZAS³'s own tanks
+          # are left out.
+          - adapter: ae2 (oldest supported)
+            task: ":compat-ae2:runAdapterGameTestServer"
+          - adapter: ae2 (newest)
+            task: ":compat-ae2:runAdapterGameTestServer -Pae2.version=newest"
+          - adapter: ae2 (older than supported)
+            task: ":compat-ae2:runAdapterGameTestServer -Pae2.version=unsupported"
+          - adapter: ae2 (content off)
+            task: ":compat-ae2:runAdapterGameTestServer -Pcontent=off"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6

@@ -70,6 +70,9 @@ public final class ReleaseJarTests {
     /** The CC: Tweaked adapter's package, which is part of zas_atmos. */
     private static final String CC_ADAPTER = "io.github.west3436.zas.atmos.compat.cc";
 
+    /** The Applied Energistics 2 adapter's package. */
+    private static final String AE2_ADAPTER = "io.github.west3436.zas.compat.ae2";
+
     /** The Ad Astra adapter's package. */
     private static final String AD_ASTRA_ADAPTER = "io.github.west3436.zas.compat.adastra";
 
@@ -292,6 +295,33 @@ public final class ReleaseJarTests {
         h.assertValueEqual(status.row().entryClass(), CC_ADAPTER + ".CcCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the CC: Tweaked adapter's state");
         h.assertFalse(Adapters.isActive("computercraft"), "the CC: Tweaked adapter is on");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the Applied Energistics 2 adapter, and on a server without AE2 none of it
+     * loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its entry class, which names
+     * AE2's, was never asked for, and its config file isn't there.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_ae2_adapter_loads_without_ae2(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("ae2"), "AE2 is on the release check's server");
+        // It ships: this is looked up as a file, which loads nothing.
+        String entry = AE2_ADAPTER.replace('.', '/') + "/Ae2Compat.class";
+        h.assertTrue(
+                ReleaseJarTests.class.getClassLoader().getResource(entry) != null, "the release jar has no " + entry);
+
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("ae2"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for AE2");
+        h.assertValueEqual(status.row().entryClass(), AE2_ADAPTER + ".Ae2Compat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the AE2 adapter's state");
+        h.assertFalse(Adapters.isActive("ae2"), "the AE2 adapter is on");
+        h.assertFalse(
+                ModConfigs.getFileMap().containsKey("zas-ae2-server.toml"),
+                "the AE2 adapter's config file is registered");
         h.succeed();
     }
 

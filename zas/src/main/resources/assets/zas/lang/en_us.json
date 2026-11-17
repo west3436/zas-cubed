@@ -35,6 +35,9 @@
   "pack.zas.ad_astra": "ZAS³ Ad Astra",
   "pack.zas.ad_astra.description": "Suits and space mobs",
 
+  "zas.ae2.gases": "Gases",
+  "zas.ae2.gas_storage": "Gas storage",
+
   "hud.zas.pressure": "%s",
   "hud.zas.oxygen": "O₂ %s",
   "hud.zas.toxin": "%s %s",

@@ -18,7 +18,8 @@ import net.minecraft.resources.ResourceLocation;
  * methods its viewer calls to draw, never while it registers.
  */
 public final class ViewerDraw {
-    private static final ResourceLocation GAS =
+    /** A gas's icon, 16 by 16, white, which is drawn in the gas's colour. */
+    public static final ResourceLocation GAS =
             ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "textures/gui/viewer/gas.png");
 
     /** The sheet of chip icons ({@link Icon}), which also holds the reactions' own 16 by 16 icon. */
