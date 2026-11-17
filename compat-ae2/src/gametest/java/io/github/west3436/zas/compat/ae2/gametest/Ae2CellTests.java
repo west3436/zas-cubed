@@ -121,11 +121,15 @@ public final class Ae2CellTests {
             h.assertValueEqual(Upgrades.getMaxInstallable(ae2("fuzzy_card"), item), 0, "a fuzzy card in a cell");
         }
 
-        // The cell workbench sets the filter through the cell's config inventory.
-        ItemStack stack = new ItemStack(cells.get(0));
-        IBasicCellItem cell = (IBasicCellItem) stack.getItem();
-        cell.getConfigInventory(stack).setStack(0, new GenericStack(GasKey.of(O2), 1));
-        h.assertValueEqual(cell.getConfigInventory(stack).getKey(0), GasKey.of(O2), "the gas in the filter");
+        // The cell workbench sets the filter through the cell's config inventory, here from an id
+        // made anew, as a window's is, and the cell is saved and loaded, as a world restart does: its
+        // filter still matches the gas a tank reports under the shared id.
+        ItemStack set = new ItemStack(cells.get(0));
+        IBasicCellItem cell = (IBasicCellItem) set.getItem();
+        cell.getConfigInventory(set).setStack(0, new GenericStack(GasKey.of(ResourceLocation.parse(O2.toString())), 1));
+        var registries = h.getLevel().registryAccess();
+        ItemStack stack = ItemStack.parse(registries, set.save(registries)).orElseThrow();
+        h.assertValueEqual(cell.getConfigInventory(stack).getKey(0), GasKey.of(O2), "the gas in the loaded filter");
         StorageCell inventory = inventory(h, stack);
         IActionSource source = IActionSource.empty();
         h.assertValueEqual(
