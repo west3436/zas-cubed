@@ -37,6 +37,7 @@ import java.util.Objects;
  * @param hotspots the hotspots burning after the tick (FIRE-011, API-055)
  * @param pressureBreaks fragile blocks to break (FLOW-007), in the order they were found
  * @param zoneEvents what happened to zones (API-030), oldest first
+ * @param relocations what the operations of moves did (API-065), in sequence order
  */
 public record Result(
         long tick,
@@ -55,9 +56,11 @@ public record Result(
         List<FireEvent> fireEvents,
         HotspotTable hotspots,
         List<PressureBreak> pressureBreaks,
-        List<ZoneEvent> zoneEvents) {
+        List<ZoneEvent> zoneEvents,
+        List<Relocation.Outcome> relocations) {
 
     public Result {
+        relocations = List.copyOf(relocations);
         Objects.requireNonNull(snapshot, "snapshot");
         components = List.copyOf(components);
         zoneEvents = List.copyOf(zoneEvents);

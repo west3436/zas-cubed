@@ -22,12 +22,18 @@ import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.relocation.Destination;
+import io.github.west3436.zas.api.relocation.RelocationResult;
+import io.github.west3436.zas.api.relocation.RelocationTicket;
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.example.ExampleAddonMod;
+import io.github.west3436.zas.example.ShipMover;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -42,6 +48,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.NeoForgeMod;
@@ -177,6 +184,34 @@ public final class WithoutZasTests {
     @GameTest(template = "empty")
     public static void s_12_container_explosions_break_no_blocks(GameTestHelper h) {
         h.assertFalse(Atmospheres.containerExplosionsBreakBlocks(), "containerExplosionsBreakBlocks");
+        h.succeed();
+    }
+
+    /**
+     * The worked mover moves its blocks without ZAS³, and every step of a move completes at once as
+     * ABSENT; nothing is ever moving (API-065, API-067, D-17).
+     */
+    @GameTest(template = "empty")
+    public static void api_065_moves_complete_absent(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        BlockPos stone = h.absolutePos(new BlockPos(1, 2, 1));
+        level.setBlockAndUpdate(stone, Blocks.STONE.defaultBlockState());
+        BoundingBox box = BoundingBox.fromCorners(stone, stone);
+        h.assertFalse(Relocations.isMoving(level, stone), "a block is moving without ZAS³");
+        CompletableFuture<RelocationResult> moved =
+                ShipMover.move(level, box, Destination.offset(level, new Vec3i(2, 0, 0)));
+        RelocationTicket other = Relocations.begin(level, box, SOURCE);
+        for (CompletableFuture<RelocationResult> f : List.of(
+                moved,
+                other.begun(),
+                Relocations.cancel(other),
+                Relocations.complete(other, Destination.offset(level, Vec3i.ZERO)))) {
+            h.assertTrue(f.isDone(), "a fallback step didn't complete at once");
+            h.assertValueEqual(f.join(), RelocationResult.ABSENT, "a fallback step");
+        }
+        h.assertTrue(level.getBlockState(stone).isAir(), "the mover left its block");
+        h.assertTrue(
+                level.getBlockState(stone.offset(2, 0, 0)).is(Blocks.STONE), "the mover didn't set its block down");
         h.succeed();
     }
 

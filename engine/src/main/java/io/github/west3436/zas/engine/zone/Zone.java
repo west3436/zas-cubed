@@ -44,6 +44,11 @@ public final class Zone {
     boolean reportedBreached;
     /** Whether it last reported being paused (API-030). */
     boolean reportedPaused;
+    /**
+     * Whether its next resume is no news (API-066): it arrived from a move, whose event says so, and
+     * pauses only while what it opens onto is classified.
+     */
+    boolean quietResume;
     /** Sorted: the ambient edge first, then zone edges by the other zone's id. */
     final List<Edge> edges = new ArrayList<>(4);
 

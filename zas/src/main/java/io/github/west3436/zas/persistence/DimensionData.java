@@ -3,7 +3,9 @@ package io.github.west3436.zas.persistence;
 import com.mojang.logging.LogUtils;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import net.minecraft.core.HolderLookup;
@@ -27,7 +29,10 @@ import org.slf4j.Logger;
  *       in chunks keeps the pins it was saved with, so when it loads these owners' pins are taken
  *       off it. The list is optional in the file, so older saves read with none;
  *   <li>the {@linkplain DimensionPause pause} of the dimension's simulation, if it has one
- *       (OPS-005). Also optional in the file, so older saves read as running.
+ *       (OPS-005). Also optional in the file, so older saves read as running;
+ *   <li>the zones a mover is bringing here that have left their own dimension's graph and not yet
+ *       arrived (API-065, DATA-020), each as a tag the simulation reads, with their numbering. Also
+ *       optional, so older saves read with none.
  * </ul>
  *
  * <p>Versioned (DATA-003), and an older save is brought forward before it is read (DATA-012). A
@@ -58,6 +63,8 @@ public final class DimensionData extends SavedData {
     private final TreeSet<String> released = new TreeSet<>();
     private final Set<String> releasedView = Collections.unmodifiableSet(released);
     private DimensionPause pause;
+    private long nextArrival = 1;
+    private final TreeMap<Long, CompoundTag> arrivals = new TreeMap<>();
 
     /** The dimension's data, created empty if it has none. */
     public static DimensionData of(ServerLevel level) {
@@ -125,6 +132,12 @@ public final class DimensionData extends SavedData {
             CompoundTag pause = tag.getCompound("pause");
             d.pause = new DimensionPause(pause.getString("by"), pause.getString("reason"));
         }
+        ListTag arriving = tag.getList("arrivals", Tag.TAG_COMPOUND);
+        for (int i = 0; i < arriving.size(); i++) {
+            CompoundTag a = arriving.getCompound(i);
+            d.arrivals.put(a.getLong("key"), a);
+        }
+        d.nextArrival = Math.max(tag.getLong("next_arrival"), d.arrivals.isEmpty() ? 1 : d.arrivals.lastKey() + 1);
         return d;
     }
 
@@ -147,6 +160,14 @@ public final class DimensionData extends SavedData {
             p.putString("by", pause.by());
             p.putString("reason", pause.reason());
             tag.put("pause", p);
+        }
+        if (!arrivals.isEmpty()) {
+            ListTag arriving = new ListTag();
+            arriving.addAll(arrivals.values());
+            tag.put("arrivals", arriving);
+        }
+        if (nextArrival > 1) {
+            tag.putLong("next_arrival", nextArrival);
         }
         return tag;
     }
@@ -210,5 +231,33 @@ public final class DimensionData extends SavedData {
     public void setPause(DimensionPause pause) {
         this.pause = pause;
         setDirty();
+    }
+
+    /** A new number for a zone arriving here (API-065). */
+    public long nextArrivalKey() {
+        setDirty();
+        return nextArrival++;
+    }
+
+    /** Keeps a zone arriving here until it has arrived (DATA-020), under its number. */
+    public void putArrival(long key, CompoundTag arrival) {
+        CompoundTag t = arrival.copy();
+        t.putLong("key", key);
+        arrivals.put(key, t);
+        setDirty();
+    }
+
+    /** Forgets an arrival once its zone is here. */
+    public void removeArrival(long key) {
+        if (arrivals.remove(key) != null) {
+            setDirty();
+        }
+    }
+
+    /** The zones arriving here, by number, as saved. */
+    public Map<Long, CompoundTag> arrivals() {
+        Map<Long, CompoundTag> out = new TreeMap<>();
+        arrivals.forEach((k, v) -> out.put(k, v.copy()));
+        return out;
     }
 }

@@ -12,6 +12,7 @@ import io.github.west3436.zas.api.event.ZoneDissolvedEvent;
 import io.github.west3436.zas.api.event.ZoneLifecycleEvent;
 import io.github.west3436.zas.api.event.ZoneMergedEvent;
 import io.github.west3436.zas.api.event.ZonePausedEvent;
+import io.github.west3436.zas.api.event.ZoneRelocatedEvent;
 import io.github.west3436.zas.api.event.ZoneResumedEvent;
 import io.github.west3436.zas.api.event.ZoneSealedEvent;
 import io.github.west3436.zas.api.event.ZoneSplitEvent;
@@ -47,11 +48,13 @@ import io.github.west3436.zas.engine.scheduler.DimensionScheduler;
 import io.github.west3436.zas.engine.scheduler.EnclosureClassifier;
 import io.github.west3436.zas.engine.scheduler.EngineSettings;
 import io.github.west3436.zas.engine.scheduler.FireEvent;
+import io.github.west3436.zas.engine.scheduler.FireIntent;
 import io.github.west3436.zas.engine.scheduler.GasOp;
 import io.github.west3436.zas.engine.scheduler.GeometryAudit;
 import io.github.west3436.zas.engine.scheduler.HotspotTable;
 import io.github.west3436.zas.engine.scheduler.OpOutcome;
 import io.github.west3436.zas.engine.scheduler.OpenAirEvent;
+import io.github.west3436.zas.engine.scheduler.Relocation;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.engine.zone.ZoneEvent;
@@ -70,6 +73,7 @@ import io.github.west3436.zas.sound.IgnitionWhoomps;
 import io.github.west3436.zas.sound.ZasSounds;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,8 +84,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.LongConsumer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -257,6 +264,22 @@ public final class DimensionAtmos {
     private final List<Sprayed> extinguished = new ArrayList<>();
 
     private record Sprayed(BoundingBox box, long batch) {}
+
+    // Moves (API-065, DATA-020).
+    /** What waits for each queued step of a move, by sequence number. */
+    private final Map<Long, Consumer<Relocation.Outcome>> relocationWaiters = new TreeMap<>();
+    /** The zones arriving here, by their number in {@link DimensionData}: kept until they arrive. */
+    private final Map<Long, PendingArrival> arrivals = new TreeMap<>();
+    /** Whether {@link #arrivals} holds what {@link DimensionData} saved, after a restart. */
+    private boolean arrivalsRead;
+    /** The queued arrivals of the current engine: sequence number to arrival number. */
+    private final Map<Long, Long> arrivalSeqs = new TreeMap<>();
+    /** What waits for each arrival, by its number: given the zone's id here, or 0. This session only. */
+    private final Map<Long, LongConsumer> arrivalWaiters = new HashMap<>();
+    /** Chunks zones are arriving in, with how many marks each has: they read as settling. Any thread. */
+    private final Map<Long, Integer> arriving = new ConcurrentHashMap<>();
+    /** The zones that arrived in the result being applied, by their id here. */
+    private final Map<Long, PendingArrival> arrivedNow = new HashMap<>();
 
     DimensionAtmos(ServerLevel level, Executor workers) {
         this.level = level;
@@ -742,6 +765,9 @@ public final class DimensionAtmos {
      * its saved bytes wait to be read. Its cells then look unzoned without being so. Any thread.
      */
     public boolean isSettling(long chunk) {
+        if (arriving.containsKey(chunk)) {
+            return true; // a move is bringing zones here (API-065)
+        }
         DimensionPipeline p = pipeline;
         if (p != null) {
             return p.isSettling(chunk);
@@ -752,6 +778,207 @@ public final class DimensionAtmos {
     /** Whether a chunk is loaded, as the atmosphere sees it. Any thread. */
     public boolean isChunkLoaded(long chunk) {
         return !simulatedUnloaded.contains(chunk) && AtmosPersistence.isLoaded(dimension(), chunk);
+    }
+
+    // ---- Moves (API-065) ------------------------------------------------------------
+
+    /**
+     * Queues the start of a move, with what waits for its outcome; or returns -1 if the dimension has
+     * no engine, as an excluded one, in which case nothing is queued and there are no zones to carry.
+     *
+     * @throws IllegalStateException if the dimension's atmosphere has failed
+     */
+    long beginRelocation(long ticket, BoundingBox box, int maxCells, Consumer<Relocation.Outcome> then) {
+        if (isFaulted()) {
+            throw faulted();
+        }
+        ensureEngine();
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            return -1;
+        }
+        long seq = pl.beginRelocation(
+                ticket,
+                new Relocation.Box(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ()),
+                maxCells);
+        relocationWaiters.put(seq, then);
+        return seq;
+    }
+
+    /** Queues the end of a move; -1 if the dimension has no engine. */
+    long completeRelocation(long ticket, Relocation.Transform transform, Consumer<Relocation.Outcome> then) {
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            return -1;
+        }
+        long seq = pl.completeRelocation(ticket, transform);
+        relocationWaiters.put(seq, then);
+        return seq;
+    }
+
+    /** Queues the cancelling of a move; -1 if the dimension has no engine. */
+    long cancelRelocation(long ticket, Consumer<Relocation.Outcome> then) {
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            return -1;
+        }
+        long seq = pl.cancelRelocation(ticket);
+        relocationWaiters.put(seq, then);
+        return seq;
+    }
+
+    /** Marks chunks as settling while a move brings zones into them (API-065). */
+    void expectArrival(long[] chunks) {
+        for (long c : chunks) {
+            arriving.merge(c, 1, Integer::sum);
+        }
+    }
+
+    /** Takes off one {@link #expectArrival} mark of each chunk. */
+    void arrived(long[] chunks) {
+        for (long c : chunks) {
+            arriving.computeIfPresent(c, (k, n) -> n > 1 ? n - 1 : null);
+        }
+    }
+
+    /** The gas ids of this dimension's registry, for a departure's moles. */
+    Map<String, Double> molesById(double[] moles) {
+        Map<String, Double> out = new TreeMap<>();
+        for (int i = 0; i < moles.length && i < gasIds.length; i++) {
+            if (moles[i] > 0) {
+                out.put(gasIds[i].toString(), moles[i]);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Brings a zone here (API-065, DATA-020): it is kept in the dimension's data until it has arrived,
+     * so a save in between holds it, and its chunks read as settling. {@code then} gets its id here
+     * once it has, or 0 if none of its cells could be had and its gas was added as gas is. In a
+     * dimension excluded from simulation its gas joins the open air at once, and {@code then} gets 0.
+     */
+    void queueArrival(PendingArrival arrival, LongConsumer then) {
+        if (Ambients.isExcluded(level.dimension())) {
+            then.accept(0);
+            return;
+        }
+        readArrivals();
+        DimensionData data = DimensionData.of(level);
+        PendingArrival a = arrival.withKey(data.nextArrivalKey());
+        data.putArrival(a.key(), a.toTag());
+        arrivals.put(a.key(), a);
+        arrivalWaiters.put(a.key(), then);
+        expectArrival(a.chunks());
+        ensureEngine();
+        if (pipeline != null && !arrivalSeqs.containsValue(a.key())) {
+            submitArrival(a);
+        }
+    }
+
+    /** Reads the arrivals the dimension saved, once per session (DATA-020). */
+    private void readArrivals() {
+        if (arrivalsRead) {
+            return;
+        }
+        arrivalsRead = true;
+        for (Map.Entry<Long, CompoundTag> e : DimensionData.of(level).arrivals().entrySet()) {
+            try {
+                PendingArrival a = PendingArrival.fromTag(e.getValue()).withKey(e.getKey());
+                arrivals.put(a.key(), a);
+                expectArrival(a.chunks());
+            } catch (RuntimeException ex) {
+                LOGGER.warn(
+                        "A zone arriving in {} couldn't be read, and is dropped: {}",
+                        dimension().location(),
+                        ex.toString());
+                DimensionData.of(level).removeArrival(e.getKey());
+            }
+        }
+    }
+
+    /** Queues an arrival on the current engine. */
+    private void submitArrival(PendingArrival a) {
+        double[] moles = new double[registry.size()];
+        a.moles().forEach((gas, n) -> {
+            int index = registry.indexOf(gas);
+            if (index >= 0) {
+                moles[index] = n;
+            }
+        });
+        long seq = pipeline.arrive(
+                a.keepId(), a.fromId(), a.blocks(), a.hints(), moles, a.temperature(), a.pins(), a.breached());
+        arrivalSeqs.put(seq, a.key());
+    }
+
+    /** Queues every arrival on a new engine. */
+    private void submitArrivals() {
+        readArrivals();
+        arrivalSeqs.clear();
+        for (PendingArrival a : arrivals.values()) {
+            submitArrival(a);
+        }
+    }
+
+    /** What the result being applied did to moves: departures, arrivals and the rest. */
+    private void applyRelocations(List<Relocation.Outcome> outcomes) {
+        arrivedNow.clear();
+        for (Relocation.Outcome o : outcomes) {
+            Long key = arrivalSeqs.remove(o.seq());
+            if (key != null) {
+                arrivalApplied(key, o);
+                continue;
+            }
+            Consumer<Relocation.Outcome> then = relocationWaiters.remove(o.seq());
+            if (then != null) {
+                then.accept(o);
+            }
+        }
+    }
+
+    private void arrivalApplied(long key, Relocation.Outcome o) {
+        PendingArrival a = arrivals.remove(key);
+        if (a == null) {
+            return;
+        }
+        DimensionData.of(level).removeArrival(key);
+        arrived(a.chunks());
+        long zone = 0;
+        if (o.status() == Relocation.Status.ARRIVED) {
+            zone = o.arrivedId();
+            arrivedNow.put(zone, a);
+        } else {
+            // No cell of it could be had here: its gas is added where its first cell would be.
+            Map<ResourceLocation, Double> moles = new TreeMap<>();
+            a.moles().forEach((gas, n) -> moles.put(ResourceLocation.parse(gas), n));
+            add(
+                    BlockPos.of(a.blocks()[0]),
+                    -1,
+                    new GasParcel(moles, a.temperature()),
+                    new SourceId(ResourceLocation.parse(a.mover())),
+                    LedgerCategory.API,
+                    true);
+        }
+        LongConsumer then = arrivalWaiters.remove(key);
+        if (then != null) {
+            then.accept(zone);
+        }
+    }
+
+    /**
+     * Ends what waits for this engine's steps of moves, as after a rebuild or a stop: they never
+     * apply. Arrivals stay, to be queued again.
+     */
+    private List<Consumer<Relocation.Outcome>> takeRelocationWaiters() {
+        List<Consumer<Relocation.Outcome>> out = new ArrayList<>(relocationWaiters.values());
+        relocationWaiters.clear();
+        return out;
+    }
+
+    /** Whether this dimension has an engine to carry zones. */
+    boolean simulates() {
+        ensureEngine();
+        return pipeline != null;
     }
 
     // ---- Simulated unloads and restarts, for GameTests -------------------------------------
@@ -887,6 +1114,7 @@ public final class DimensionAtmos {
             }
         }
         List<GasOp> carried = old.outstanding();
+        List<Consumer<Relocation.Outcome>> moves = takeRelocationWaiters();
         DimensionData.of(level).raiseNextZoneId(old.nextZoneId());
         old.scheduler().abandon();
         pipeline = null;
@@ -964,6 +1192,13 @@ public final class DimensionAtmos {
         pending.putAll(moved);
         for (Pending p : orphans) {
             p.future().completeExceptionally(new CancellationException("the gas geometry changed"));
+        }
+        // The steps of moves the old engine had are gone with it: its tickets are over, and their
+        // zones are in the records it handed over. Arrivals were queued again with create().
+        Relocation.Outcome ended =
+                new Relocation.Outcome(0, Relocation.Status.ENDED, new long[0], new long[0], List.of(), 0, -1);
+        for (Consumer<Relocation.Outcome> then : moves) {
+            then.accept(ended);
         }
     }
 
@@ -1079,6 +1314,7 @@ public final class DimensionAtmos {
         for (Map.Entry<Long, byte[]> e : new TreeMap<>(AtmosPersistence.takeLoaded(level)).entrySet()) {
             deliver(e.getKey(), e.getValue());
         }
+        submitArrivals();
         byte[] queued = data.takeQueued();
         if (queued != null) {
             ChunkRecord r = decode(queued, ChunkRecordCodec.LEVEL_WIDE);
@@ -1114,6 +1350,13 @@ public final class DimensionAtmos {
             case DISSOLVED -> new ZoneDissolvedEvent(level, zone, pos);
             case PAUSED -> new ZonePausedEvent(level, zone, pos);
             case RESUMED -> new ZoneResumedEvent(level, zone, pos);
+            case RELOCATED -> {
+                PendingArrival a = arrivedNow.get(e.zoneId());
+                yield a == null
+                        ? null
+                        : new ZoneRelocatedEvent(
+                                level, zone, pos, a.from(), other, new SourceId(ResourceLocation.parse(a.mover())));
+            }
         };
     }
 
@@ -1387,9 +1630,16 @@ public final class DimensionAtmos {
             }
         }
         extinguished.clear();
+        List<FireIntent> intents = a.fireIntents();
+        if (!arriving.isEmpty()) {
+            // A gas fire carried with its blocks burns on until its zone arrives (API-065, DATA-009).
+            intents = new ArrayList<>(intents);
+            intents.removeIf(i ->
+                    i.kind() == FireIntent.Kind.REMOVE && arriving.containsKey(SectionKeys.chunkOfBlockKey(i.block())));
+        }
         FireIntents.apply(
                 level,
-                a.fireIntents(),
+                intents,
                 this::isChunkLoaded,
                 block -> {
                     BlockPos p = BlockPos.of(block);
@@ -1403,8 +1653,12 @@ public final class DimensionAtmos {
                 this::gasCaught);
         PressureBreaks.apply(level, a.pressureBreaks(), chunk -> isChunkLoaded(chunk) && !isSettling(chunk));
         // API-030, ahead of what happened inside the zones.
+        applyRelocations(a.relocations());
         for (ZoneEvent e : a.zoneEvents()) {
-            ApiEvents.post(zoneEvent(e));
+            ZoneLifecycleEvent event = zoneEvent(e);
+            if (event != null) {
+                ApiEvents.post(event);
+            }
         }
         // API-031, after the blocks: a listener finds the fire's blocks as the event says.
         for (FireEvent e : a.fireEvents()) {
@@ -1609,6 +1863,14 @@ public final class DimensionAtmos {
         unpins.clear();
         waitingPins.forEach(f -> f.complete(PinResult.none(PinOutcome.UNRESOLVED)));
         waitingUnpins.forEach(f -> f.complete(null));
+        // A step of a move not yet applied didn't happen; the zones are saved where they are, and
+        // arrivals with the dimension (API-065, DATA-020).
+        Relocation.Outcome ended =
+                new Relocation.Outcome(0, Relocation.Status.ENDED, new long[0], new long[0], List.of(), 0, -1);
+        takeRelocationWaiters().forEach(then -> then.accept(ended));
+        List<LongConsumer> arriving = new ArrayList<>(arrivalWaiters.values());
+        arrivalWaiters.clear();
+        arriving.forEach(then -> then.accept(-1)); // they arrive after the restart
         // Heat isn't saved (API-013): a heat mutation not yet applied moved nothing.
         List<CompletableFuture<HeatResult>> waitingHeats = new ArrayList<>(heats.values());
         heats.clear();
@@ -1641,5 +1903,8 @@ public final class DimensionAtmos {
         heats.clear();
         ignitions.clear();
         waiting.forEach(f -> f.completeExceptionally(why));
+        Relocation.Outcome ended =
+                new Relocation.Outcome(0, Relocation.Status.ENDED, new long[0], new long[0], List.of(), 0, -1);
+        takeRelocationWaiters().forEach(then -> then.accept(ended));
     }
 }

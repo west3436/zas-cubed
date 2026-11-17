@@ -7,6 +7,7 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.device.ZonePort;
@@ -303,7 +304,10 @@ public abstract class PortableGasDevice extends PortableDevice {
 
     @Override
     public void setRemoved() {
-        if (!unloading && !keepContents && level instanceof ServerLevel server) {
+        if (!unloading
+                && !keepContents
+                && level instanceof ServerLevel server
+                && !Relocations.isMoving(server, worldPosition)) { // a mover carries it (CONT-156)
             GasParcel gas = store.drain();
             if (!gas.isEmpty() && !voidContents) {
                 GasMutations.add(server, point(), gas, source);

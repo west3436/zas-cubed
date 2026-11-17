@@ -723,6 +723,26 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
         return lastOpened;
     }
 
+    /**
+     * Its links after a mover moved it (CONT-156): each slot and vent goes where {@code rebase} says,
+     * or is emptied for null. Stops a cycle.
+     */
+    public void rebase(java.util.function.UnaryOperator<BlockPos> rebase) {
+        for (int i = 0; i < slots.length; i++) {
+            slots[i] = slots[i] == null ? null : rebase.apply(slots[i]);
+        }
+        List<BlockPos> was = new ArrayList<>(vents);
+        vents.clear();
+        for (BlockPos v : was) {
+            BlockPos to = rebase.apply(v);
+            if (to != null) {
+                vents.add(to);
+            }
+        }
+        cycling = -1;
+        setChanged();
+    }
+
     /** The linked vents. */
     public Set<BlockPos> linkedVents() {
         return Set.copyOf(vents);
