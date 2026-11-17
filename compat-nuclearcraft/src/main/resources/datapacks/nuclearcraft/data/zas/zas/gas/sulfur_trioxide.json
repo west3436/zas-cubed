@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.sulfur_trioxide",
+  "formula": "SO₃",
+  "molar_mass": 0.080057,
+  "molar_heat_capacity": 42.35,
+  "sources": {
+    "molar_mass": "S 32.06 + 3 × O 15.999 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 50.661 − 8.314 J/(mol·K). C_p of SO3(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table O-058, https://janaf.nist.gov/tables/O-058.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

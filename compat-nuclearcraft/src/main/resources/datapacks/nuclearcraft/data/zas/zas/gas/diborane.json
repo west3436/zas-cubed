@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.diborane",
+  "formula": "B₂H₆",
+  "molar_mass": 0.027668,
+  "molar_heat_capacity": 49.79,
+  "sources": {
+    "molar_mass": "2 × B 10.81 + 6 × H 1.0080 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 58.100 − 8.314 J/(mol·K). C_p of B2H6(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table B-091, https://janaf.nist.gov/tables/B-091.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

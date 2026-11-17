@@ -1,0 +1,158 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The NuclearCraft: Neoteric adapter (COMPAT-150 to COMPAT-155): NuclearCraft's gases as ZAS³
+// gases, a fission reactor's heat in the room around it, and its HEV suit as a suit. Its classes
+// and data ship inside the zas jar (zas/build.gradle's `bundled`), and zas starts it only when
+// NuclearCraft is installed in a version its row supports (COMPAT-001, COMPAT-002). Its code needs
+// none of the content, so it compiles against the public API and NuclearCraft alone. NuclearCraft
+// and Nuclear Radiation, which NuclearCraft requires, are never in a jar of ours: they are compiled
+// against, and added to this project's own runs.
+
+// What a run of the GameTests loads: the newest NuclearCraft by default, the oldest supported one
+// with -Pnuclearcraft.version=floor, or the last one before it with
+// -Pnuclearcraft.version=unsupported. Each goes with the Nuclear Radiation that was newest when it
+// came out. The versions are in gradle.properties.
+def table = [
+    newest     : [nc: nuclearcraft_version, nr: nuclear_radiation_version, supported: true],
+    floor      : [nc: nuclearcraft_floor_version, nr: nuclear_radiation_floor_version, supported: true],
+    unsupported: [nc: nuclearcraft_unsupported_version, nr: nuclear_radiation_unsupported_version, supported: false],
+]
+def runName = providers.gradleProperty('nuclearcraft.version').getOrElse('newest')
+def chosen = table[runName]
+if (chosen == null) {
+    throw new GradleException("-Pnuclearcraft.version is one of ${table.keySet().join(', ')}, not '${runName}'")
+}
+// The tests of a NuclearCraft the adapter supports, or the one that checks it stays off. The tests
+// that build with the content mod's pipes and items are in a namespace of their own, which
+// -Pcontent=off leaves out (CONT-155).
+def namespaces = !chosen.supported ? ['zas_nuclearcraft_off']
+        : contentOff ? ['zas_nuclearcraft'] : ['zas_nuclearcraft', 'zas_nuclearcraft_content']
+
+// NuclearCraft and Nuclear Radiation are published on Modrinth only.
+def modrinth = { slug, version -> "maven.modrinth:${slug}:${version}" }
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with NuclearCraft loaded (COMPAT-004). They stay out of
+    // every jar but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_nuclearcraft', 'zas_nuclearcraft_content', 'zas_nuclearcraft_off'].each { ns ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${ns}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+dependencies {
+    implementation project(':zas-api')
+    // Compile-only, so no jar and no run but this project's own ever holds it. The oldest build the
+    // adapter supports, so that it uses nothing newer. NuclearCraft publishes no API jar; the adapter
+    // reads the fission controller's public fields only, which AdapterReferencesTest checks.
+    compileOnly(modrinth('nuclearcraft-neoteric', nuclearcraft_floor_version)) { transitive = false }
+
+    // GameTests (only) ask the framework and the content what they did, and Nuclear Radiation what
+    // armour keeps its gas out.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+    gametestCompileOnly project(':zas-atmos')
+    gametestCompileOnly(modrinth('nuclear-radiation', nuclear_radiation_floor_version)) { transitive = false }
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+neoForge {
+    // Unit tests of the adapter's arithmetic and data. Minecraft's classes are on the test
+    // classpath, but the game is never bootstrapped and NuclearCraft isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs NuclearCraft, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespaces.join(',')
+            // The NuclearCraft the run asked for, which the tests check is the one that loaded.
+            systemProperty 'zas.nuclearcraft.version', chosen.nc
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly(modrinth('nuclearcraft-neoteric', chosen.nc)) { transitive = false }
+    gametestRunRuntimeOnly(modrinth('nuclear-radiation', chosen.nr)) { transitive = false }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // The shipped data packs, which tests read as files: the adapter's and the shared gases in zas's.
+    systemProperty 'zas.nuclearcraft.resources', file('src/main/resources').absolutePath
+    def zasResources = project(':zas').file('src/main/resources')
+    inputs.dir(zasResources).withPropertyName('zasResources')
+    systemProperty 'zas.resources', zasResources.absolutePath
+    // And the content's, which holds what Nuclear Radiation reads of ZAS³'s masks (COMPAT-155).
+    def atmosResources = project(':zas-atmos').file('src/main/resources')
+    inputs.dir(atmosResources).withPropertyName('atmosResources')
+    systemProperty 'zas.atmos.resources', atmosResources.absolutePath
+    // AdapterReferencesTest scans the compiled adapter.
+    def classes = sourceSets.main.output.classesDirs
+    inputs.files(classes).withPropertyName('adapterClasses')
+    systemProperty 'zas.nuclearcraft.classes', classes.files.join(File.pathSeparator)
+    // The oldest NuclearCraft the tests run with is the one the adapter's row starts at.
+    systemProperty 'zas.nuclearcraft.floorVersion', nuclearcraft_floor_version
+    systemProperty 'zas.nuclearcraft.unsupportedVersion', nuclearcraft_unsupported_version
+    testLogging.exceptionFormat = 'full'
+}

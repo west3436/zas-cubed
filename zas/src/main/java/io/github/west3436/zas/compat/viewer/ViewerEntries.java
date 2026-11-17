@@ -41,18 +41,50 @@ public final class ViewerEntries {
     public static final int GREY = 0xB0B0B0;
 
     /**
-     * The built-in gases' colours, as the content mod's windows draw them. A gas's definition has no
-     * colour unless the gas is visible in the world, so these are repeated here.
+     * The built-in gases' colours, and those of the gases the Mekanism and NuclearCraft adapters
+     * add, as the content mod's windows draw them. A gas's definition has no colour unless the gas
+     * is visible in the world, so these are repeated here.
      */
-    private static final Map<String, Integer> COLOURS = Map.of(
-            "zas:oxygen", 0x2A79C8,
-            "zas:nitrogen", 0xD92626,
-            "zas:carbon_dioxide", 0x7A7A7A,
-            "zas:nitrous_oxide", 0xE7A0A0,
-            "zas:carbon_monoxide", 0x8A4FD0,
-            "zas:hydrogen", 0xF26C0D,
-            "zas:methane", 0xA96A3C,
-            "zas:water_vapor", 0xE8E8E8);
+    private static final Map<String, Integer> COLOURS = Map.ofEntries(
+            Map.entry("zas:oxygen", 0x2A79C8),
+            Map.entry("zas:nitrogen", 0xD92626),
+            Map.entry("zas:carbon_dioxide", 0x7A7A7A),
+            Map.entry("zas:nitrous_oxide", 0xE7A0A0),
+            Map.entry("zas:carbon_monoxide", 0x8A4FD0),
+            Map.entry("zas:hydrogen", 0xF26C0D),
+            Map.entry("zas:methane", 0xA96A3C),
+            Map.entry("zas:water_vapor", 0xE8E8E8),
+            // MEK-010 and COMPAT-151: Mekanism's and NuclearCraft's tints.
+            Map.entry("zas:chlorine", 0xCFE800),
+            Map.entry("zas:hydrogen_chloride", 0xA8F1E9),
+            Map.entry("zas:sulfur_dioxide", 0xA99D90),
+            Map.entry("zas:ethene", 0xEACCF9),
+            Map.entry("zas:deuterium", 0xFF3232),
+            Map.entry("zas:tritium", 0x64FF70),
+            Map.entry("zas:argon", 0xFF75DD),
+            Map.entry("zas:neon", 0xFF9F7A),
+            Map.entry("zas:helium", 0xC57B81),
+            Map.entry("zas:helium_3", 0xCBBB67),
+            Map.entry("zas:nitric_oxide", 0xC9EEFF),
+            Map.entry("zas:nitrogen_dioxide", 0x782A10),
+            Map.entry("zas:fluorine", 0xD3C75D),
+            Map.entry("zas:ammonia", 0x7AC3A0),
+            Map.entry("zas:fluoromethane", 0x424C05),
+            Map.entry("zas:oxygen_difluoride", 0xEA1B01),
+            Map.entry("zas:diborane", 0x5DBBD6),
+            Map.entry("zas:sulfur_trioxide", 0xD3AE5D),
+            Map.entry("zas:radon", 0xFFFFFF));
+
+    /**
+     * The colour the viewers give a gas with no visible colour of its own, by its id: the windows'
+     * colour, or grey.
+     *
+     * @param gas the gas's id
+     * @return the colour, RGB
+     */
+    public static int colour(String gas) {
+        return COLOURS.getOrDefault(gas, GREY);
+    }
 
     private static final Map<String, Icon> TAG_ICONS =
             Map.of("zas:oxidizer", Icon.OXIDIZER, "zas:flammable", Icon.FLAME, "zas:toxic", Icon.TOXIC);

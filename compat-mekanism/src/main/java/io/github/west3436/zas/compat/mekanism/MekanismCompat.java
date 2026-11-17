@@ -35,11 +35,19 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 public final class MekanismCompat {
     /**
      * The adapter's built-in data pack, a folder in the jar: the chemical map's defaults, the gas
-     * definitions of the chemicals that ZAS³ has no gas for with their hazard profiles, and the
+     * definition of hydrogen chloride, which only Mekanism has, with its hazard profile, and the
      * breathing gear's data (the MekaSuit's protection and how Mekanism treats ZAS³'s damage
      * types). It is offered only by {@link #init}, so none of it loads without Mekanism.
      */
     public static final String DATA_PACK = "datapacks/mekanism";
+
+    /**
+     * The gases Mekanism shares with other mods, in a pack of zas's that the NuclearCraft adapter
+     * offers too: chlorine, sulfur dioxide, ethene, deuterium and tritium, their hazard profiles,
+     * and the fluid tags they map from. Offered twice, it is still one pack, so each gas is defined
+     * once. It is offered only by {@link #init} and that other adapter.
+     */
+    public static final String SHARED_GASES = "datapacks/shared_gases";
 
     private static volatile boolean active;
 
@@ -58,7 +66,11 @@ public final class MekanismCompat {
         }
         MekanismSettings.register(container);
         ResourceLocation pack = ResourceLocation.fromNamespaceAndPath(container.getModId(), DATA_PACK);
-        modBus.addListener((AddPackFindersEvent event) -> addDataPack(event, pack));
+        ResourceLocation shared = ResourceLocation.fromNamespaceAndPath(container.getModId(), SHARED_GASES);
+        modBus.addListener((AddPackFindersEvent event) -> {
+            addDataPack(event, pack, "pack.zas.mekanism");
+            addDataPack(event, shared, "pack.zas.shared_gases");
+        });
         NeoForge.EVENT_BUS.addListener((AddReloadListenerEvent event) -> event.addListener(new ChemicalMapLoader()));
         // The gases a server defines are fixed while it runs, and may differ in the next one.
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> ChemicalGases.forget());
@@ -109,15 +121,15 @@ public final class MekanismCompat {
     }
 
     /**
-     * The pack is always on and starts at the bottom, so any other data pack overrides it. It is a
+     * A pack is always on and starts at the bottom, so any other data pack overrides it. It is a
      * built-in pack rather than the mod's own data because the mod's data loads whether or not
      * Mekanism is installed.
      */
-    private static void addDataPack(AddPackFindersEvent event, ResourceLocation pack) {
+    private static void addDataPack(AddPackFindersEvent event, ResourceLocation pack, String title) {
         event.addPackFinders(
                 pack,
                 PackType.SERVER_DATA,
-                Component.translatable("pack.zas.mekanism"),
+                Component.translatable(title),
                 PackSource.BUILT_IN,
                 true,
                 Pack.Position.BOTTOM);

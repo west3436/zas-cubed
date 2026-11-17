@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.helium",
+  "formula": "He",
+  "molar_mass": 0.0040026,
+  "molar_heat_capacity": 12.47,
+  "sources": {
+    "molar_mass": "He 4.0026 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 20.786 − 8.314 J/(mol·K). C_p of He(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table He-001, https://janaf.nist.gov/tables/He-001.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

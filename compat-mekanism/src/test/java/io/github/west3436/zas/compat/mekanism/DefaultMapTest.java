@@ -30,6 +30,8 @@ import org.junit.jupiter.api.Test;
 class DefaultMapTest {
     private static final Path PACK = Path.of(System.getProperty("zas.mekanism.resources"), "datapacks", "mekanism");
     private static final Path ZAS_RESOURCES = Path.of(System.getProperty("zas.resources"));
+    /** The gases Mekanism shares with other mods, in a pack of zas's the adapter offers too. */
+    private static final Path SHARED = ZAS_RESOURCES.resolve("datapacks").resolve("shared_gases");
 
     /** ZAS³'s gases that Mekanism has no chemical for, which the adapter registers as chemicals (MEK-011). */
     private static final Set<String> REGISTERED =
@@ -64,8 +66,12 @@ class DefaultMapTest {
 
     /** The pack's files in a folder of a format, by the id their path gives them. */
     private static Map<ResourceLocation, JsonElement> files(String directory) throws IOException {
+        return files(PACK, directory);
+    }
+
+    private static Map<ResourceLocation, JsonElement> files(Path pack, String directory) throws IOException {
         Map<ResourceLocation, JsonElement> out = new TreeMap<>();
-        Path data = PACK.resolve("data");
+        Path data = pack.resolve("data");
         try (Stream<Path> namespaces = Files.list(data)) {
             for (Path namespace : (Iterable<Path>) namespaces::iterator) {
                 Path folder = namespace.resolve(directory);
@@ -268,12 +274,18 @@ class DefaultMapTest {
     }
 
     /**
-     * Every gas the defaults name is one of ZAS³'s own or is defined by the adapter's pack, with a
-     * name players can read; the pack defines no gas the map doesn't use.
+     * Every gas the defaults name is one of ZAS³'s own or is defined by the adapter's pack or the
+     * shared gases' pack, once, with a name players can read; neither pack defines a gas the map
+     * doesn't use.
      */
     @Test
     void mek_010_every_mapped_gas_is_defined_and_named() throws IOException {
-        Map<ResourceLocation, JsonElement> definitions = files("zas/gas");
+        Map<ResourceLocation, JsonElement> definitions = new TreeMap<>(files("zas/gas"));
+        Map<ResourceLocation, JsonElement> shared = files(SHARED, "zas/gas");
+        for (ResourceLocation gas : shared.keySet()) {
+            assertFalse(definitions.containsKey(gas), gas + " is defined in both packs");
+        }
+        definitions.putAll(shared);
         Set<String> named = new TreeSet<>();
         for (ChemicalMapping mapping : map.mappings()) {
             mapping.gases().keySet().forEach(gas -> named.add(gas.toString()));
@@ -304,17 +316,20 @@ class DefaultMapTest {
             assertTrue(sources.has("molar_mass") && sources.has("molar_heat_capacity"), gas + " cites no sources");
         });
         assertTrue(lang.has("pack.zas.mekanism") && lang.has("pack.zas.mekanism.description"));
+        assertTrue(lang.has("pack.zas.shared_gases") && lang.has("pack.zas.shared_gases.description"));
     }
 
     /** The toxic chemicals' gases join ZAS³'s toxic gases, so masks filter them and scrubbers remove them. */
     @Test
     void mek_010_chlorine_hydrogen_chloride_and_sulfur_dioxide_are_toxic() throws IOException {
-        JsonObject tag = JsonParser.parseString(
-                        Files.readString(PACK.resolve("data/zas/tags/zas/gas/toxic.json"), StandardCharsets.UTF_8))
-                .getAsJsonObject();
-        assertFalse(tag.has("replace"), "the tag must add to ZAS³'s, not replace it");
         Set<String> values = new TreeSet<>();
-        tag.getAsJsonArray("values").forEach(v -> values.add(v.getAsString()));
+        for (Path pack : List.of(PACK, SHARED)) {
+            JsonObject tag = JsonParser.parseString(
+                            Files.readString(pack.resolve("data/zas/tags/zas/gas/toxic.json"), StandardCharsets.UTF_8))
+                    .getAsJsonObject();
+            assertFalse(tag.has("replace"), "the tag must add to ZAS³'s, not replace it");
+            tag.getAsJsonArray("values").forEach(v -> values.add(v.getAsString()));
+        }
         assertEquals(Set.of("zas:chlorine", "zas:hydrogen_chloride", "zas:sulfur_dioxide"), values);
     }
 }
