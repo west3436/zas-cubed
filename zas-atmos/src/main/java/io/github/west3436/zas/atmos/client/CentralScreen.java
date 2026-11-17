@@ -229,7 +229,7 @@ public class CentralScreen extends TguiScreen<CentralMenu> {
         boolean contact = r.contact();
         int colour = contact ? Ui.WHITE : Ui.DIM;
         BlockPos p = r.pos();
-        Component position = Component.literal(p.getX() + ", " + p.getY() + ", " + p.getZ());
+        Component position = DeviceParts.position(p);
         if (r.label().isEmpty()) {
             ui.line(position, c.position, textY, Ui.ROW, contact ? Ui.LABEL : Ui.DIM, Face.BODY);
         } else {

@@ -181,7 +181,7 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
             ui.button(right - width, y, width, Ui.BUTTON_HEIGHT, back, Tone.DEFAULT, () -> press(ControllerMenu.BACK));
             right -= width + Ui.PAD;
         }
-        Component position = Component.literal(central.getX() + ", " + central.getY() + ", " + central.getZ());
+        Component position = DeviceParts.position(central);
         if (label.isEmpty()) {
             ui.line(position, valueX, y, Ui.ROW, Ui.WHITE, Face.BODY);
         } else {
@@ -537,13 +537,7 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
                     Component.empty().append(label).append(" · ").append(kind));
         }
         BlockPos pos = p.pos();
-        ui.line(
-                Component.literal(pos.getX() + ", " + pos.getY() + ", " + pos.getZ()),
-                positionX,
-                y,
-                Ui.ROW,
-                Ui.LABEL,
-                Face.BODY);
+        ui.line(DeviceParts.position(pos), positionX, y, Ui.ROW, Ui.LABEL, Face.BODY);
         String from = p.inZone() && p.linked() ? "zone_and_link" : p.inZone() ? "zone" : "link";
         ui.line(text("from." + from), fromX, y, Ui.ROW, Ui.WHITE, Face.BODY);
         if (p.powered()) {

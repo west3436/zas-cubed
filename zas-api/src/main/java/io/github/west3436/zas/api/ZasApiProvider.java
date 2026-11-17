@@ -674,4 +674,22 @@ public interface ZasApiProvider {
     default boolean isRelocating(ServerLevel level, BlockPos pos) {
         return false;
     }
+
+    /**
+     * Where the world shows a point of a level (API-068).
+     *
+     * <p>The default is the fallback's answer: the point itself. It is there for the same reason as
+     * {@link #pin}'s.
+     *
+     * <p>Thread: the level's own; for a server-side level the caller has checked.
+     *
+     * @param level the level
+     * @param point the point, where blocks are kept
+     * @return where the world shows it
+     * @since 1.2.0
+     */
+    @LevelThread
+    default Vec3 shownAt(Level level, Vec3 point) {
+        return point;
+    }
 }

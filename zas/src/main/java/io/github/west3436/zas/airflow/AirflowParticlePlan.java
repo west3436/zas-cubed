@@ -1,5 +1,6 @@
 package io.github.west3436.zas.airflow;
 
+import io.github.west3436.zas.provider.Frame;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -22,6 +23,10 @@ import java.util.random.RandomGenerator;
  *
  * <p>A particle starts a little on the high side of the opening's face, so it is seen passing
  * through, and spreads out as it goes towards the low side.
+ *
+ * <p>For blocks another mod shows somewhere else, such as a Sable sub-level's, the particle starts
+ * where their {@link Frame} shows that place, goes the way the frame turns the flow, and moves on
+ * with the frame (COMPAT-101).
  */
 public final class AirflowParticlePlan {
     /** The most particles one edge starts in a game tick. */
@@ -101,18 +106,44 @@ public final class AirflowParticlePlan {
             double density,
             RandomGenerator random,
             Sink sink) {
+        return plan(flows, px, py, pz, density, random, Frame.Lookup.NONE, sink);
+    }
+
+    /**
+     * {@link #plan(List, double, double, double, double, RandomGenerator, Sink)} with the frames that
+     * show parts of the level elsewhere.
+     *
+     * @param px the player's centre, as the world shows it
+     * @param frames the frame that shows each block column
+     */
+    public static int plan(
+            List<VisibleFlow> flows,
+            double px,
+            double py,
+            double pz,
+            double density,
+            RandomGenerator random,
+            Frame.Lookup frames,
+            Sink sink) {
         if (density <= 0 || flows.isEmpty()) {
             return 0;
         }
-        record InRange(VisibleFlow flow, List<VisibleOpening> openings, double nearest) {}
+        record InRange(VisibleFlow flow, List<Placed> openings, double nearest) {}
         List<InRange> near = new ArrayList<>(flows.size());
         for (VisibleFlow flow : flows) {
-            List<VisibleOpening> openings = new ArrayList<>(flow.openings().size());
+            List<Placed> openings = new ArrayList<>(flow.openings().size());
             double nearest = Double.MAX_VALUE;
             for (VisibleOpening o : flow.openings()) {
-                double d = o.distance(px, py, pz);
+                Frame frame = frames.at(o.x(), o.z());
+                double d;
+                if (frame == null) {
+                    d = o.distance(px, py, pz);
+                } else {
+                    double[] m = frame.toShown(o.mx(), o.my(), o.mz());
+                    d = Math.sqrt((px - m[0]) * (px - m[0]) + (py - m[1]) * (py - m[1]) + (pz - m[2]) * (pz - m[2]));
+                }
                 if (d <= VisibleFlows.RANGE) {
-                    openings.add(o);
+                    openings.add(new Placed(o, frame));
                     nearest = Math.min(nearest, d);
                 }
             }
@@ -143,7 +174,11 @@ public final class AirflowParticlePlan {
         return random.nextDouble() < wanted - floor ? floor + 1 : floor;
     }
 
-    private static void start(VisibleOpening o, double speed, RandomGenerator random, Sink sink) {
+    /** An opening, and the frame that shows it, or null. */
+    private record Placed(VisibleOpening opening, Frame frame) {}
+
+    private static void start(Placed placed, double speed, RandomGenerator random, Sink sink) {
+        VisibleOpening o = placed.opening();
         double along = random.nextDouble() * (START_BEHIND + START_AHEAD) - START_BEHIND;
         double[] at = {o.mx(), o.my(), o.mz()};
         int[] n = {o.nx(), o.ny(), o.nz()};
@@ -157,6 +192,15 @@ public final class AirflowParticlePlan {
             } else {
                 at[axis] += spread(random, START_SPREAD);
                 v[axis] = speed * spread(random, directed ? SIDEWAYS : SIDEWAYS * 2);
+            }
+        }
+        Frame frame = placed.frame();
+        if (frame != null) {
+            double[] moving = frame.shownVelocity(o.mx(), o.my(), o.mz());
+            at = frame.toShown(at[0], at[1], at[2]);
+            v = frame.turnToShown(v[0], v[1], v[2]);
+            for (int axis = 0; axis < 3; axis++) {
+                v[axis] += moving[axis];
             }
         }
         sink.particle(at[0], at[1], at[2], v[0], v[1], v[2]);

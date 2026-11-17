@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.life.LocalAtmospheres;
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync.Kind;
 import io.github.west3436.zas.atmos.filter.FilterBlock;
 import io.github.west3436.zas.atmos.gas.GasStore;
@@ -258,7 +259,7 @@ public record AnalyzerTarget(
                 return air(Component.translatable("gui.zas_atmos.analyzer.here"), level, player.getEyePosition());
             }
             case POINT -> {
-                return air(coordinates(pos), level, point);
+                return air(coordinates(BlockPos.containing(Relocations.shownAt(level, point))), level, point);
             }
             case CANISTER -> {
                 PipeNodeEntity vessel = GasVessels.at(level, pos);

@@ -282,6 +282,11 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     }
 
     @Override
+    public Vec3 shownAt(Level level, Vec3 point) {
+        return Frames.shown(level, point);
+    }
+
+    @Override
     public void markDirty(ServerLevel level, BlockPos pos) {
         if (level.isOutsideBuildHeight(pos)
                 || level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4) == null) {

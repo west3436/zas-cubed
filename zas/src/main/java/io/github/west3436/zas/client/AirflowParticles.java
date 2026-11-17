@@ -2,6 +2,8 @@ package io.github.west3436.zas.client;
 
 import io.github.west3436.zas.airflow.AirflowParticlePlan;
 import io.github.west3436.zas.airflow.HeldFlows;
+import io.github.west3436.zas.provider.Frame;
+import io.github.west3436.zas.provider.Frames;
 import java.util.Random;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -45,14 +47,17 @@ final class AirflowParticles {
             case MINIMAL -> AirflowParticlePlan.MINIMAL;
         };
         Vec3 c = mc.player.getBoundingBox().getCenter();
-        AirflowParticlePlan.plan(HeldFlows.CLIENT.flows(), c.x, c.y, c.z, density, RANDOM, (x, y, z, vx, vy, vz) -> {
-            Particle particle = mc.particleEngine.createParticle(ParticleTypes.WHITE_SMOKE, x, y, z, vx, vy, vz);
-            if (particle != null) {
-                particle.setParticleSpeed(vx, vy, vz);
-                float shade = SHADE_MIN + RANDOM.nextFloat() * (SHADE_MAX - SHADE_MIN);
-                particle.setColor(shade, shade, shade);
-                particle.setLifetime(LIFETIME_MIN + RANDOM.nextInt(LIFETIME_SPREAD));
-            }
-        });
+        Frame.Lookup frames = Frames.lookup(level);
+        AirflowParticlePlan.plan(
+                HeldFlows.CLIENT.flows(), c.x, c.y, c.z, density, RANDOM, frames, (x, y, z, vx, vy, vz) -> {
+                    Particle particle =
+                            mc.particleEngine.createParticle(ParticleTypes.WHITE_SMOKE, x, y, z, vx, vy, vz);
+                    if (particle != null) {
+                        particle.setParticleSpeed(vx, vy, vz);
+                        float shade = SHADE_MIN + RANDOM.nextFloat() * (SHADE_MAX - SHADE_MIN);
+                        particle.setColor(shade, shade, shade);
+                        particle.setLifetime(LIFETIME_MIN + RANDOM.nextInt(LIFETIME_SPREAD));
+                    }
+                });
     }
 }

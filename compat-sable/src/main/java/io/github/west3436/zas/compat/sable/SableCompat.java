@@ -1,6 +1,7 @@
 package io.github.west3436.zas.compat.sable;
 
 import io.github.west3436.zas.compat.sable.mixin.SableMixinPlugin;
+import io.github.west3436.zas.provider.Frames;
 import io.github.west3436.zas.provider.PointResolver;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
@@ -36,6 +37,9 @@ public final class SableCompat {
         }
         // The air on board (COMPAT-101).
         PointResolver.addProjection(Aboard::project);
+        // Where the world shows each plot: airflow's sounds, particles and pushes on board, and the
+        // coordinates players read (COMPAT-101, API-068).
+        Frames.add(new SableFrames());
         // The plots' air through unloads and removals (COMPAT-100).
         NeoForge.EVENT_BUS.addListener((LevelEvent.Load e) -> {
             if (e.getLevel() instanceof ServerLevel level) {

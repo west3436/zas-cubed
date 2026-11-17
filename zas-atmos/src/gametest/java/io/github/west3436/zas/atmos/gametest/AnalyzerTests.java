@@ -36,6 +36,8 @@ import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.command.ZasCommands;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
+import io.github.west3436.zas.provider.Frame;
+import io.github.west3436.zas.provider.Frames;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -62,6 +64,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -314,6 +317,83 @@ public final class AnalyzerTests {
         h.assertTrue(atOut.contains("ambient, zone -"), "/zas at point:\n" + atOut);
         says(a, atOut, out.gas(), false);
         p.closeContainer();
+        a.clear(-1, -1, 5, 5);
+        h.succeed();
+    }
+
+    /**
+     * On blocks another mod shows somewhere else, as Sable shows a sub-level's plot at the ship, it
+     * names the point where the world shows it (API-068), and reads the air where the blocks are.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_034_on_blocks_shown_elsewhere_it_names_where_they_show(GameTestHelper h) {
+        Area a = new Area(h, 3471);
+        a.box(0, 0, 4, 4);
+        a.fill(2, 2, 2, Map.of(O2, 5.0, N2, 19.0));
+        ZoneInfo zone = a.zone(2, 2, 2);
+        ListeningPlayer l = player(a, 2, 1, 2);
+        ServerPlayer p = l.player();
+        BlockPos o = a.abs(0, 0, 0);
+        // The area shown 40 blocks east and 3 up, turned a quarter so its east is the world's south.
+        Frame turned = new Frame() {
+            @Override
+            public double[] toShown(double x, double y, double z) {
+                return new double[] {o.getX() + 40 - (z - o.getZ()), y + 3, o.getZ() + (x - o.getX())};
+            }
+
+            @Override
+            public double[] toLevel(double x, double y, double z) {
+                return new double[] {o.getX() + (z - o.getZ()), y - 3, o.getZ() - (x - o.getX() - 40)};
+            }
+
+            @Override
+            public double[] turnToShown(double x, double y, double z) {
+                return new double[] {-z, y, x};
+            }
+
+            @Override
+            public double[] turnToLevel(double x, double y, double z) {
+                return new double[] {z, y, -x};
+            }
+
+            @Override
+            public double[] shownVelocity(double x, double y, double z) {
+                return new double[3];
+            }
+        };
+        Frames.Source source = new Frames.Source() {
+            @Override
+            public Frame at(Level level, int blockX, int blockZ) {
+                boolean in = level == a.level
+                        && blockX >= o.getX() - 1
+                        && blockX <= o.getX() + 5
+                        && blockZ >= o.getZ() - 1
+                        && blockZ <= o.getZ() + 5;
+                return in ? turned : null;
+            }
+
+            @Override
+            public List<Frame> near(Level level, AABB shown) {
+                return List.of();
+            }
+        };
+        Frames.add(source);
+        try {
+            BlockPos wall = a.abs(4, 2, 2);
+            Vec3 inside = faceCentre(wall, Direction.WEST);
+            h.assertTrue(useOn(p, wall, Direction.WEST, inside).consumesAction(), "using it did nothing");
+            AnalyzerSync in = last(a, l);
+            double[] shown = turned.toShown(inside.x - 0.01, inside.y, inside.z);
+            BlockPos expected = BlockPos.containing(shown[0], shown[1], shown[2]);
+            h.assertValueEqual(in.kind(), Kind.POINT, "what the inside face reads");
+            h.assertValueEqual(in.target(), Component.literal(coordsComma(expected)), "its name");
+            h.assertFalse(expected.equals(a.abs(3, 2, 2)), "the frame shows the block where it is");
+            h.assertValueEqual(in.state(), AtmosphereState.ZONED, "the inside's state");
+            h.assertValueEqual(in.zone(), zone.id().value(), "the inside's zone");
+            p.closeContainer();
+        } finally {
+            Frames.removeForTest(source);
+        }
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }
