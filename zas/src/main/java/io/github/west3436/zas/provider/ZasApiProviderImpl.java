@@ -22,6 +22,10 @@ import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.relocation.Destination;
+import io.github.west3436.zas.api.relocation.RelocationOutcome;
+import io.github.west3436.zas.api.relocation.RelocationResult;
+import io.github.west3436.zas.api.relocation.RelocationTicket;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
@@ -68,6 +72,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import org.jetbrains.annotations.Nullable;
@@ -236,6 +241,44 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             return CompletableFuture.completedFuture(null);
         }
         return service.unpin(level, owner);
+    }
+
+    @Override
+    public RelocationTicket beginRelocation(ServerLevel level, BoundingBox box, SourceId mover) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            return new RelocationTicket(
+                    level,
+                    box,
+                    mover,
+                    0,
+                    CompletableFuture.completedFuture(RelocationResult.of(RelocationOutcome.ENDED)));
+        }
+        return service.relocator().begin(level, box, mover);
+    }
+
+    @Override
+    public CompletableFuture<RelocationResult> completeRelocation(RelocationTicket ticket, Destination destination) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            return CompletableFuture.completedFuture(RelocationResult.of(RelocationOutcome.ENDED));
+        }
+        return service.relocator().complete(ticket, destination);
+    }
+
+    @Override
+    public CompletableFuture<RelocationResult> cancelRelocation(RelocationTicket ticket) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            return CompletableFuture.completedFuture(RelocationResult.of(RelocationOutcome.ENDED));
+        }
+        return service.relocator().cancel(ticket);
+    }
+
+    @Override
+    public boolean isRelocating(ServerLevel level, BlockPos pos) {
+        AtmosService service = AtmosService.current();
+        return service != null && service.relocator().isMoving(level, pos);
     }
 
     @Override

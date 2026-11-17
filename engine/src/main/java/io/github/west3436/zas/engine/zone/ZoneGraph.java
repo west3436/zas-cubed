@@ -1574,9 +1574,23 @@ public final class ZoneGraph {
         for (Zone z : zones.values()) {
             if (z.paused != z.reportedPaused) {
                 z.reportedPaused = z.paused;
+                if (z.quietResume && !z.paused) {
+                    z.quietResume = false;
+                    continue;
+                }
                 event(z.paused ? ZoneEvent.Kind.PAUSED : ZoneEvent.Kind.RESUMED, z, 0);
             }
         }
+    }
+
+    /**
+     * Sets whether a zone reads as having reported being paused, without an event (API-065): a zone
+     * suspended for a move pauses quietly, since the move's own events say what happens to it, and
+     * a cancelled move lets it resume as quietly.
+     */
+    public void setReportedPaused(Zone zone, boolean paused) {
+        requireLive(zone);
+        zone.reportedPaused = paused;
     }
 
     // ---- Conservation (CORE-036, CORE-073) ----------------------------------
@@ -1866,6 +1880,154 @@ public final class ZoneGraph {
             zone.reportedPaused = true;
             event(ZoneEvent.Kind.PAUSED, zone, 0);
         }
+        return takeOut(zone);
+    }
+
+    /**
+     * Takes a zone out of the graph because a mover is carrying it elsewhere (API-065, GEO-046): as
+     * {@link #evict}, its gas leaves, recorded as {@link LedgerCategory#STORAGE}, and its cells leave
+     * the graph with no ambient connection, but with no event, since its arrival has one (API-066).
+     * The cells it left are unknown to the graph until they are refreshed.
+     *
+     * @return the gas the zone held
+     */
+    public GasMixture relocateOut(Zone zone) {
+        requireLive(zone);
+        return takeOut(zone);
+    }
+
+    /**
+     * Rebuilds a zone a mover carried here (API-065, GEO-046), holding its gas and pins, and records
+     * {@link ZoneEvent.Kind#RELOCATED}. Its gas is merged in whole, recorded as {@link
+     * LedgerCategory#STORAGE} as a share loaded from storage is ({@link #loadShare}), so its moles and
+     * temperature are what it left with, whatever its volume here.
+     *
+     * <p>Cells that aren't cells here are left out, and so are cells of a paused zone, which keeps
+     * still (GEO-035). A cell another zone holds is taken from it, and that zone keeps the gas, as
+     * when a block fills one of its cells (CORE-022): its pressure rises, or with {@link
+     * ZoneSettings#deleteDisplacedGas()} the displaced share is deleted (CORE-029). A zone that loses
+     * every cell to the arrival, such as a pocket of a hangar's air the hull closed off, is gone, and
+     * its gas goes to the ambient, recorded as {@link LedgerCategory#AMBIENT}, as a zone's does when
+     * its last cell fills with no zone beside it (CORE-075).
+     *
+     * <p>The cells need not be connected. The zone reads as paused and breach-reported as it was
+     * where it left, so its first resume and an opening it already had are no news.
+     *
+     * @param keepId the id to give it if that id was issued here and isn't live; otherwise, or for 0,
+     *     a new id
+     * @param fromId its id where it left, for the event
+     * @param cellIds its cells here
+     * @param gas its gas; not changed
+     * @param pins the owners of its pins (D-64)
+     * @param breached whether it had an ambient edge where it left
+     * @return the zone, or null if none of the cells could join it, in which case nothing changed
+     */
+    public Zone arrive(long keepId, long fromId, long[] cellIds, GasMixture gas, List<String> pins, boolean breached) {
+        Objects.requireNonNull(gas, "gas");
+        long[] sorted = cellIds.clone();
+        Arrays.sort(sorted);
+        long[] usable = new long[sorted.length];
+        int n = 0;
+        for (int i = 0; i < sorted.length; i++) {
+            long c = sorted[i];
+            if ((i > 0 && c == sorted[i - 1]) || !(topology.volume(c) > 0)) {
+                continue;
+            }
+            Zone holder = zoneOf(c);
+            if (holder != null && holder.paused) {
+                continue;
+            }
+            usable[n++] = c;
+        }
+        if (n == 0) {
+            return null;
+        }
+        displace(usable, n);
+        Zone zone;
+        if (keepId > 0 && keepId < nextZoneId && !zones.containsKey(keepId)) {
+            zone = new Zone(keepId, new GasMixture(registry, config, 1, gas.temperature()));
+            zones.put(keepId, zone);
+        } else {
+            zone = newZone(new GasMixture(registry, config, 1, gas.temperature()));
+        }
+        for (int i = 0; i < n; i++) {
+            Cell c = cells.get(usable[i]);
+            if (c == null) {
+                c = new Cell(usable[i]);
+                cells.put(usable[i], c);
+            }
+            unlinkAll(c);
+            c.volume = topology.volume(usable[i]);
+            addCell(zone, c);
+            linkFromTopology(c);
+        }
+        if (zone.mixture().merge(gas)) {
+            ledger.record(LedgerCategory.STORAGE, gas, 1);
+        }
+        zone.pins = Pins.of(pins);
+        zone.changed = true;
+        zone.breachKnown = true;
+        zone.reportedBreached = breached;
+        zone.reportedPaused = true;
+        zone.quietResume = true;
+        event(ZoneEvent.Kind.RELOCATED, zone, fromId);
+        return zone;
+    }
+
+    /**
+     * Takes the zoned cells among the first {@code n} of {@code sorted} out of their zones, for an
+     * arrival: a zone that loses all of its cells is gone, its gas to the ambient; any other keeps
+     * its gas, less what {@link #deleteDisplaced} deletes, and is checked for a split.
+     */
+    private void displace(long[] sorted, int n) {
+        TreeMap<Long, List<Cell>> byZone = new TreeMap<>();
+        for (int i = 0; i < n; i++) {
+            Cell c = cells.get(sorted[i]);
+            if (c != null && c.zone != null) {
+                byZone.computeIfAbsent(c.zone.id(), k -> new ArrayList<>()).add(c);
+            }
+        }
+        for (List<Cell> taken : byZone.values()) {
+            Zone zone = taken.get(0).zone;
+            if (taken.size() == zone.cellCount()) {
+                long cell = zone.cellAt(0).id;
+                GasMixture gas = zone.mixture().removeFraction(1);
+                ledger.record(LedgerCategory.AMBIENT, gas, -1);
+                drainPruned(gas);
+                for (Cell c : taken) {
+                    unlinkAll(c);
+                    removeCell(c);
+                }
+                zoneEvents.add(new ZoneEvent(ZoneEvent.Kind.DISSOLVED, zone.id(), 0, cell, false));
+                destroyZone(zone);
+                continue;
+            }
+            for (Cell c : taken) {
+                if (c.zone != zone) {
+                    zone = c.zone; // a split moved it to a remnant
+                }
+                if (zone.cellCount() == 1) {
+                    GasMixture gas = zone.mixture().removeFraction(1);
+                    ledger.record(LedgerCategory.AMBIENT, gas, -1);
+                    drainPruned(gas);
+                    unlinkAll(c);
+                    removeCell(c);
+                    zoneEvents.add(new ZoneEvent(ZoneEvent.Kind.DISSOLVED, zone.id(), 0, c.id, false));
+                    destroyZone(zone);
+                    continue;
+                }
+                deleteDisplaced(zone, c.volume / zone.volume());
+                collectZoneNeighbours(c);
+                unlinkAll(c);
+                removeCell(c);
+                zone.changed = true;
+                splitCheck(zone);
+            }
+        }
+    }
+
+    /** {@link #evict} and {@link #relocateOut} without the event. */
+    private GasMixture takeOut(Zone zone) {
         GasMixture gas = zone.mixture().removeFraction(1);
         ledger.record(LedgerCategory.STORAGE, gas, -1);
         drainPruned(gas);

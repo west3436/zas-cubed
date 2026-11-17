@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.inline;
 
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.label.Labelled;
@@ -350,7 +351,9 @@ public abstract class InlineDeviceEntity extends AtmosDevice
     /** Removed from the world, it releases each port's share into its cell (CONT-009). */
     @Override
     public void setRemoved() {
-        if (!unloading && level instanceof ServerLevel server) {
+        if (!unloading
+                && level instanceof ServerLevel server
+                && !Relocations.isMoving(server, worldPosition)) { // a mover carries it (CONT-156)
             for (PipePort p : ports) {
                 GasParcel share = p.detach();
                 if (!share.isEmpty()) {
