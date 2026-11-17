@@ -122,6 +122,32 @@ public final class Ambients {
     }
 
     /**
+     * The id of the registered ambient seed whose answer is a dimension's ambient now (SPACE-020),
+     * in the variant that applies. Empty when a test, a datapack definition or a provider gives the
+     * ambient, when a test seed or no seed does, and so when it is the fallback. It goes through the
+     * sources in {@link #ambient(ResourceKey, AtmospherePreset)}'s order.
+     *
+     * <p>For an adapter whose target's data a seed reads, so it can tell an ambient that came from
+     * that data: the Create Aeronautics adapter leaves Sable's air pressure as it is where Sable's
+     * {@code dimension_physics} seeded the ambient (COMPAT-082). Any thread.
+     */
+    public static Optional<ResourceLocation> seedOf(ResourceKey<Level> dimension) {
+        ResourceLocation id = dimension.location();
+        if (testOverrides.containsKey(id)) {
+            return Optional.empty();
+        }
+        DimensionAmbient definition = definitionOf(id);
+        if (definition != null
+                && definition.ambient(PresetOptions.AMBIENT_VARIANT.get()).isPresent()) {
+            return Optional.empty();
+        }
+        if (ProvidedAmbients.answer(id) != null || seeded.containsKey(id)) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(SeededAmbients.seedOf(id));
+    }
+
+    /**
      * Takes the answer of a level's provider for this atmos tick (ENV-015), and of the ambient seeds
      * (SPACE-020), which every lookup then reads until the next. The atmos scheduler calls this as it
      * closes a batch, whether or not the dimension simulates, since an excluded one keeps its ambient

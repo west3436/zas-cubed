@@ -24,6 +24,13 @@ config = "zas.mixins.json"
 config = "zas.mekanism.mixins.json"
 requiredMods = ["mekanism"]
 
+# The Create Aeronautics adapter's hook into Sable's air pressure (COMPAT-080): only with Aeronautics
+# and Sable installed, and its own plugin then applies it only beside an Aeronautics the adapter
+# supports.
+[[mixins]]
+config = "zas.aeronautics.mixins.json"
+requiredMods = ["aeronautics", "sable"]
+
 [[dependencies.zas]]
 modId = "neoforge"
 type = "required"
