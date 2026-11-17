@@ -1,0 +1,164 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Sable adapter (COMPAT-100 to COMPAT-102): rooms on Sable's sub-levels keep their air as the
+// structure moves, is assembled or taken apart, unloads and reloads; what stands on board breathes
+// it; and an opening on board lets in the air of the dimension. Its classes ship inside the zas jar
+// (zas/build.gradle's `bundled`), and zas starts it only when Sable is installed in a version its
+// row supports (COMPAT-001, COMPAT-002). None of it needs the content. Sable is never in a jar of
+// ours: it is compiled against, and added to this project's own runs.
+
+// What a run of the GameTests loads: the newest Sable by default, the oldest supported one with
+// -Psable.version=floor, or the last one before it with -Psable.version=unsupported. The versions
+// are in gradle.properties.
+def table = [
+    newest     : [version: sable_version, supported: true],
+    floor      : [version: sable_floor_version, supported: true],
+    unsupported: [version: sable_unsupported_version, supported: false],
+]
+def runName = providers.gradleProperty('sable.version').getOrElse('newest')
+def chosen = table[runName]
+if (chosen == null) {
+    throw new GradleException("-Psable.version is one of ${table.keySet().join(', ')}, not '${runName}'")
+}
+// The tests of a Sable the adapter supports, or the one that checks it stays off.
+def namespace = chosen.supported ? 'zas_sable' : 'zas_sable_off'
+
+repositories {
+    // Sable comes from Modrinth's maven, as a player downloads it, with what it nests.
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with Sable loaded (COMPAT-004). They stay out of every jar
+    // but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+    // The oldest supported Sable, whose nested Sable Companion (its small public library of poses
+    // and bounds, MIT) the adapter also compiles against.
+    sableFloor {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// Sable Companion, taken out of the Sable jar it ships in, for compiling only.
+def sableCompanion = tasks.register('extractSableCompanion', Sync) {
+    from({ zipTree(configurations.sableFloor.singleFile) }) {
+        include 'META-INF/jarjar/sable-companion-*.jar'
+        eachFile { path = name }
+        includeEmptyDirs = false
+    }
+    into layout.buildDirectory.dir('sableCompanion')
+}
+def sableCompanionJar = files({ fileTree(sableCompanion.get().destinationDir).include('*.jar').files })
+        .builtBy(sableCompanion)
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_sable', 'zas_sable_off'].each { ns ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${ns}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+dependencies {
+    implementation project(':zas-api')
+    // ZAS³'s internals: saving and dropping the chunks Sable keeps itself, and where a point stands
+    // in the level, which the public API doesn't have. zas ships this adapter, so it never compiles
+    // against it: it only runs with it.
+    compileOnly project(':zas')
+    compileOnly project(':engine')
+    // Compile-only, so no jar and no run but this project's own ever holds it. The oldest supported
+    // Sable, so the adapter uses nothing newer.
+    sableFloor "maven.modrinth:sable:${sable_floor_version}"
+    compileOnly("maven.modrinth:sable:${sable_floor_version}") { transitive = false }
+    compileOnly sableCompanionJar
+
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+neoForge {
+    // Unit tests of the adapter's pure logic. Minecraft's classes are on the test classpath, but the
+    // game is never bootstrapped and Sable isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Sable, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespace
+            // The Sable the run asked for, which the tests check is the one that loaded.
+            systemProperty 'zas.sable.version', chosen.version
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly("maven.modrinth:sable:${chosen.version}") { transitive = false }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones and sub-levels would otherwise come
+// back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // AdapterReferencesTest scans the compiled adapter.
+    def classes = sourceSets.main.output.classesDirs
+    inputs.files(classes).withPropertyName('adapterClasses')
+    systemProperty 'zas.sable.classes', classes.files.join(File.pathSeparator)
+    // COMPAT-002: the builds the runs use sit where they should against the adapter's range.
+    systemProperty 'zas.sable.newestVersion', sable_version
+    systemProperty 'zas.sable.floorVersion', sable_floor_version
+    systemProperty 'zas.sable.unsupportedVersion', sable_unsupported_version
+    testLogging.exceptionFormat = 'full'
+}

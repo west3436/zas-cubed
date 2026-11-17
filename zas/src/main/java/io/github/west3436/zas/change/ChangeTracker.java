@@ -10,6 +10,7 @@ import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.ignition.IgnitionEvents;
+import io.github.west3436.zas.persistence.HostedChunks;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -23,6 +24,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -113,7 +115,7 @@ public final class ChangeTracker {
     /** Registers the chunk and server lifecycle listeners on the game event bus. */
     public static void register(IEventBus gameBus) {
         gameBus.addListener(ChangeTracker::onChunkLoad);
-        gameBus.addListener(ChangeTracker::onChunkUnload);
+        HostedChunks.onUnload(gameBus, EventPriority.NORMAL, ChangeTracker::onChunkUnload);
         gameBus.addListener(ChangeTracker::onLevelUnload);
         gameBus.addListener(ChangeTracker::onServerTick);
         gameBus.addListener(ChangeTracker::onServerStopped);

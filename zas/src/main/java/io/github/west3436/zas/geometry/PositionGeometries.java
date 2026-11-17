@@ -7,6 +7,7 @@ import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryDeriver;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.persistence.HostedChunks;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Map;
@@ -22,6 +23,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -89,7 +91,7 @@ public final class PositionGeometries {
 
     /** Registers the chunk and server lifecycle listeners on the game event bus. */
     public static void register(IEventBus gameBus) {
-        gameBus.addListener(PositionGeometries::onChunkUnload);
+        HostedChunks.onUnload(gameBus, EventPriority.NORMAL, PositionGeometries::onChunkUnload);
         gameBus.addListener(PositionGeometries::onLevelUnload);
         gameBus.addListener(PositionGeometries::onServerStopped);
     }

@@ -81,7 +81,7 @@ public final class AtmosPersistence {
         gameBus.addListener(AtmosPersistence::onDataLoad);
         gameBus.addListener(AtmosPersistence::onDataSave);
         gameBus.addListener(EventPriority.HIGH, AtmosPersistence::onChunkLoad);
-        gameBus.addListener(EventPriority.HIGH, AtmosPersistence::onChunkUnload);
+        HostedChunks.onUnload(gameBus, EventPriority.HIGH, AtmosPersistence::onChunkUnload);
         gameBus.addListener(EventPriority.LOW, AtmosPersistence::onLevelUnload);
         gameBus.addListener(AtmosPersistence::onServerStopped);
     }
@@ -207,12 +207,23 @@ public final class AtmosPersistence {
                 || chunk.getPersistedStatus().getChunkType() != ChunkType.LEVELCHUNK) {
             return;
         }
-        long key = chunk.getPos().toLong();
+        byte[] bytes = bytesToSave(level, chunk.getPos().toLong());
+        if (bytes != null) {
+            event.getData().putByteArray(TAG, bytes);
+        }
+    }
+
+    /**
+     * What a chunk's save writes under {@link #TAG} now, or null for nothing: the record its unload
+     * built, if it has just unloaded; else its saved bytes if no engine has taken them; else, for a
+     * loaded chunk, its record as the dimension's published table has it. {@link HostedChunks} uses
+     * it for chunks another mod saves itself. Server thread.
+     */
+    static byte[] bytesToSave(ServerLevel level, long key) {
         boolean unloading = !isLoaded(level.dimension(), key);
-        byte[] bytes;
         synchronized (AtmosPersistence.class) {
             Map<Long, byte[]> out = OUTGOING.get(level);
-            bytes = out == null ? null : out.remove(key);
+            byte[] bytes = out == null ? null : out.remove(key);
             Map<Long, byte[]> saved = SAVED.get(level);
             byte[] untaken = saved == null ? null : (unloading ? saved.remove(key) : saved.get(key));
             if (bytes == null && untaken != null) {
@@ -221,9 +232,7 @@ public final class AtmosPersistence {
                 Store store = STORES.get(level);
                 bytes = store == null ? null : store.save(key);
             }
-        }
-        if (bytes != null) {
-            event.getData().putByteArray(TAG, bytes);
+            return bytes;
         }
     }
 

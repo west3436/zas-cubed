@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "io.github.west3436.zas.compat.sable.mixin",
+  "plugin": "io.github.west3436.zas.compat.sable.mixin.SableMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MoveBlocksMixin",
+    "PlotSaveMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

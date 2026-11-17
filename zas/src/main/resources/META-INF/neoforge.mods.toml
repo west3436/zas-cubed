@@ -31,6 +31,13 @@ requiredMods = ["mekanism"]
 config = "zas.aeronautics.mixins.json"
 requiredMods = ["aeronautics", "sable"]
 
+# The Sable adapter's hooks (COMPAT-100): saving a sub-level's rooms with its plot, and carrying
+# them when Sable moves blocks. Only with Sable installed, and its own plugin then applies them only
+# to a Sable the adapter supports.
+[[mixins]]
+config = "zas.sable.mixins.json"
+requiredMods = ["sable"]
+
 [[dependencies.zas]]
 modId = "neoforge"
 type = "required"
