@@ -38,6 +38,12 @@ final class SeededAmbients {
         return answer == null ? null : answer.ambient();
     }
 
+    /** The id of the seed whose answer a dimension has, or null if no seed covers it. Any thread. */
+    static ResourceLocation seedOf(ResourceLocation dimension) {
+        Answer answer = ANSWERS.get(dimension);
+        return answer == null ? null : answer.seed();
+    }
+
     /**
      * Takes a level's answer for this atmos tick: the first seed's, in order of id, that covers the
      * dimension. Server thread. With no seed registered it is one read and one lookup.

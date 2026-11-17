@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "io.github.west3436.zas.compat.aeronautics.mixin",
+  "plugin": "io.github.west3436.zas.compat.aeronautics.mixin.AeronauticsMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AirPressureMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

@@ -91,6 +91,12 @@ public final class Adapters {
         rows.add(new Row(
                 "pneumaticcraft", "[8.0.3,)", "io.github.west3436.zas.compat.pneumaticcraft.PneumaticCraftCompat"));
 
+        // Create Aeronautics (COMPAT-080 to COMPAT-083): 1.3.0 is its first build on Sable 2, which
+        // every later one needs, and the adapter's one hook into Sable is the same in all of them. No
+        // upper bound: the adapter's GameTests run with the newest build too, every night
+        // (COMPAT-004). The range is AeronauticsVersions.SUPPORTED, which its mixin plugin reads.
+        rows.add(new Row("aeronautics", "[1.3.0,)", "io.github.west3436.zas.compat.aeronautics.AeronauticsCompat"));
+
         return rows;
     }
 

@@ -47,5 +47,9 @@ include 'compat-cc'
 // compat-mekanism.
 include 'compat-pneumaticcraft'
 
+// The Create Aeronautics adapter (COMPAT-080 to COMPAT-083), bundled into the zas jar like
+// compat-mekanism.
+include 'compat-aeronautics'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'

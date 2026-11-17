@@ -10,6 +10,7 @@ evaluationDependsOn(':compat-kubejs')
 evaluationDependsOn(':compat-jei')
 evaluationDependsOn(':compat-emi')
 evaluationDependsOn(':compat-pneumaticcraft')
+evaluationDependsOn(':compat-aeronautics')
 
 // GameTests live in their own source set so they stay out of the mod jar.
 sourceSets {
@@ -20,10 +21,10 @@ sourceSets {
 }
 
 // Source sets compiled elsewhere whose classes ship inside the zas jar. The viewer plugins and the
-// KubeJS plugin compile against zas, so zas only runs with them: it never compiles against them.
+// KubeJS plugin and the Aeronautics adapter compile against zas, so zas only runs with them: it never compiles against them.
 def viewers = [project(':compat-jei'), project(':compat-emi')]
 def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots'),
-                project(':compat-kubejs'), project(':compat-pneumaticcraft')]
+                project(':compat-kubejs'), project(':compat-pneumaticcraft'), project(':compat-aeronautics')]
         + viewers)
         .collect { it.sourceSets.main }
 
@@ -83,6 +84,7 @@ dependencies {
     runtimeOnly project(':compat-mekanism')
     runtimeOnly project(':compat-slots')
     runtimeOnly project(':compat-pneumaticcraft')
+    runtimeOnly project(':compat-aeronautics')
     // Found by KubeJS, through the kubejs.plugins.txt that ships with it.
     runtimeOnly project(':compat-kubejs')
     viewers.each { runtimeOnly it }
