@@ -203,6 +203,15 @@ public final class Relocator {
     }
 
     private void arrivedOne(Move m, long from, long zone) {
+        if (zone < 0) {
+            // The destination stopped first: its data keeps the zone, which arrives when it starts.
+            if (moves.get(m.ticket) == m) {
+                end(m, RelocationOutcome.ENDED);
+                m.completed.completeExceptionally(
+                        new CancellationException("server stopping; the zones arrive after the restart"));
+            }
+            return;
+        }
         if (zone != 0) {
             m.moved.put(new ZoneId(from), new ZoneId(zone));
         }
@@ -296,13 +305,7 @@ public final class Relocator {
 
     /** What complete and cancel answer for a ticket that is over. */
     private RelocationOutcome endedOutcome(RelocationTicket ticket) {
-        RelocationOutcome why = ended.get(ticket);
-        return why == null
-                        || why == RelocationOutcome.MOVED
-                        || why == RelocationOutcome.CANCELLED
-                        || why == RelocationOutcome.ENDED
-                ? RelocationOutcome.ENDED
-                : why;
+        return ended.get(ticket) == RelocationOutcome.TIMED_OUT ? RelocationOutcome.TIMED_OUT : RelocationOutcome.ENDED;
     }
 
     private static CompletableFuture<RelocationResult> done(RelocationOutcome outcome) {

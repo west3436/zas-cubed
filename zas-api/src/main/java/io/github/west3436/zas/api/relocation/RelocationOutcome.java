@@ -18,13 +18,14 @@ public enum RelocationOutcome {
     CANCELLED,
     /**
      * A chunk the box, the destination or a zone in the box spans isn't loaded. At {@link
-     * Relocations#begin} and {@link Relocations#complete} the ticket stays as it was, so complete
+     * Relocations#begin} the ticket is over. At {@link Relocations#complete} it stays open, so complete
      * again once the chunks are loaded, or cancel.
      */
     UNLOADED,
     /**
      * {@link Relocations#begin}: a zone in the box is paused (GEO-030), or the whole dimension is
-     * (OPS-005). The ticket is over.
+     * (OPS-005). The ticket is over. A {@link Relocations#complete} called before the begin was
+     * applied answers this too, as do the two below.
      */
     PAUSED,
     /** {@link Relocations#begin}: a zone in the box is already being moved. The ticket is over. */
@@ -42,8 +43,8 @@ public enum RelocationOutcome {
     TIMED_OUT,
     /**
      * {@link Relocations#complete}, {@link Relocations#cancel}: the ticket is over already. It was
-     * completed or cancelled, its begin failed, or the server restarted or rebuilt the dimension's
-     * simulation since.
+     * completed or cancelled, its begin was refused (its {@link RelocationTicket#begun()} says why),
+     * or the server stopped or rebuilt the dimension's simulation since.
      */
     ENDED,
     /** ZAS³ is not installed: nothing happened (API-009, D-17). */

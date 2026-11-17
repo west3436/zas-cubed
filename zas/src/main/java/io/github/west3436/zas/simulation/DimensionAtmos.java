@@ -1868,7 +1868,9 @@ public final class DimensionAtmos {
         Relocation.Outcome ended =
                 new Relocation.Outcome(0, Relocation.Status.ENDED, new long[0], new long[0], List.of(), 0, -1);
         takeRelocationWaiters().forEach(then -> then.accept(ended));
+        List<LongConsumer> arriving = new ArrayList<>(arrivalWaiters.values());
         arrivalWaiters.clear();
+        arriving.forEach(then -> then.accept(-1)); // they arrive after the restart
         // Heat isn't saved (API-013): a heat mutation not yet applied moved nothing.
         List<CompletableFuture<HeatResult>> waitingHeats = new ArrayList<>(heats.values());
         heats.clear();
