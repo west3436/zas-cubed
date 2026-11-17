@@ -5,6 +5,7 @@ import appeng.items.storage.BasicStorageCell;
 import appeng.items.storage.StorageTier;
 import appeng.items.tools.powered.AbstractPortableCell;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FastColor;
 import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
@@ -12,7 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 
 /**
  * How the gas cells look (COMPAT-075, COMPAT-076): the light on a cell, which AE2 colours by how full
- * the cell is, the portable cell's dyed screen, and the cell in a drive or an ME chest. Client only.
+ * the cell is, the portable cell's screen, and the cell in a drive or an ME chest. Client only.
  */
 final class GasCellsClient {
     private GasCellsClient() {}
@@ -23,12 +24,14 @@ final class GasCellsClient {
     }
 
     private static void colours(RegisterColorHandlersEvent.Item event) {
-        // AE2's own colouring: layer 1 is the light, and a portable cell's layer 2 its screen.
+        // AE2's own colouring: layer 1 is the light, and a portable cell's layer 2 its screen. Its
+        // colours have no alpha, which the game reads as clear, so they are made opaque, as AE2 does.
         for (Item cell : GasCells.cells()) {
-            event.register(BasicStorageCell::getColor, cell);
+            event.register((stack, layer) -> FastColor.ARGB32.opaque(BasicStorageCell.getColor(stack, layer)), cell);
         }
         for (Item cell : GasCells.portableCells()) {
-            event.register(AbstractPortableCell::getColor, cell);
+            event.register(
+                    (stack, layer) -> FastColor.ARGB32.opaque(AbstractPortableCell.getColor(stack, layer)), cell);
         }
     }
 
