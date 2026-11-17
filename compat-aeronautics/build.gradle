@@ -1,0 +1,150 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Create Aeronautics adapter (COMPAT-080 to COMPAT-083): the air pressure its balloons, wings
+// and propellers feel follows the density of the dimension's air. Aeronautics reads that pressure
+// from Sable, so the adapter compiles against Sable alone and names nothing of Aeronautics'. Its
+// classes ship inside the zas jar (zas/build.gradle's `bundled`), and zas starts it only when
+// Aeronautics is installed in a version its row supports (COMPAT-001, COMPAT-002). None of it needs
+// the content. Aeronautics, Sable and Create are never in a jar of ours: Sable is compiled against,
+// and all three are added to this project's own runs.
+
+// What a run of the GameTests loads: the newest Aeronautics by default, the oldest supported one
+// with -Paeronautics.version=floor, or the last one before it with -Paeronautics.version=unsupported,
+// each with its Sable. The versions are in gradle.properties.
+def table = [
+    newest     : [version: aeronautics_version, sable: aeronautics_sable_version, supported: true],
+    floor      : [version: aeronautics_floor_version, sable: aeronautics_floor_sable_version, supported: true],
+    unsupported: [version: aeronautics_unsupported_version, sable: aeronautics_unsupported_sable_version,
+                  supported: false],
+]
+def runName = providers.gradleProperty('aeronautics.version').getOrElse('newest')
+def chosen = table[runName]
+if (chosen == null) {
+    throw new GradleException("-Paeronautics.version is one of ${table.keySet().join(', ')}, not '${runName}'")
+}
+// The tests of an Aeronautics the adapter supports, or the one that checks it stays off.
+def namespace = chosen.supported ? 'zas_aeronautics' : 'zas_aeronautics_off'
+
+repositories {
+    // Aeronautics, Sable and Create come from Modrinth's maven, as a player downloads them, with
+    // what each nests.
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with Aeronautics loaded (COMPAT-004). They stay out of
+    // every jar but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_aeronautics', 'zas_aeronautics_off'].each { ns ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${ns}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+dependencies {
+    implementation project(':zas-api')
+    // ZAS³'s internals: each dimension's ambient as it is now, which seed gave it, and the gases'
+    // molar masses, none of which the public API has. zas ships this adapter, so it never compiles
+    // against it: it only runs with it.
+    compileOnly project(':zas')
+    compileOnly project(':engine')
+    // Compile-only, so no jar and no run but this project's own ever holds it. The Sable the oldest
+    // supported Aeronautics needs, so the adapter uses nothing newer.
+    compileOnly("maven.modrinth:sable:${aeronautics_floor_sable_version}") { transitive = false }
+
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+neoForge {
+    // Unit tests of the adapter's pure arithmetic. Minecraft's classes are on the test classpath,
+    // but the game is never bootstrapped and Sable isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Aeronautics, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespace
+            // The Aeronautics and Sable the run asked for, which the tests check are the ones that
+            // loaded.
+            systemProperty 'zas.aeronautics.version', chosen.version
+            systemProperty 'zas.aeronautics.sableVersion', chosen.sable
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly("maven.modrinth:create-aeronautics:${chosen.version}") { transitive = false }
+    gametestRunRuntimeOnly("maven.modrinth:sable:${chosen.sable}") { transitive = false }
+    gametestRunRuntimeOnly("maven.modrinth:create:${create_version}") { transitive = false }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // AdapterReferencesTest scans the compiled adapter.
+    def classes = sourceSets.main.output.classesDirs
+    inputs.files(classes).withPropertyName('adapterClasses')
+    systemProperty 'zas.aeronautics.classes', classes.files.join(File.pathSeparator)
+    // COMPAT-002: the builds the runs use sit where they should against the adapter's range.
+    systemProperty 'zas.aeronautics.newestVersion', aeronautics_version
+    systemProperty 'zas.aeronautics.floorVersion', aeronautics_floor_version
+    systemProperty 'zas.aeronautics.unsupportedVersion', aeronautics_unsupported_version
+    testLogging.exceptionFormat = 'full'
+}

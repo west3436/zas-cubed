@@ -114,6 +114,21 @@ class VersionGateTest {
         }
     }
 
+    /**
+     * The Create Aeronautics row against the versions its builds carry: 1.3.0, the first on Sable 2,
+     * is the oldest it supports, and 1.2.1, the last on Sable 1.2, is below it.
+     */
+    @Test
+    void compat_002_the_aeronautics_range_fits_its_real_versions() {
+        String aeronautics = range("aeronautics");
+        for (String version : List.of("1.3.0", "1.3.1", "1.3.2", "1.4.0", "2.0.0")) {
+            assertEquals(Verdict.SUPPORTED, VersionGate.check(version, aeronautics), version);
+        }
+        for (String version : List.of("1.2.1", "1.1.3", "1.0.2")) {
+            assertEquals(Verdict.UNSUPPORTED, VersionGate.check(version, aeronautics), version);
+        }
+    }
+
     private static String range(String modId) {
         return Adapters.rows().stream()
                 .filter(row -> row.modId().equals(modId))

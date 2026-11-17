@@ -60,6 +60,8 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
 
 **PneumaticCraft: Repressurized** (8.0.3+): Pneumatic Armor works as a suit, and its air feeds your internals. Machines and tubes that leak fill the room with air, and heat blocks warm and cool the rooms they stand in.
 
+**Create Aeronautics** (1.3.0+): balloons, wings and propellers follow the density of the open air: they lift less in thin or hot air and not at all in a vacuum. A dimension with no air of its own takes it from Sable's physics data.
+
 ## For mod developers
 
 The public API (`zas-api`) is what space, tech and survival mods can build on: read and change a zone's gas and heat, give a dimension its open air, offer a block's gas store to pipes, and make items that protect or supply breath. A mod can bundle it and still run when ZAS³ isn't installed. The Mekanism and Ad Astra adapters use the public API alone, so they double as worked examples. The guide and Javadoc are on the [wiki](https://github.com/west3436/zas-cubed/wiki).
