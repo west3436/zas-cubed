@@ -196,7 +196,7 @@ jobs:
           # and Sable's pressure, so every test runs.
           - adapter: aeronautics (content off)
             task: ":compat-aeronautics:runAdapterGameTestServer -Pcontent=off"
-          # COMPAT-070 to COMPAT-074: the AE2 adapter, with the oldest AE2 it
+          # COMPAT-070 to COMPAT-077: the AE2 adapter, with the oldest AE2 it
           # supports and the newest. COMPAT-002: with the last build before the
           # oldest, the adapter stays off. With the content off it still works
           # on other mods' gas blocks, so only the tests with ZAS³'s own tanks

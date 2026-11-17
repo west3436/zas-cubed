@@ -1,0 +1,28 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas:gas_cell_housing"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "ae2:chest"
+    },
+    {
+      "item": "ae2:cell_component_4k"
+    },
+    {
+      "item": "ae2:energy_cell"
+    },
+    {
+      "item": "zas:gas_cell_housing"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas:portable_gas_cell_4k"
+  }
+}

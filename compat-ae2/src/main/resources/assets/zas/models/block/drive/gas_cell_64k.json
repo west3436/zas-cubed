@@ -1,0 +1,53 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "zas:block/drive/gas_cells",
+    "cell": "zas:block/drive/gas_cells"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        6,
+        2,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            6,
+            6,
+            8
+          ],
+          "texture": "#cell",
+          "cullface": "north"
+        },
+        "up": {
+          "uv": [
+            6,
+            0,
+            12,
+            2
+          ],
+          "texture": "#cell",
+          "cullface": "north"
+        },
+        "down": {
+          "uv": [
+            6,
+            2,
+            12,
+            4
+          ],
+          "texture": "#cell",
+          "cullface": "north"
+        }
+      }
+    }
+  ]
+}

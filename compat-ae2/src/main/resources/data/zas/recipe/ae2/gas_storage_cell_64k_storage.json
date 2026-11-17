@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas:gas_cell_housing"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas:gas_cell_housing"
+    },
+    {
+      "item": "ae2:cell_component_64k"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas:gas_storage_cell_64k"
+  }
+}

@@ -8,9 +8,12 @@ import io.github.west3436.zas.compat.Adapters.State;
 import io.github.west3436.zas.compat.Adapters.Status;
 import io.github.west3436.zas.compat.ae2.Ae2Compat;
 import io.github.west3436.zas.compat.ae2.Ae2Settings;
+import io.github.west3436.zas.compat.ae2.GasCells;
 import io.github.west3436.zas.compat.ae2.GasKeyType;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.config.ModConfigs;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -37,6 +40,18 @@ public final class Ae2GateTests {
                 .orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for AE2");
         return status;
+    }
+
+    /** Whether the gas cells are items, and their recipes loaded (COMPAT-075 to COMPAT-077). */
+    private static boolean cellsThere(GameTestHelper h, boolean expected) {
+        boolean item = BuiltInRegistries.ITEM.containsKey(GasCells.HOUSING);
+        boolean recipe = h.getLevel()
+                .getRecipeManager()
+                .byKey(ResourceLocation.fromNamespaceAndPath("zas", "ae2/gas_cell_housing"))
+                .isPresent();
+        h.assertValueEqual(item, expected, "whether the gas cell housing is an item");
+        h.assertValueEqual(recipe, expected, "whether its recipe is loaded");
+        return item;
     }
 
     private static boolean gasTypeRegistered() {
@@ -68,6 +83,7 @@ public final class Ae2GateTests {
             h.assertValueEqual(type.getUnitSymbol(), "mol", "the unit a terminal shows");
             h.assertValueEqual(type.formatAmount(2500, appeng.api.stacks.AmountFormat.FULL), "2.5 mol", "2,500 units");
             h.assertTrue(AEKey.class.isAssignableFrom(type.getKeyClass()), "the key class");
+            cellsThere(h, true);
             h.succeed();
         }
     }
@@ -91,6 +107,8 @@ public final class Ae2GateTests {
             h.assertFalse(gasTypeRegistered(), "the gas key type is registered");
             // AE2 itself runs on, with its own types.
             h.assertTrue(AEKeyTypes.getAll().contains(AEKeyType.fluids()), "AE2's fluids aren't a key type");
+            // No gas cells, and their recipes stay unloaded without an error.
+            cellsThere(h, false);
             h.succeed();
         }
     }

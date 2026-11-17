@@ -13,13 +13,14 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 /**
- * Starts the Applied Energistics 2 adapter (COMPAT-070 to COMPAT-074). {@code zas}'s adapter loader
+ * Starts the Applied Energistics 2 adapter (COMPAT-070 to COMPAT-077). {@code zas}'s adapter loader
  * calls {@link #init} by name, and only with AE2 installed in a version its row supports (COMPAT-001,
  * COMPAT-002), so this class may name AE2's.
  *
  * <p>It adds gases as a type of stack ME storage holds ({@link GasKeyType}), the import, export and
  * storage buses for blocks that provide {@code IGasHandler} ({@link GasBuses}), and on a client the
- * way a gas is drawn in AE2's windows ({@link GasKeyRendering}). It needs nothing of the content mod,
+ * way a gas is drawn in AE2's windows ({@link GasKeyRendering}), and the gas storage cells ({@link
+ * GasCells}). It needs nothing of the content mod,
  * so it is the same with the content off; only fewer blocks offer gas.
  */
 public final class Ae2Compat {
@@ -43,9 +44,12 @@ public final class Ae2Compat {
         }
         Ae2Settings.register(container);
         modBus.addListener(Ae2Compat::registerType);
+        modBus.addListener(GasCells::register);
+        modBus.addListener(GasCells::creativeTab);
         modBus.addListener(Ae2Compat::setup);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             GasKeyRendering.init(modBus);
+            GasCellsClient.init(modBus);
         }
         active = true;
     }
@@ -70,6 +74,7 @@ public final class Ae2Compat {
             StackExportStrategy.register(GasKeyType.TYPE, GasBuses::exporting);
             ExternalStorageStrategy.register(GasKeyType.TYPE, GasBuses::external);
             GenericSlotCapacities.register(GasKeyType.TYPE, SLOT_CAPACITY);
+            GasCells.upgrades();
             registered = true;
         });
     }

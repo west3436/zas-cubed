@@ -316,7 +316,8 @@ public final class ReleaseJarTests {
     /**
      * The release jar holds the Applied Energistics 2 adapter, and on a server without AE2 none of it
      * loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its entry class, which names
-     * AE2's, was never asked for, and its config file isn't there.
+     * AE2's, was never asked for, and its config file isn't there. Nor are its gas cells or their
+     * recipes (COMPAT-075 to COMPAT-077).
      */
     @GameTest(template = "empty")
     public static void compat_001_nothing_of_the_ae2_adapter_loads_without_ae2(GameTestHelper h) {
@@ -337,6 +338,15 @@ public final class ReleaseJarTests {
         h.assertFalse(
                 ModConfigs.getFileMap().containsKey("zas-ae2-server.toml"),
                 "the AE2 adapter's config file is registered");
+        // Its gas cells are AE2's own cell classes: without AE2 there are no cells and no recipes.
+        ResourceLocation housing = ResourceLocation.fromNamespaceAndPath("zas", "gas_cell_housing");
+        h.assertFalse(BuiltInRegistries.ITEM.containsKey(housing), "the gas cell housing is registered");
+        h.assertFalse(
+                h.getLevel()
+                        .getRecipeManager()
+                        .byKey(ResourceLocation.fromNamespaceAndPath("zas", "ae2/gas_cell_housing"))
+                        .isPresent(),
+                "the gas cell housing's recipe loaded");
         h.succeed();
     }
 

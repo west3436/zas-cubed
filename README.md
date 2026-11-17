@@ -54,7 +54,7 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
 
 **KubeJS** (2101.7.0+): server scripts get the zone and fire events, read and change the air, and add their own hazards and open air.
 
-**Applied Energistics 2** (19.0.24+): storage buses keep gases in ME, in large gas tanks, pipes or any other mod's gas store; import and export buses move gas to and from them, a mixture coming in as its separate gases.
+**Applied Energistics 2** (19.0.24+): storage buses keep gases in ME, in large gas tanks, pipes or any other mod's gas store; import and export buses move gas to and from them, a mixture coming in as its separate gases. Gas storage cells, 1k to 256k and portable, hold gas in drives, ME chests and your hand.
 
 **Create** (6.0.10+): brings Ponder, so the built-in Ponder scenes show.
 

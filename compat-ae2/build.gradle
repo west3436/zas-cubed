@@ -1,12 +1,14 @@
 apply plugin: 'net.neoforged.moddev'
 
-// The Applied Energistics 2 adapter (COMPAT-070 to COMPAT-074): each gas a storable type of AE2's,
-// and AE2's import, export and storage buses working on any block that provides IGasHandler. Its
-// classes ship inside the zas jar (zas/build.gradle's `bundled`), where zas starts it only with AE2
-// installed in a version its row supports (COMPAT-001, COMPAT-002). It needs nothing of the content
-// mod, so it runs with the content off too. It compiles against zas for gases' names and the way the
-// viewers draw a gas, and against AE2's API jar only (COMPAT-003). AE2 is never in a jar of ours: its
-// API is compiled against, and the mod is added to this project's own runs.
+// The Applied Energistics 2 adapter (COMPAT-070 to COMPAT-077): each gas a storable type of AE2's,
+// AE2's import, export and storage buses working on any block that provides IGasHandler, and gas
+// storage cells. Its classes ship inside the zas jar (zas/build.gradle's `bundled`), where zas starts
+// it only with AE2 installed in a version its row supports (COMPAT-001, COMPAT-002). It needs nothing
+// of the content mod, so it runs with the content off too. It compiles against zas for gases' names
+// and the way the viewers draw a gas, and against AE2: its API, and for the cells two classes outside
+// it, AE2's storage cell and portable cell (COMPAT-003), which the GameTests use with the oldest and
+// newest AE2. AE2 is never in a jar of ours: it is compiled against, and added to this project's own
+// runs.
 
 // The AE2 the runs load: the oldest supported by default, the newest with -Pae2.version=newest, the
 // last one before the oldest with -Pae2.version=unsupported, or any published version by name.
@@ -109,9 +111,10 @@ dependencies {
     // Gases' names and their drawing, which the viewers share; zas is at run time what loads this.
     compileOnly project(':zas')
     compileOnly project(':engine')
-    // Compile-only, never bundled: the adapter is optional (COMPAT-001). Only AE2's API, and the
-    // oldest supported one, so the adapter can use nothing else of it.
+    // Compile-only, never bundled: the adapter is optional (COMPAT-001). The oldest supported AE2,
+    // so the adapter can use nothing newer: its API jar, and the mod for the cells' two classes.
     compileOnly "appeng:appliedenergistics2:${ae2_version}:api"
+    compileOnly("maven.modrinth:ae2:${ae2_version}") { transitive = false }
 
     // The tests may use AE2's own classes, and the framework's, to build networks and read them.
     gametestCompileOnly "maven.modrinth:ae2:${ae2_version}"

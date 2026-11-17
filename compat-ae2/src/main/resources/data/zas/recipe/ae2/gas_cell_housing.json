@@ -1,0 +1,30 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas:gas_cell_housing"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "a": {
+      "item": "ae2:quartz_glass"
+    },
+    "b": {
+      "tag": "c:dusts/redstone"
+    },
+    "c": {
+      "tag": "c:ingots/gold"
+    }
+  },
+  "pattern": [
+    "aba",
+    "b b",
+    "ccc"
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas:gas_cell_housing"
+  }
+}

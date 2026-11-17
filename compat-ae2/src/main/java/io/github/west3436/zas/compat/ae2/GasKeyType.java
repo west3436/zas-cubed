@@ -22,7 +22,10 @@ public final class GasKeyType extends AEKeyType {
     /** The units a bus moves for one operation: 5 mol. */
     public static final int PER_OPERATION = 5 * GasUnits.PER_MOLE;
 
-    /** The units in one byte of a storage cell's room: 64 operations' worth, as for fluids. */
+    /**
+     * The units in one byte of a storage cell's room: 64 operations' worth, as for fluids, so 320 mol;
+     * a 1k gas cell holds 325,120 mol of one gas (COMPAT-075).
+     */
     public static final int PER_BYTE = 64 * PER_OPERATION;
 
     /** The one instance, which {@link Ae2Compat} registers. */
