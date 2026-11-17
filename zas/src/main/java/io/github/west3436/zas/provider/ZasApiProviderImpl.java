@@ -430,6 +430,12 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return ZasServerConfig.heat().nearVacuumDensity();
     }
 
+    /** The configured mB to litres factor (COMPAT-143); the default before the config loads. */
+    @Override
+    public double litresPerMillibucket() {
+        return ZasServerConfig.litresPerMillibucket();
+    }
+
     /**
      * The running server's reactions on a standalone mixture (API-019, FIRE-031), with the
      * configured fire oxygen threshold; unchanged when no server runs in this JVM.

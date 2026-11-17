@@ -1,0 +1,108 @@
+{
+  "values": [
+    {
+      "id": "mekanism:chlorine",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_chlorine",
+      "required": false
+    },
+    {
+      "id": "mekanism:ethene",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_ethene",
+      "required": false
+    },
+    {
+      "id": "mekanism:hydrogen",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_hydrogen",
+      "required": false
+    },
+    {
+      "id": "mekanism:hydrogen_chloride",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_hydrogen_chloride",
+      "required": false
+    },
+    {
+      "id": "mekanism:oxygen",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_oxygen",
+      "required": false
+    },
+    {
+      "id": "mekanism:steam",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_steam",
+      "required": false
+    },
+    {
+      "id": "mekanism:sulfur_dioxide",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_sulfur_dioxide",
+      "required": false
+    },
+    {
+      "id": "mekanism:sulfur_trioxide",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_sulfur_trioxide",
+      "required": false
+    },
+    {
+      "id": "mekanism:hydrofluoric_acid",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_hydrofluoric_acid",
+      "required": false
+    },
+    {
+      "id": "mekanism:uranium_hexafluoride",
+      "required": false
+    },
+    {
+      "id": "mekanism:flowing_uranium_hexafluoride",
+      "required": false
+    },
+    {
+      "id": "mekanismgenerators:deuterium",
+      "required": false
+    },
+    {
+      "id": "mekanismgenerators:flowing_deuterium",
+      "required": false
+    },
+    {
+      "id": "mekanismgenerators:tritium",
+      "required": false
+    },
+    {
+      "id": "mekanismgenerators:flowing_tritium",
+      "required": false
+    },
+    {
+      "id": "mekanismgenerators:fusion_fuel",
+      "required": false
+    },
+    {
+      "id": "mekanismgenerators:flowing_fusion_fuel",
+      "required": false
+    }
+  ]
+}

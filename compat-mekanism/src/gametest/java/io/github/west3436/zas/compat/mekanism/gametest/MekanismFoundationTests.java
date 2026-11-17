@@ -3,16 +3,17 @@ package io.github.west3436.zas.compat.mekanism.gametest;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.GasTags;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import io.github.west3436.zas.compat.Adapters;
 import io.github.west3436.zas.compat.Adapters.State;
 import io.github.west3436.zas.compat.Adapters.Status;
 import io.github.west3436.zas.compat.mekanism.ChemicalGases;
 import io.github.west3436.zas.compat.mekanism.ChemicalMapping;
-import io.github.west3436.zas.compat.mekanism.ChemicalUnits;
 import io.github.west3436.zas.compat.mekanism.MekanismCompat;
 import io.github.west3436.zas.compat.mekanism.MekanismSettings;
 import io.github.west3436.zas.compat.mekanism.MekanismVersions;
 import io.github.west3436.zas.compat.mekanism.mixin.MekanismMixinPlugin;
+import io.github.west3436.zas.config.ZasServerConfig;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -192,12 +193,12 @@ public final class MekanismFoundationTests {
     }
 
     /**
-     * The unit factor is one server setting (Q-19): 1 mB is 1 L of gas at 101.325 kPa and 293.15 K
+     * The unit factor is one server setting, ZAS³'s own (Q-19, COMPAT-143): 1 mB is 1 L of gas at 101.325 kPa and 293.15 K
      * by default, and a change applies to the next conversion, in both directions, with no restart.
      */
     @GameTest(template = "empty")
     public static void mek_002_the_unit_factor_is_one_server_setting_read_on_use(GameTestHelper h) {
-        double standard = ChemicalUnits.molesPerMillibucket(1.0);
+        double standard = Millibuckets.molesPerMillibucket(1.0);
         h.assertValueEqual(MekanismSettings.litresPerMillibucket(), 1.0, "the default factor");
         assertClose(h, ChemicalGases.molesPerMillibucket(), standard, "mol per mB");
         assertClose(h, ChemicalGases.moles(1000), 1000 * standard, "1,000 mB");
@@ -208,7 +209,7 @@ public final class MekanismFoundationTests {
 
         // No test runs between the change and its undoing, since both are in this one call.
         try {
-            MekanismSettings.LITRES_PER_MILLIBUCKET.set(2.0);
+            ZasServerConfig.LITRES_PER_MILLIBUCKET.set(2.0);
             assertClose(h, ChemicalGases.molesPerMillibucket(), 2 * standard, "mol per mB at 2 L");
             assertClose(
                     h,
@@ -217,7 +218,7 @@ public final class MekanismFoundationTests {
                     "1,000 mB of oxygen at 2 L per mB");
             h.assertValueEqual(ChemicalGases.wholeMillibuckets(1000 * standard), 500L, "the same gas at 2 L per mB");
         } finally {
-            MekanismSettings.LITRES_PER_MILLIBUCKET.set(1.0);
+            ZasServerConfig.LITRES_PER_MILLIBUCKET.set(1.0);
         }
         assertClose(h, ChemicalGases.molesPerMillibucket(), standard, "mol per mB, set back");
         h.succeed();

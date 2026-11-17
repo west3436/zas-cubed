@@ -1,5 +1,6 @@
 package io.github.west3436.zas.compat.mekanism;
 
+import io.github.west3436.zas.api.capability.GasHandlerView;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -24,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
  * rate. If the pipe shared gas with the tube as well, as it does with a tank, the two would pass the
  * same gas back and forth, since a tube in its usual mode both takes and gives on one face.
  */
-final class TubeJoint implements IGasHandler {
+final class TubeJoint implements GasHandlerView {
     private static final TubeJoint JOINT = new TubeJoint();
 
     private TubeJoint() {}
