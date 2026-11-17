@@ -1,32 +1,35 @@
-package io.github.west3436.zas.compat.mekanism;
+package io.github.west3436.zas.api.gas;
 
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Which gas of a mixture may leave ZAS³ for Mekanism, and how much of it (MEK-013). A Mekanism tank
- * holds one chemical and a ZAS³ store holds a mixture, so something has to decide what a tube finds
- * in a pipe of air.
+ * Which gas of a mixture may leave ZAS³ for a store that holds one substance, and how much of it: a
+ * Mekanism tank of one chemical (MEK-013), or another mod's tank of one fluid (COMPAT-142). A ZAS³
+ * store holds a mixture, so something has to decide what such a store finds in a pipe of air.
  *
  * <p>The rule: gas leaves only while one gas is at least a set share of the whole, by moles. Then
  * that gas alone leaves, and only as much of it as keeps what stays behind at that share. So:
  *
  * <ul>
- *   <li>a tube never draws one gas out of a mixture, which would be a filter that needs no power;
+ *   <li>another mod's pipe never draws one gas out of a mixture, which would be a filter that needs
+ *       no power;
  *   <li>the trace of other gases in a nearly pure pipe never leaves, however much is drawn. A tube
- *       carries one chemical at a time, and a trace that got into it would block it;
+ *       or fluid pipe carries one substance at a time, and a trace that got into it would block it;
  *   <li>the trace holds some of the main gas back with it: 99 times its own amount, at a share of
  *       0.99. A pipe of one gas alone gives all of it.
  * </ul>
  *
- * <p>The share is a server setting ({@link MekanismSettings#minPurity}); at 0 the rule is off and
- * each gas leaves on its own.
+ * <p>The share is a server setting of whoever applies the rule; at 0 the rule is off and each gas
+ * leaves on its own.
  *
- * <p>Nothing here applies on the way in: a chemical is one gas already, and enters whatever the
- * store holds.
+ * <p>Nothing here applies on the way in: a chemical or a fluid is one gas already, and enters
+ * whatever the store holds.
  *
- * <p>Pure arithmetic: this class names nothing of the game's but ids, and nothing of Mekanism's.
+ * <p>Pure arithmetic: this class names nothing of the game's but ids.
+ *
+ * @since 1.2.0
  */
 public final class GasPurity {
     /** The default share: a mixture gives gas only while it is at least 99 % one gas. */

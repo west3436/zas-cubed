@@ -15,7 +15,7 @@
  *       lacks, registered as chemicals (MEK-011);
  *   <li>{@code ChemicalConnection}: tubes, tanks and machines joined to pipes with no block in
  *       between, each side seeing the other's capability (MEK-013), under the rule for mixtures in
- *       {@link io.github.west3436.zas.compat.mekanism.GasPurity};
+ *       {@link io.github.west3436.zas.api.gas.GasPurity};
  *   <li>the {@code mixin} package: the only place that may name a class of Mekanism's outside its
  *       API, applied only to a Mekanism the adapter supports.
  * </ul>

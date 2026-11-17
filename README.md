@@ -40,6 +40,8 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
  - Ad Astra's space suits protect like ZAS³'s, and their oxygen feeds your internals.
  - Torches and lanterns can be placed in a room whose air can keep a flame.
 
+**Mods that keep gases as fluids**: a fluid tank of oxygen, hydrogen, steam or another gas joins ZAS³ pipes, and fluid pipes fill and drain them, at 1 mB to 1 L. Fluids are matched by shared fluid tags such as `#c:oxygen`, and a datapack maps more.
+
 **Jade**: looking at a device shows its pressure, temperature and gas shares, port by port on pumps, filters and mixers.
 
 **JEI** and **EMI**: gas properties and reactions are detailed.

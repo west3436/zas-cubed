@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.ServerThread;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -162,19 +163,19 @@ public final class ChemicalGases {
      * @return the moles
      */
     public static double moles(long millibuckets) {
-        return ChemicalUnits.moles(millibuckets, molesPerMillibucket());
+        return Millibuckets.moles(millibuckets, molesPerMillibucket());
     }
 
     /**
      * The whole millibuckets an amount of gas makes, at the unit factor now set, rounded down
-     * ({@link ChemicalUnits#wholeMillibuckets}): take {@link #moles} of the result out of the gas
+     * ({@link Millibuckets#wholeMillibuckets}): take {@link #moles} of the result out of the gas
      * and leave the rest, and nothing is made or lost.
      *
      * @param moles the gas, in moles
      * @return the whole millibuckets, 0 or more
      */
     public static long wholeMillibuckets(double moles) {
-        return ChemicalUnits.wholeMillibuckets(moles, molesPerMillibucket());
+        return Millibuckets.wholeMillibuckets(moles, molesPerMillibucket());
     }
 
     /**
