@@ -101,6 +101,8 @@ public final class DimensionPipeline {
      * @param pressureBreaks fragile blocks to break (FLOW-007), without those read from a rejected zone
      * @param zoneEvents what happened to zones (API-030), oldest first, without what a rejection takes
      *     back
+     * @param relocations what the operations of moves did (API-065), without the departures of a
+     *     rejected component, which the worker runs again
      */
     public record Applied(
             long tick,
@@ -114,7 +116,8 @@ public final class DimensionPipeline {
             List<FireIntent> fireIntents,
             List<FireEvent> fireEvents,
             List<PressureBreak> pressureBreaks,
-            List<ZoneEvent> zoneEvents) {}
+            List<ZoneEvent> zoneEvents,
+            List<Relocation.Outcome> relocations) {}
 
     private final DimensionScheduler scheduler;
     private final World world;
@@ -123,6 +126,11 @@ public final class DimensionPipeline {
     private final int maxSectionY;
 
     private final List<GasOp> queue = new ArrayList<>();
+    /** The operations of moves waiting for a batch, in sequence order (API-065). */
+    private final List<Relocation.Op> relocationQueue = new ArrayList<>();
+    /** Every queued operation of a move whose outcome hasn't been applied, by sequence number. */
+    private final TreeMap<Long, Relocation.Op> outstandingRelocations = new TreeMap<>();
+
     private final Set<Long> loads = new LinkedHashSet<>();
     private final Set<Long> unloads = new LinkedHashSet<>();
     private long nextSeq = 1;
@@ -401,6 +409,98 @@ public final class DimensionPipeline {
         outstanding.put(op.seq(), op);
     }
 
+    // ---- Moves (API-065) ------------------------------------------------------------
+
+    /**
+     * Queues the start of a move: the zones wholly inside {@code box} are suspended under {@code
+     * ticket} ({@link Relocation.Begin}).
+     *
+     * @return its sequence number
+     */
+    public long beginRelocation(long ticket, Relocation.Box box, int maxCells) {
+        return enqueue(new Relocation.Begin(nextSeq++, ticket, box, maxCells));
+    }
+
+    /**
+     * Queues the end of a move: the ticket's zones leave, as departures moved by {@code transform}
+     * ({@link Relocation.Complete}).
+     *
+     * @return its sequence number
+     */
+    public long completeRelocation(long ticket, Relocation.Transform transform) {
+        return enqueue(new Relocation.Complete(nextSeq++, ticket, transform));
+    }
+
+    /**
+     * Queues the cancelling of a move: the ticket's zones resume where they are ({@link
+     * Relocation.Cancel}).
+     *
+     * @return its sequence number
+     */
+    public long cancelRelocation(long ticket) {
+        return enqueue(new Relocation.Cancel(nextSeq++, ticket));
+    }
+
+    /**
+     * Queues a zone's arrival ({@link Relocation.Arrive}). It goes to the worker once every chunk its
+     * cells are in is loaded, with the sections they are in.
+     *
+     * @param keepId the id to keep if free here, or 0
+     * @param fromId its id where it left
+     * @param blocks the block positions of its cells
+     * @param hints each cell's hint
+     * @param moles its moles by this engine's registry
+     * @param temperature its temperature in K
+     * @param pins the owners of its pins
+     * @param breached whether it had an ambient edge where it left
+     * @return its sequence number
+     */
+    public long arrive(
+            long keepId,
+            long fromId,
+            long[] blocks,
+            int[] hints,
+            double[] moles,
+            double temperature,
+            List<String> pins,
+            boolean breached) {
+        return enqueue(
+                new Relocation.Arrive(nextSeq++, keepId, fromId, blocks, hints, moles, temperature, pins, breached));
+    }
+
+    /** {@link #arrive(long, long, long[], int[], double[], double, List, boolean)} for a departure. */
+    public long arrive(long keepId, long fromId, Relocation.Departure departure, double[] moles) {
+        return arrive(
+                keepId,
+                fromId,
+                departure.blocks(),
+                departure.hints(),
+                moles,
+                departure.temperature(),
+                departure.pins(),
+                departure.breached());
+    }
+
+    private long enqueue(Relocation.Op op) {
+        relocationQueue.add(op);
+        outstandingRelocations.put(op.seq(), op);
+        return op.seq();
+    }
+
+    /** The queued operations of moves whose outcomes haven't been applied, in sequence order. */
+    public List<Relocation.Op> outstandingRelocations() {
+        return List.copyOf(outstandingRelocations.values());
+    }
+
+    /** The chunks an arrival's cells are in, ascending. */
+    public static long[] chunksOf(Relocation.Arrive a) {
+        TreeSet<Long> out = new TreeSet<>();
+        for (int i = 0; i < a.cellCount(); i++) {
+            out.add(SectionKeys.chunkOfBlockKey(a.block(i)));
+        }
+        return toArray(out);
+    }
+
     /** A chunk loaded, with nothing saved. */
     public void chunkLoaded(long chunk) {
         chunkLoaded(chunk, null);
@@ -497,6 +597,30 @@ public final class DimensionPipeline {
         }
         List<GasOp> ops = List.copyOf(queue);
         queue.clear();
+        // An arrival waits for every chunk its cells are in; it brings the sections they are in.
+        List<Relocation.Op> relocations = new ArrayList<>(relocationQueue.size());
+        for (Iterator<Relocation.Op> it = relocationQueue.iterator(); it.hasNext(); ) {
+            Relocation.Op op = it.next();
+            if (op instanceof Relocation.Arrive a) {
+                boolean loaded = true;
+                for (long c : chunksOf(a)) {
+                    loaded &= world.isLoaded(c);
+                }
+                if (!loaded) {
+                    continue;
+                }
+                long last = Long.MIN_VALUE;
+                for (int i = 0; i < a.cellCount(); i++) {
+                    long section = SectionKeys.sectionOfBlockKey(a.block(i));
+                    if (section != last) {
+                        last = section;
+                        addWithNeighbours(section, keys);
+                    }
+                }
+            }
+            relocations.add(op);
+            it.remove();
+        }
         boolean prefetching = true;
         for (GasOp op : ops) {
             long target = SectionKeys.sectionOfBlockKey(op.block());
@@ -586,7 +710,8 @@ public final class DimensionPipeline {
                 records,
                 toArray(unloadedListed),
                 toArray(changedOutsideMirror),
-                world.limits());
+                world.limits(),
+                relocations);
         loads.clear();
         unloads.clear();
         pendingRejection = null;
@@ -714,6 +839,7 @@ public final class DimensionPipeline {
                     List.of(),
                     List.of(),
                     List.of(),
+                    List.of(),
                     List.of());
         }
         List<Integer> rejectedIndices = new ArrayList<>();
@@ -772,11 +898,20 @@ public final class DimensionPipeline {
                 breaks.add(b);
             }
         }
+        List<Relocation.Outcome> relocations = new ArrayList<>();
+        for (Relocation.Outcome o : result.relocations()) {
+            if (o.component() < 0 || !rejectedIndices.contains(o.component())) {
+                relocations.add(o);
+            }
+        }
         HotspotTable burning = result.hotspots().withRejected(hotspots, rejectedSet);
         TreeSet<Long> changed = changedChunks(published, snapshot);
         // Nothing below can throw, so an exception above leaves the last result whole (NFR-014).
         for (OpOutcome o : outcomes) {
             outstanding.remove(o.seq());
+        }
+        for (Relocation.Outcome o : relocations) {
+            outstandingRelocations.remove(o.seq());
         }
         for (java.util.Iterator<Map.Entry<Long, Sent>> it =
                         unconfirmed.entrySet().iterator();
@@ -820,7 +955,8 @@ public final class DimensionPipeline {
                 intents,
                 fireEvents,
                 breaks,
-                zoneEvents);
+                zoneEvents,
+                relocations);
     }
 
     /** The chunks of zones whose published state differs between two tables. */

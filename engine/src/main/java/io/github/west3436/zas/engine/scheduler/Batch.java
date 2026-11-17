@@ -30,6 +30,8 @@ import java.util.Objects;
  * @param changedOutsideMirror sections the worker doesn't mirror where a block's geometry changed
  *     since the last batch, ascending: not captured, but a classification may rest on them (GEO-027)
  * @param limits the world border and whether the world's edges are sealed, now (GEO-031)
+ * @param relocations the operations of moves queued since the last batch, in sequence order
+ *     (API-065); their sequence numbers are shared with {@code ops}
  */
 public record Batch(
         long tick,
@@ -44,7 +46,8 @@ public record Batch(
         List<ChunkRecord> records,
         long[] unloadedListedChunks,
         long[] changedOutsideMirror,
-        WorldLimits limits) {
+        WorldLimits limits,
+        List<Relocation.Op> relocations) {
 
     /**
      * Checks and copies the arguments.
@@ -73,6 +76,44 @@ public record Batch(
         unloadedListedChunks = sorted(unloadedListedChunks);
         changedOutsideMirror = sorted(changedOutsideMirror);
         Objects.requireNonNull(limits, "limits");
+        relocations = List.copyOf(relocations);
+        for (int i = 1; i < relocations.size(); i++) {
+            if (relocations.get(i).seq() <= relocations.get(i - 1).seq()) {
+                throw new IllegalArgumentException("relocations must be in ascending sequence order");
+            }
+        }
+    }
+
+    /** A batch with no relocations. */
+    public Batch(
+            long tick,
+            List<SectionSource> sections,
+            long[] loadedChunks,
+            long[] unloadedChunks,
+            long[] unavailableSections,
+            Ambient ambient,
+            List<GasOp> ops,
+            Rejection rejection,
+            EngineSettings settings,
+            List<ChunkRecord> records,
+            long[] unloadedListedChunks,
+            long[] changedOutsideMirror,
+            WorldLimits limits) {
+        this(
+                tick,
+                sections,
+                loadedChunks,
+                unloadedChunks,
+                unavailableSections,
+                ambient,
+                ops,
+                rejection,
+                settings,
+                records,
+                unloadedListedChunks,
+                changedOutsideMirror,
+                limits,
+                List.of());
     }
 
     /** A batch without saved records. */
@@ -123,7 +164,8 @@ public record Batch(
                 records,
                 unloadedListedChunks,
                 changedOutsideMirror,
-                limits);
+                limits,
+                relocations);
     }
 
     /** This batch carrying a rejection. */
@@ -141,7 +183,8 @@ public record Batch(
                 records,
                 unloadedListedChunks,
                 changedOutsideMirror,
-                limits);
+                limits,
+                relocations);
     }
 
     private static long[] sorted(long[] keys) {

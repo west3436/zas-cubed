@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.airlock;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -68,6 +69,7 @@ public class AirlockControllerBlock extends WallPanelBlock implements EntityBloc
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock())
                 && level instanceof ServerLevel server
+                && !Relocations.isMoving(server, pos) // a mover carries it (CONT-156)
                 && level.getBlockEntity(pos) instanceof AirlockControllerBlockEntity be) {
             be.removedFromWorld(server);
         }

@@ -113,8 +113,30 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
      * position (API-017).
      */
     public SourceId owner() {
-        BlockPos p = getBlockPos();
+        return owner(getBlockPos());
+    }
+
+    /** The owner of the pins of a controller at a position. */
+    static SourceId owner(BlockPos p) {
         return SourceId.of(ZasAtmosMod.MOD_ID, "area_air_controller/" + p.getX() + "_" + p.getY() + "_" + p.getZ());
+    }
+
+    /**
+     * Its links after a mover moved it (CONT-156): each goes where {@code rebase} says, or is dropped
+     * for null. It pins its zone again, under the owner of its new position.
+     */
+    void rebase(java.util.function.UnaryOperator<BlockPos> rebase) {
+        List<BlockPos> was = new ArrayList<>(links);
+        links.clear();
+        for (BlockPos l : was) {
+            BlockPos to = rebase.apply(l);
+            if (to != null) {
+                links.add(to);
+            }
+        }
+        pending = null;
+        pinnedZone = null;
+        setChanged();
     }
 
     /** The point the controller samples: the middle of its own block, in front of the wall. */

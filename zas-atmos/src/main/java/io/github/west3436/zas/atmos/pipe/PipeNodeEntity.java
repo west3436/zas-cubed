@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.pipe;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
@@ -335,7 +336,9 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
         if (!unloading && level instanceof ServerLevel server) {
             GasParcel share = network != null && network.valid() ? network.detach(this) : stored.drain();
             network = null;
-            if (keepsShareWhenRemoved()) {
+            if (Relocations.isMoving(server, worldPosition)) {
+                stored.set(share); // a mover carries it, in the data it copied (CONT-156)
+            } else if (keepsShareWhenRemoved()) {
                 stored.set(share); // carried away, as by a mined canister's item
             } else if (!share.isEmpty() && !voidsShareWhenRemoved()) { // a voided share is destroyed
                 GasMutations.add(

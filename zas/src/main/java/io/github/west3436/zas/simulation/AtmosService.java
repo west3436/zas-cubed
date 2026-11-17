@@ -64,6 +64,7 @@ public final class AtmosService {
     private final MinecraftServer server;
     private final ExecutorService workers;
     private final Map<ResourceKey<Level>, DimensionAtmos> dimensions = new ConcurrentHashMap<>();
+    private final Relocator relocator = new Relocator(this);
 
     private AtmosService(MinecraftServer server) {
         this.server = server;
@@ -123,6 +124,11 @@ public final class AtmosService {
     /** The service of the running server, or null between servers. Any thread. */
     public static AtmosService current() {
         return current;
+    }
+
+    /** The moves in progress (API-065). Server thread. */
+    public Relocator relocator() {
+        return relocator;
     }
 
     /** The atmos state of a level's dimension, or null if it has had none yet. Any thread. */
@@ -250,6 +256,7 @@ public final class AtmosService {
         }
         long start = System.nanoTime();
         long budget = ZasServerConfig.budgetNanos();
+        relocator.tick(gameTick);
         for (ServerLevel level : server.getAllLevels()) {
             DimensionAtmos d = dimensionFor(level);
             if (d.dueAt(gameTick, timing)) {
@@ -383,6 +390,7 @@ public final class AtmosService {
         for (DimensionAtmos d : dimensions.values()) {
             d.stop(); // keeps its published table for the final save, which follows (DATA-011)
         }
+        relocator.stop();
         dimensions.clear();
         workers.shutdownNow();
         try {

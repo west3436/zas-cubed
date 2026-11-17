@@ -84,6 +84,12 @@ public final class ZasServerConfig {
     /** The most {@link #ENCLOSURE_MAX_CELLS} can be: a hall 5 × 5 chunks wide and 16 blocks high. */
     public static final int ENCLOSURE_MAX_CELLS_LIMIT = EnclosureFill.SETTABLE_MAX_CELLS;
 
+    /** The most cells the zones of one move can have (API-065, GEO-047). */
+    public static final ModConfigSpec.IntValue RELOCATION_MAX_CELLS;
+
+    /** How long a move may stay open before it is cancelled, in s (API-065, GEO-047). */
+    public static final ModConfigSpec.IntValue RELOCATION_TIMEOUT_SECONDS;
+
     /** The permission level every {@code /zas} command needs (OPS-011). */
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
 
@@ -171,6 +177,14 @@ public final class ZasServerConfig {
                         "one counts as open air. A higher limit costs more time when a large roofed space or cave",
                         "is checked. Zones that formed under another limit stay as they are.")
                 .defineInRange("enclosure_max_cells", EnclosureFill.DEFAULT_MAX_CELLS, 1, ENCLOSURE_MAX_CELLS_LIMIT);
+        RELOCATION_MAX_CELLS = builder.comment(
+                        "The most cells (blocks of air) the rooms of one move by another mod can have, such as a",
+                        "ship taking off. A larger move fails, and the rooms stay where they are.")
+                .defineInRange("relocation_max_cells", EnclosureFill.DEFAULT_MAX_CELLS, 0, 1 << 24);
+        RELOCATION_TIMEOUT_SECONDS = builder.comment(
+                        "How long another mod may take to move blocks whose rooms it asked to carry along, in",
+                        "seconds. After that the move is cancelled, and the rooms carry on where they are.")
+                .defineInRange("relocation_timeout_seconds", 30, 1, 3600);
         builder.pop();
         builder.push("heat");
         HEAT_ENABLED = builder.comment(
@@ -356,6 +370,16 @@ public final class ZasServerConfig {
         return SPEC.isLoaded()
                 ? new ZoneSettings(DELETE_DISPLACED_GAS.get(), SEALED_ZONE_DISSOLVE_SECONDS.get())
                 : ZoneSettings.DEFAULT;
+    }
+
+    /** The most cells one move's zones can have (GEO-047); the default while no world's config is loaded. */
+    public static int relocationMaxCells() {
+        return SPEC.isLoaded() ? RELOCATION_MAX_CELLS.get() : EnclosureFill.DEFAULT_MAX_CELLS;
+    }
+
+    /** How long a move may stay open, in game ticks (GEO-047); the default while no config is loaded. */
+    public static long relocationTimeoutTicks() {
+        return 20L * (SPEC.isLoaded() ? RELOCATION_TIMEOUT_SECONDS.get() : 30);
     }
 
     /** The most cells an enclosure can have (GEO-020, D-23); the default while no world's config is loaded. */
