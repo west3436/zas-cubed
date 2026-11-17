@@ -82,6 +82,34 @@ class ViewerEntriesTest {
         assertEquals(oxygen, ViewerEntries.emblem(entries), "oxygen stands for the gases");
     }
 
+    /**
+     * The gases the Mekanism and NuclearCraft adapters add show in the viewers in the tints the
+     * windows give them ({@code GasPartsTest}), not grey (MEK-010, COMPAT-151).
+     */
+    @Test
+    void compat_151_the_adapters_gases_have_the_windows_colours() {
+        assertEquals(0xCFE800, ViewerEntries.colour("zas:chlorine"));
+        assertEquals(0xA8F1E9, ViewerEntries.colour("zas:hydrogen_chloride"));
+        assertEquals(0xA99D90, ViewerEntries.colour("zas:sulfur_dioxide"));
+        assertEquals(0xEACCF9, ViewerEntries.colour("zas:ethene"));
+        assertEquals(0xFF3232, ViewerEntries.colour("zas:deuterium"));
+        assertEquals(0x64FF70, ViewerEntries.colour("zas:tritium"));
+        assertEquals(0xFF75DD, ViewerEntries.colour("zas:argon"));
+        assertEquals(0xFF9F7A, ViewerEntries.colour("zas:neon"));
+        assertEquals(0xC57B81, ViewerEntries.colour("zas:helium"));
+        assertEquals(0xCBBB67, ViewerEntries.colour("zas:helium_3"));
+        assertEquals(0xC9EEFF, ViewerEntries.colour("zas:nitric_oxide"));
+        assertEquals(0x782A10, ViewerEntries.colour("zas:nitrogen_dioxide"));
+        assertEquals(0xD3C75D, ViewerEntries.colour("zas:fluorine"));
+        assertEquals(0x7AC3A0, ViewerEntries.colour("zas:ammonia"));
+        assertEquals(0x424C05, ViewerEntries.colour("zas:fluoromethane"));
+        assertEquals(0xEA1B01, ViewerEntries.colour("zas:oxygen_difluoride"));
+        assertEquals(0x5DBBD6, ViewerEntries.colour("zas:diborane"));
+        assertEquals(0xD3AE5D, ViewerEntries.colour("zas:sulfur_trioxide"));
+        assertEquals(0xFFFFFF, ViewerEntries.colour("zas:radon"));
+        assertEquals(ViewerEntries.GREY, ViewerEntries.colour("pack:argon"));
+    }
+
     @Test
     void compat_061_a_tag_without_an_icon_or_a_name_still_shows() {
         GasRegistry registry = GasRegistry.of(

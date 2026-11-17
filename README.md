@@ -60,6 +60,8 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
 
 **PneumaticCraft: Repressurized** (8.0.3+): Pneumatic Armor works as a suit, and its air feeds your internals. Machines and tubes that leak fill the room with air, and heat blocks warm and cool the rooms they stand in.
 
+**NuclearCraft: Neoteric** (1.3.2+): its gases are ZAS³ gases, in its tanks and in our pipes, and the toxic ones need a gas mask. A fission reactor's heat warms the room it stands in, and the HEV suit works as a suit. With Nuclear Radiation, our masks keep its radioactive gas out.
+
 **Create Aeronautics** (1.3.0+): balloons, wings and propellers follow the density of the open air: they lift less in thin or hot air and not at all in a vacuum. A dimension with no air of its own takes it from Sable's physics data.
 
 **Sable** (2.0.0+): rooms on ships and other moving structures keep their air when they are built, taken apart, unloaded and reloaded. You breathe the cabin you stand in, and a hole in the hull lets in the air of the dimension outside.

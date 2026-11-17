@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.radon",
+  "formula": "Rn",
+  "molar_mass": 0.222018,
+  "molar_heat_capacity": 12.47,
+  "sources": {
+    "molar_mass": "222.0176 g/mol, the atomic mass of radon-222, its longest-lived isotope: Wang et al., The AME 2020 atomic mass evaluation (II), Chinese Physics C 45 (2021) 030003, https://doi.org/10.1088/1674-1137/abddaf. Radon has no standard atomic weight",
+    "molar_heat_capacity": "C_v = 3/2 R, a monatomic ideal gas. No NIST-JANAF table for radon was found. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

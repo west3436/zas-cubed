@@ -175,6 +175,10 @@ public final class MekanismFoundationTests {
         h.assertValueEqual(pack, "mod/zas:datapacks/mekanism", "the pack's id");
         h.assertTrue(
                 h.getLevel().getServer().getPackRepository().getSelectedIds().contains(pack), pack + " isn't on");
+        // The gases Mekanism shares with other mods are in a pack of zas's that it offers too.
+        String shared = "mod/zas:" + MekanismCompat.SHARED_GASES;
+        h.assertTrue(
+                h.getLevel().getServer().getPackRepository().getSelectedIds().contains(shared), shared + " isn't on");
         for (String gas : PACK_GASES) {
             h.assertTrue(GasProperties.isDefined(id(gas)), "the server defines no gas " + gas);
         }

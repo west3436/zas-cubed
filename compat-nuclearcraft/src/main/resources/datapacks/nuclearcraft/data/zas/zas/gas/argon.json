@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.argon",
+  "formula": "Ar",
+  "molar_mass": 0.03995,
+  "molar_heat_capacity": 12.47,
+  "sources": {
+    "molar_mass": "Ar 39.95 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 20.786 − 8.314 J/(mol·K). C_p of Ar(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table Ar-001, https://janaf.nist.gov/tables/Ar-001.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

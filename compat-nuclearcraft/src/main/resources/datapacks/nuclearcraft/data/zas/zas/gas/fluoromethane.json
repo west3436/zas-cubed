@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.fluoromethane",
+  "formula": "CH₃F",
+  "molar_mass": 0.034033,
+  "molar_heat_capacity": 29.19,
+  "sources": {
+    "molar_mass": "C 12.011 + 3 × H 1.0080 + F 18.998 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 37.500 − 8.314 J/(mol·K). C_p of CH3F(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table C-065, https://janaf.nist.gov/tables/C-065.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

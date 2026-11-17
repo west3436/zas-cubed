@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.oxygen_difluoride",
+  "formula": "OF₂",
+  "molar_mass": 0.053995,
+  "molar_heat_capacity": 34.99,
+  "sources": {
+    "molar_mass": "O 15.999 + 2 × F 18.998 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 43.301 − 8.314 J/(mol·K). C_p of OF2(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table F-083, https://janaf.nist.gov/tables/F-083.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

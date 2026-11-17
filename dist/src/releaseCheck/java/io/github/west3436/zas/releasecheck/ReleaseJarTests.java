@@ -40,7 +40,7 @@ import net.neoforged.neoforgespi.language.IModFileInfo;
 
 /**
  * Checks that run inside the release jar on a dedicated server (CONT-052, CONT-155, MEK-001,
- * COMPAT-001, SPACE-003, CLIENT-023). Gradle runs them twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
+ * COMPAT-001, COMPAT-150, SPACE-003, CLIENT-023). Gradle runs them twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
  * runContentOffGameTestServer} with it off, as {@code zas.releaseCheck.contentOff} says.
  */
 @GameTestHolder("zas")
@@ -75,6 +75,12 @@ public final class ReleaseJarTests {
 
     /** The PneumaticCraft adapter's package. */
     private static final String PNEUMATICCRAFT_ADAPTER = "io.github.west3436.zas.compat.pneumaticcraft";
+
+    /** The NuclearCraft adapter's package. */
+    private static final String NUCLEARCRAFT_ADAPTER = "io.github.west3436.zas.compat.nuclearcraft";
+
+    /** The pack of the gases the Mekanism and NuclearCraft adapters both offer. */
+    private static final String SHARED_GASES_PACK = "mod/zas:datapacks/shared_gases";
 
     /** The Create Aeronautics adapter's package. */
     private static final String AERONAUTICS_ADAPTER = "io.github.west3436.zas.compat.aeronautics";
@@ -174,7 +180,9 @@ public final class ReleaseJarTests {
             MEKANISM_ADAPTER.replace('.', '/') + "/MekanismCompat.class",
             "zas.mekanism.mixins.json",
             "datapacks/mekanism/pack.mcmeta",
-            "datapacks/mekanism/data/zas/zas/gas/chlorine.json"
+            "datapacks/mekanism/data/zas/zas/gas/hydrogen_chloride.json",
+            "datapacks/shared_gases/pack.mcmeta",
+            "datapacks/shared_gases/data/zas/zas/gas/chlorine.json"
         }) {
             h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
         }
@@ -191,8 +199,9 @@ public final class ReleaseJarTests {
 
         // What the adapter would have added.
         MinecraftServer server = h.getLevel().getServer();
-        String pack = "mod/zas:datapacks/mekanism";
-        h.assertFalse(server.getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        for (String pack : new String[] {"mod/zas:datapacks/mekanism", SHARED_GASES_PACK}) {
+            h.assertFalse(server.getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        }
         h.assertFalse(ModConfigs.getFileMap().containsKey("zas-mekanism-server.toml"), "its config file is registered");
         ResourceLocation chlorine = ResourceLocation.fromNamespaceAndPath("zas", "chlorine");
         h.assertFalse(GasProperties.isDefined(chlorine), "the adapter's gases are defined");
@@ -438,6 +447,54 @@ public final class ReleaseJarTests {
                 h.getLevel().getServer().getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
         h.assertFalse(
                 ModConfigs.getFileMap().containsKey("zas-pneumaticcraft-server.toml"), "its config file is registered");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the NuclearCraft adapter, and on a server without NuclearCraft none of
+     * it loads (COMPAT-150, NFR-022): {@code zas} left the adapter off, so its entry class was never
+     * asked for, and its data packs, its gases and its settings file aren't there. The content's
+     * data for Nuclear Radiation ships too; Nuclear Radiation reads it only where it is installed.
+     */
+    @GameTest(template = "empty")
+    public static void compat_150_nothing_of_the_nuclearcraft_adapter_loads_without_nuclearcraft(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("nuclearcraft"), "NuclearCraft is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            NUCLEARCRAFT_ADAPTER.replace('.', '/') + "/NuclearCraftCompat.class",
+            "datapacks/nuclearcraft/pack.mcmeta",
+            "datapacks/nuclearcraft/data/zas/zas/gas/argon.json",
+            "datapacks/nuclearcraft/data/nuclearcraft/zas/protection/hev.json",
+            "datapacks/shared_gases/data/zas/zas/gas/chlorine.json",
+            "datapacks/content/data/zas_atmos/nuclear_radiation/armor_protection/gas_mask.json"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+
+        // zas went through its row and found no NuclearCraft, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("nuclearcraft"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for NuclearCraft");
+        h.assertValueEqual(
+                status.row().entryClass(), NUCLEARCRAFT_ADAPTER + ".NuclearCraftCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the NuclearCraft adapter's state");
+        h.assertFalse(Adapters.isActive("nuclearcraft"), "the NuclearCraft adapter is on");
+
+        // What the adapter would have added.
+        MinecraftServer server = h.getLevel().getServer();
+        for (String pack : new String[] {"mod/zas:datapacks/nuclearcraft", SHARED_GASES_PACK}) {
+            h.assertFalse(server.getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        }
+        h.assertFalse(
+                ModConfigs.getFileMap().containsKey("zas-nuclearcraft-server.toml"), "its config file is registered");
+        ResourceLocation argon = ResourceLocation.fromNamespaceAndPath("zas", "argon");
+        h.assertFalse(GasProperties.isDefined(argon), "the adapter's gases are defined");
+        h.assertFalse(
+                GasTags.contains(GasTags.TOXIC, ResourceLocation.fromNamespaceAndPath("zas", "ammonia")),
+                "the adapter's gas tags loaded");
         h.succeed();
     }
 

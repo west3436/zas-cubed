@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.fluorine",
+  "formula": "F₂",
+  "molar_mass": 0.037996,
+  "molar_heat_capacity": 22.99,
+  "sources": {
+    "molar_mass": "2 × F 18.998 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 31.302 − 8.314 J/(mol·K). C_p of F2(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table F-054, https://janaf.nist.gov/tables/F-054.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

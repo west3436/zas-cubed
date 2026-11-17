@@ -38,6 +38,25 @@
   "pack.zas.pneumaticcraft": "ZAS³ PneumaticCraft",
   "pack.zas.pneumaticcraft.description": "Pneumatic Armor",
 
+  "gas.zas.ammonia": "Ammonia",
+  "gas.zas.argon": "Argon",
+  "gas.zas.diborane": "Diborane",
+  "gas.zas.fluorine": "Fluorine",
+  "gas.zas.fluoromethane": "Fluoromethane",
+  "gas.zas.helium": "Helium",
+  "gas.zas.helium_3": "Helium-3",
+  "gas.zas.neon": "Neon",
+  "gas.zas.nitric_oxide": "Nitric Oxide",
+  "gas.zas.nitrogen_dioxide": "Nitrogen Dioxide",
+  "gas.zas.oxygen_difluoride": "Oxygen Difluoride",
+  "gas.zas.radon": "Radon",
+  "gas.zas.sulfur_trioxide": "Sulfur Trioxide",
+  "pack.zas.nuclearcraft": "ZAS³ NuclearCraft",
+  "pack.zas.nuclearcraft.description": "Gases and the HEV suit",
+
+  "pack.zas.shared_gases": "ZAS³ Shared Gases",
+  "pack.zas.shared_gases.description": "Gases Mekanism and NuclearCraft both have",
+
   "zas.ae2.gases": "Gases",
   "zas.ae2.gas_storage": "Gas storage",
 
