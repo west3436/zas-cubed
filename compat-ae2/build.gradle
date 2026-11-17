@@ -1,0 +1,161 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Applied Energistics 2 adapter (COMPAT-070 to COMPAT-074): each gas a storable type of AE2's,
+// and AE2's import, export and storage buses working on any block that provides IGasHandler. Its
+// classes ship inside the zas jar (zas/build.gradle's `bundled`), where zas starts it only with AE2
+// installed in a version its row supports (COMPAT-001, COMPAT-002). It needs nothing of the content
+// mod, so it runs with the content off too. It compiles against zas for gases' names and the way the
+// viewers draw a gas, and against AE2's API jar only (COMPAT-003). AE2 is never in a jar of ours: its
+// API is compiled against, and the mod is added to this project's own runs.
+
+// The AE2 the runs load: the oldest supported by default, the newest with -Pae2.version=newest, the
+// last one before the oldest with -Pae2.version=unsupported, or any published version by name.
+def table = [floor: ae2_version, newest: ae2_newest_version, unsupported: ae2_unsupported_version]
+def chosen = providers.gradleProperty('ae2.version').getOrElse('floor')
+def ae2Run = table.getOrDefault(chosen, chosen)
+def unsupported = chosen == 'unsupported'
+// From 19.2.0 AE2 needs GuideME beside it.
+def needsGuideMe = !(ae2Run ==~ /19\.[01]\..*/)
+
+// With the content off (-Pcontent=off, CONT-155) the tests that build with the content mod's pipes
+// and tanks are left out: they are in a namespace of their own.
+def namespaces = unsupported ? 'zas_ae2_off' : contentOff ? 'zas_ae2' : 'zas_ae2,zas_ae2_content'
+
+repositories {
+    // AE2's API jar, by its own coordinates.
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://modmaven.dev/' }
+        }
+        filter { includeGroup 'appeng' }
+    }
+    // The mod jars the runs load, and GuideME, from Modrinth's maven.
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with AE2 loaded (COMPAT-004). They stay out of every jar
+    // but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+    // The client's, likewise: the release jar and AE2.
+    clientRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_ae2', 'zas_ae2_content', 'zas_ae2_off'].each { namespace ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${namespace}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    addModdingDependenciesTo(sourceSets.clientRun)
+    // Unit tests of the adapter's arithmetic. Minecraft's classes are on the test classpath, but the
+    // game is never bootstrapped and AE2 isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    runs {
+        // ./gradlew :compat-ae2:runClient: a client with the release jar and AE2, as a player has them.
+        client {
+            client()
+            sourceSet = sourceSets.clientRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('clientRun')
+        }
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs AE2, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespaces
+            // The AE2 the run asked for, which the tests check is the one that loaded.
+            systemProperty 'zas.ae2.version', ae2Run
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+}
+
+dependencies {
+    implementation project(':zas-api')
+    // Gases' names and their drawing, which the viewers share; zas is at run time what loads this.
+    compileOnly project(':zas')
+    compileOnly project(':engine')
+    // Compile-only, never bundled: the adapter is optional (COMPAT-001). Only AE2's API, and the
+    // oldest supported one, so the adapter can use nothing else of it.
+    compileOnly "appeng:appliedenergistics2:${ae2_version}:api"
+
+    // The tests may use AE2's own classes, and the framework's, to build networks and read them.
+    gametestCompileOnly "maven.modrinth:ae2:${ae2_version}"
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+    gametestCompileOnly project(':zas-atmos')
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// The release jar plus the tests and their empty structures.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    clientRunRuntimeOnly files({ configurations.releaseJar.files })
+    ['gametestRunRuntimeOnly', 'clientRunRuntimeOnly'].each { config ->
+        add(config, "maven.modrinth:ae2:${ae2Run}") { transitive = false }
+        if (needsGuideMe) {
+            add(config, "maven.modrinth:guideme:${guideme_version}") { transitive = false }
+        }
+    }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back. And from
+// a fresh log, which the unsupported run's test reads.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    testLogging.exceptionFormat = 'full'
+}

@@ -85,6 +85,21 @@ class VersionGateTest {
     }
 
     /**
+     * AE2's row (COMPAT-002): from its first release for this Minecraft not marked alpha or beta, and
+     * every build after it, betas too. The beta just before it is the one the unsupported run loads.
+     */
+    @Test
+    void compat_002_the_ae2_range_fits_its_real_versions() {
+        String ae2 = range("ae2");
+        for (String version : List.of("19.0.24", "19.0.27", "19.1.0-beta", "19.2.0-beta", "19.2.19", "20.0.0")) {
+            assertEquals(Verdict.SUPPORTED, VersionGate.check(version, ae2), version);
+        }
+        for (String version : List.of("19.0.23-beta", "19.0.5-alpha", "19.0.20-beta", "18.0.0")) {
+            assertEquals(Verdict.UNSUPPORTED, VersionGate.check(version, ae2), version);
+        }
+    }
+
+    /**
      * The PneumaticCraft row against the versions its builds for 1.21.1 carry: 8.0.3 is the oldest
      * it supports, and 8.0.2, the last build for 1.21.0, is below it.
      */

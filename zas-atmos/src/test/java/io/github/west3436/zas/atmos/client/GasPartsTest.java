@@ -53,6 +53,27 @@ class GasPartsTest {
         }
     }
 
+    /**
+     * The gases the NuclearCraft adapter adds (COMPAT-151), each in the tint NuclearCraft 1.3.11
+     * gives its fluid. {@code ViewerEntriesTest} holds JEI, EMI and AE2 to the same tints.
+     */
+    @Test
+    void compat_151_a_gas_of_the_nuclearcraft_adapter_has_its_fluids_tint() {
+        assertEquals(0xFFFF75DD, GasParts.colour("zas:argon"));
+        assertEquals(0xFFFF9F7A, GasParts.colour("zas:neon"));
+        assertEquals(0xFFC57B81, GasParts.colour("zas:helium"));
+        assertEquals(0xFFCBBB67, GasParts.colour("zas:helium_3"));
+        assertEquals(0xFFC9EEFF, GasParts.colour("zas:nitric_oxide"));
+        assertEquals(0xFF782A10, GasParts.colour("zas:nitrogen_dioxide"));
+        assertEquals(0xFFD3C75D, GasParts.colour("zas:fluorine"));
+        assertEquals(0xFF7AC3A0, GasParts.colour("zas:ammonia"));
+        assertEquals(0xFF424C05, GasParts.colour("zas:fluoromethane"));
+        assertEquals(0xFFEA1B01, GasParts.colour("zas:oxygen_difluoride"));
+        assertEquals(0xFF5DBBD6, GasParts.colour("zas:diborane"));
+        assertEquals(0xFFD3AE5D, GasParts.colour("zas:sulfur_trioxide"));
+        assertEquals(0xFFFFFFFF, GasParts.colour("zas:radon"));
+    }
+
     @Test
     void cont_034_a_gas_with_no_colour_has_the_colour_of_other() {
         assertEquals(GasParts.OTHER, GasParts.colour("somepack:xenon"));
