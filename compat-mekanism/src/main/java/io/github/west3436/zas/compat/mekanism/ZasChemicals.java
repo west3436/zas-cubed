@@ -3,6 +3,7 @@ package io.github.west3436.zas.compat.mekanism;
 import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.ServerThread;
 import io.github.west3436.zas.api.gas.GasProperties;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -96,7 +97,7 @@ public final class ZasChemicals {
         for (ChemicalMapping mapping : ChemicalGases.map().mappings()) {
             if (mapping.bothWays()) {
                 ResourceLocation gas = mapping.gases().keySet().iterator().next();
-                double temperature = mapping.entryTemperature(ChemicalUnits.STANDARD_TEMPERATURE);
+                double temperature = mapping.entryTemperature(Millibuckets.STANDARD_TEMPERATURE);
                 if (ChemicalConnection.leavesAs(gas, temperature) != null) {
                     gases.remove(gas);
                 }

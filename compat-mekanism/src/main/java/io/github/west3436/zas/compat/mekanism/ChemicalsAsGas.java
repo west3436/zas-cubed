@@ -1,9 +1,12 @@
 package io.github.west3436.zas.compat.mekanism;
 
+import io.github.west3436.zas.api.capability.GasHandlerView;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
+import io.github.west3436.zas.api.gas.GasPurity;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +56,7 @@ import org.jetbrains.annotations.Nullable;
  * for each gas as if it were the only one offered, so for several at once it can say more than a
  * real fill takes; a real fill's answer is what went in.
  *
- * <p><b>Out.</b> Chemicals leave as their gases at {@link ChemicalUnits#STANDARD_TEMPERATURE}, or
+ * <p><b>Out.</b> Chemicals leave as their gases at {@link Millibuckets#STANDARD_TEMPERATURE}, or
  * at their mapping's least temperature if that is higher. A radioactive chemical that a pack mapped
  * releases its radiation here, once, as it leaves Mekanism.
  *
@@ -69,9 +72,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>The view asks for the block's chemical handler anew on each call, so one that is kept holds
  * nothing once the block has gone or changed.
  */
-final class ChemicalsAsGas implements IGasHandler {
+final class ChemicalsAsGas implements GasHandlerView {
     /** A vessel with no room and no gas: a pipe's sharing moves nothing into a volume this small. */
-    static final GasMixture NOTHING = new GasMixture(Map.of(), ChemicalUnits.STANDARD_TEMPERATURE, 1e-30);
+    static final GasMixture NOTHING = new GasMixture(Map.of(), Millibuckets.STANDARD_TEMPERATURE, 1e-30);
 
     private final ServerLevel level;
     private final BlockPos pos;
@@ -156,12 +159,12 @@ final class ChemicalsAsGas implements IGasHandler {
         }
         double factor = ChemicalGases.molesPerMillibucket();
         Map<ResourceLocation, Double> moles = new TreeMap<>();
-        double temperature = ChemicalUnits.STANDARD_TEMPERATURE;
+        double temperature = Millibuckets.STANDARD_TEMPERATURE;
         for (int tank = 0; tank < tanks.getChemicalTanks(); tank++) {
             ChemicalStack held = tanks.getChemicalInTank(tank);
             ChemicalMapping mapping = ChemicalGases.mapping(held).orElse(null);
             if (mapping != null) {
-                GasParcel gas = mapping.gas(held.getAmount(), factor, ChemicalUnits.STANDARD_TEMPERATURE);
+                GasParcel gas = mapping.gas(held.getAmount(), factor, Millibuckets.STANDARD_TEMPERATURE);
                 gas.moles().forEach((id, n) -> moles.merge(id, n, Double::sum));
                 temperature = Math.max(temperature, gas.temperature());
             }
@@ -242,7 +245,7 @@ final class ChemicalsAsGas implements IGasHandler {
                 }
                 continue;
             }
-            GasParcel gas = mapping.gas(left.getAmount(), factor, ChemicalUnits.STANDARD_TEMPERATURE);
+            GasParcel gas = mapping.gas(left.getAmount(), factor, Millibuckets.STANDARD_TEMPERATURE);
             gas.moles().forEach((id, n) -> wanted.merge(id, -n, Double::sum));
             gave = gave.isEmpty() ? gas : GasProperties.mix(gave, gas);
             if (action == Action.EXECUTE) {

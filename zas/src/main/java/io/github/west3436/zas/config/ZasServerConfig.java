@@ -1,6 +1,7 @@
 package io.github.west3436.zas.config;
 
 import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import io.github.west3436.zas.engine.classify.EnclosureFill;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
@@ -34,7 +35,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * LIFE-036) under {@code [hazards]} ({@link HazardConfig}); each armor slot's coverage (LIFE-024)
  * under {@code [protection]} ({@link ProtectionConfig}); airflow (FLOW) under {@code [airflow]}
  * ({@link AirflowConfig}); the fire oxygen threshold (FIRE-030) under {@code [fire]} ({@link
- * FireConfig}); the permission level of the {@code /zas} commands (OPS-011) under
+ * FireConfig}); the litres one millibucket of another mod's gas is (COMPAT-143) under {@code
+ * [units]}; the permission level of the {@code /zas} commands (OPS-011) under
  * {@code [commands]}; and the
  * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table and thresholds join
  * this file as their features land.
@@ -93,6 +95,9 @@ public final class ZasServerConfig {
 
     /** Seconds between profiling reports in the log; 0 turns the log off (OPS-012). */
     public static final ModConfigSpec.IntValue PROFILING_LOG_INTERVAL;
+
+    /** {@code [units] litres_per_millibucket}: what 1 mB of another mod's gas is (COMPAT-143, MEK-002). */
+    public static final ModConfigSpec.DoubleValue LITRES_PER_MILLIBUCKET;
 
     /** {@code /zas checker on|off} until the server stops; null follows the config (OPS-010). */
     private static volatile Boolean checkerOverride;
@@ -186,6 +191,18 @@ public final class ZasServerConfig {
                 .defineInRange("near_vacuum_percent", 1.0, 0.0, 100.0);
         EMISSIVITY = builder.comment("The emissivity of a wall's outer surface facing a vacuum, 0 to 1.")
                 .defineInRange("emissivity", HeatSettings.DEFAULT.emissivity(), 0.0, 1.0);
+        builder.pop();
+        builder.push("units");
+        LITRES_PER_MILLIBUCKET = builder.comment(
+                        "How much gas 1 mB of another mod's gas is, a Mekanism chemical or a fluid that is a",
+                        "gas: this many litres at 101.325 kPa and 293.15 K. At 1.0, 1,000 mB fill one block at",
+                        "one atmosphere, and 1 mB is about 0.0416 mol. It is the same for every gas and every",
+                        "mod, which keeps their recipes in balance.")
+                .defineInRange(
+                        "litres_per_millibucket",
+                        Millibuckets.DEFAULT_LITRES_PER_MILLIBUCKET,
+                        Millibuckets.MIN_LITRES_PER_MILLIBUCKET,
+                        Millibuckets.MAX_LITRES_PER_MILLIBUCKET);
         builder.pop();
         BreathingConfig.define(builder);
         HazardConfig.define(builder);
@@ -376,6 +393,14 @@ public final class ZasServerConfig {
     /** Whether {@code /zas checker} overrides the config. */
     public static boolean conservationCheckerOverridden() {
         return checkerOverride != null;
+    }
+
+    /**
+     * The litres of gas, at standard air's pressure and temperature, that 1 mB of another mod's gas
+     * is (COMPAT-143); the default while no world's config is loaded.
+     */
+    public static double litresPerMillibucket() {
+        return SPEC.isLoaded() ? LITRES_PER_MILLIBUCKET.get() : Millibuckets.DEFAULT_LITRES_PER_MILLIBUCKET;
     }
 
     /** The permission level of the {@code /zas} commands; 2 while no world's config is loaded. */

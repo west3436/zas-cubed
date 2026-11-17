@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.config;
 
+import io.github.west3436.zas.api.gas.GasPurity;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.radiator.RadiatorMath;
 import net.neoforged.fml.ModContainer;
@@ -112,6 +113,9 @@ public final class AtmosServerConfig {
     /** A radiator pipe segment's emissivity in a vacuum (HEAT-021). */
     public static final ModConfigSpec.DoubleValue RADIATOR_EMISSIVITY;
 
+    /** How pure a pipe's gas must be to leave for another mod's fluid pipe or tank (COMPAT-142). */
+    public static final ModConfigSpec.DoubleValue FLUID_MIN_PURITY;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("Power: what each device draws while it runs, in FE/t (CONT-065), and the power sources.")
@@ -214,6 +218,17 @@ public final class AtmosServerConfig {
         RADIATOR_EMISSIVITY = builder.comment(
                         "Each segment's emissivity in the open air of a vacuum, over 1 m² (HEAT-021). 0 stops it radiating.")
                 .defineInRange("emissivity", RadiatorMath.DEFAULT_EMISSIVITY, 0.0, 1.0);
+        builder.pop();
+
+        builder.comment("Other mods' fluid tanks and pipes that hold gases as fluids (COMPAT-141, COMPAT-142).")
+                .push("fluids");
+        FLUID_MIN_PURITY = builder.comment(
+                        "A fluid tank holds one fluid, and a pipe holds a mixture. Gas leaves a pipe for another",
+                        "mod's fluid pipe or tank only while one gas is at least this share of what the pipe holds,",
+                        "by moles. Then that gas alone leaves, and only as much of it as keeps the rest at this",
+                        "share. At 0.99 a pipe of air gives nothing and a pipe of oxygen gives all of it. 0 turns",
+                        "the rule off: each gas then leaves on its own, as a filter would take it.")
+                .defineInRange("min_purity", GasPurity.DEFAULT_MIN_SHARE, 0.0, 1.0);
         builder.pop();
         SPEC = builder.build();
     }
