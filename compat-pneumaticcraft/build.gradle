@@ -1,0 +1,150 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The PneumaticCraft: Repressurized adapter (COMPAT-010 to COMPAT-013): Pneumatic Armor as a suit
+// and an air supply for internals, machine leaks into rooms, and heat between PneumaticCraft's heat
+// blocks and zones. Its classes and data ship inside the zas jar (zas/build.gradle's `bundled`),
+// and zas starts it only when PneumaticCraft is installed in a version its row supports
+// (COMPAT-001, COMPAT-002). None of it needs the content, so it compiles against the public API
+// and PneumaticCraft's API alone. PneumaticCraft is never in a jar of ours: it is compiled against,
+// and added to this project's own runs.
+
+// What a run of the GameTests loads: the newest PneumaticCraft by default, the oldest supported
+// one with -Ppneumaticcraft.version=floor, or the last one before it with
+// -Ppneumaticcraft.version=unsupported. The versions are in gradle.properties.
+def table = [
+    newest     : [version: pneumaticcraft_version, supported: true],
+    floor      : [version: pneumaticcraft_floor_version, supported: true],
+    unsupported: [version: pneumaticcraft_unsupported_version, supported: false],
+]
+def runName = providers.gradleProperty('pneumaticcraft.version').getOrElse('newest')
+def chosen = table[runName]
+if (chosen == null) {
+    throw new GradleException("-Ppneumaticcraft.version is one of ${table.keySet().join(', ')}, not '${runName}'")
+}
+// The tests of a PneumaticCraft the adapter supports, or the one that checks it stays off.
+def namespace = chosen.supported ? 'zas_pneumaticcraft' : 'zas_pneumaticcraft_off'
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                url = 'https://modmaven.dev/'
+                // Its older builds have no Gradle module metadata, which their POMs promise.
+                metadataSources {
+                    mavenPom()
+                    artifact()
+                    ignoreGradleMetadataRedirection()
+                }
+            }
+        }
+        filter { includeGroup 'me.desht.pneumaticcraft' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with PneumaticCraft loaded (COMPAT-004). They stay out of
+    // every jar but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_pneumaticcraft', 'zas_pneumaticcraft_off'].each { ns ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${ns}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+dependencies {
+    implementation project(':zas-api')
+    // Compile-only, so no jar and no run but this project's own ever holds it. The oldest build the
+    // adapter supports, so that it uses nothing newer. Its maven publishes no separate API jar for
+    // that build; AdapterReferencesTest keeps the adapter to the API package.
+    compileOnly("me.desht.pneumaticcraft:pneumaticcraft-repressurized:${pneumaticcraft_floor_version}") {
+        transitive = false
+    }
+
+    // GameTests (only) ask the framework what it loaded and drive its atmos ticks and breath checks.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+neoForge {
+    // Unit tests of the adapter's pure arithmetic. Minecraft's classes are on the test classpath,
+    // but the game is never bootstrapped and PneumaticCraft isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs PneumaticCraft, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespace
+            // The PneumaticCraft the run asked for, which the tests check is the one that loaded.
+            systemProperty 'zas.pneumaticcraft.version', chosen.version
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly("me.desht.pneumaticcraft:pneumaticcraft-repressurized:${chosen.version}") {
+        transitive = false
+    }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // The shipped data pack, which tests read as files.
+    systemProperty 'zas.pneumaticcraft.resources', file('src/main/resources').absolutePath
+    // AdapterReferencesTest scans the compiled adapter.
+    def classes = sourceSets.main.output.classesDirs
+    inputs.files(classes).withPropertyName('adapterClasses')
+    systemProperty 'zas.pneumaticcraft.classes', classes.files.join(File.pathSeparator)
+    testLogging.exceptionFormat = 'full'
+}
