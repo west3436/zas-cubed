@@ -13,6 +13,8 @@ import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.life.HazardType;
 import io.github.west3436.zas.life.LifeDamage;
 import io.github.west3436.zas.life.WornProtection;
+import io.github.west3436.zas.provider.Frame;
+import io.github.west3436.zas.provider.Frames;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
@@ -83,6 +85,13 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  *       ({@link AirflowEffectsPayload}, {@link VisibleFlows}, DATA-015) for its client's particles
  *       (CLIENT-003). That is separate from the openings that push the player: wider, and sent
  *       to creative players and spectators too.
+ *   <li><b>Blocks shown elsewhere</b>: a mod may keep blocks in one place in the level and show them
+ *       in another, as Sable keeps a sub-level's blocks in its plot and shows them at the ship's pose
+ *       ({@link Frames}, COMPAT-101). Openings are where the blocks sit; entities, players and what
+ *       they see and hear are where the world shows them. So the openings near an entity are found
+ *       around it and around its point in each frame near it, and a frame's push is turned the way
+ *       the frame shows its flow ({@link #pushAt}). The client places the sounds and particles of a
+ *       frame's openings where the frame shows them.
  *   <li><b>Impacts</b>: a living entity the flow has carried takes {@link FlowImpact}'s damage when
  *       a block stops it (FLOW-005). A mob's speed is what it had going into the
  *       tick. A player moves on its own client, and a client's numbers aren't trusted (NFR-011), so
@@ -273,7 +282,7 @@ public final class Airflow {
         }
         Vec3 c = e.getBoundingBox().getCenter();
         Vec3 v = e.getDeltaMovement();
-        double[] d = field.push(c.x, c.y, c.z, v.x, v.y, v.z, zone, threshold, settings, resistance);
+        double[] d = pushAt(e.level(), field, c, v, zone, threshold, settings, resistance);
         if (d == null) {
             return null;
         }
@@ -295,8 +304,109 @@ public final class Airflow {
         }
         Vec3 c = e.getBoundingBox().getCenter();
         FlowSettings onset = new FlowSettings(settings.range(), settings.speedAtOneAtm(), settings.maxSpeed(), 1);
-        double[] d = field.push(c.x, c.y, c.z, 0, 0, 0, zone, threshold, onset, resistance);
+        double[] d = pushAt(e.level(), field, c, Vec3.ZERO, zone, threshold, onset, resistance);
         return d == null ? null : new Vec3(d[0], d[1], d[2]);
+    }
+
+    /**
+     * {@link FlowField#push} at a point as the world shows it: from the openings around it, and from
+     * those around its point in each {@link Frame} near it (COMPAT-101). In a frame the velocity is
+     * turned into the frame's, and the push turned back the way the frame shows its flow. The
+     * strongest push wins.
+     *
+     * @param c the entity's centre, where the world shows it
+     * @param v its velocity
+     * @return {dx, dy, dz} to add to its velocity, or null for none
+     */
+    static double[] pushAt(
+            Level level,
+            FlowField field,
+            Vec3 c,
+            Vec3 v,
+            long zone,
+            double threshold,
+            FlowSettings settings,
+            double resistance) {
+        double[] best = field.push(c.x, c.y, c.z, v.x, v.y, v.z, zone, threshold, settings, resistance);
+        if (field.isEmpty() || !Frames.any()) {
+            return best;
+        }
+        for (Frame frame : Frames.near(level, new AABB(c, c).inflate(settings.range()))) {
+            double[] p = frame.toLevel(c.x, c.y, c.z);
+            double[] u = frame.turnToLevel(v.x, v.y, v.z);
+            double[] d = field.push(p[0], p[1], p[2], u[0], u[1], u[2], zone, threshold, settings, resistance);
+            if (d != null) {
+                d = frame.turnToShown(d[0], d[1], d[2]);
+                if (best == null || lengthSquared(d) > lengthSquared(best)) {
+                    best = d;
+                }
+            }
+        }
+        return best;
+    }
+
+    private static double lengthSquared(double[] d) {
+        return d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    }
+
+    /**
+     * The openings within a radius of a point as the world shows it, beside a zone and reaching a
+     * threshold: around the point, and around its point in each {@link Frame} near it (COMPAT-101).
+     */
+    static List<FlowField.Opening> near(
+            Level level, FlowField field, Vec3 c, double radius, long zone, double threshold) {
+        List<Vec3> points = Frames.pointsNear(level, c, radius);
+        if (points.size() == 1) {
+            return field.near(c.x, c.y, c.z, radius, zone, threshold);
+        }
+        List<FlowField.Opening> out = new ArrayList<>();
+        for (Vec3 p : points) {
+            out.addAll(field.near(p.x, p.y, p.z, radius, zone, threshold));
+        }
+        return out;
+    }
+
+    /** An opening's distance to the nearest of the points a point stands for ({@link Frames#pointsNear}). */
+    private static double distance(FlowField.Opening o, List<Vec3> points) {
+        double best = Double.MAX_VALUE;
+        for (Vec3 p : points) {
+            best = Math.min(best, o.distance(p.x, p.y, p.z));
+        }
+        return best;
+    }
+
+    /**
+     * Where the world shows a 16-block section of the level: the section itself, or for one a
+     * {@link Frame} shows elsewhere, the box around its corners where they show.
+     */
+    private static AABB shownSection(ServerLevel level, int[] sec) {
+        double x0 = sec[0] * 16.0;
+        double y0 = sec[1] * 16.0;
+        double z0 = sec[2] * 16.0;
+        AABB box = new AABB(x0, y0, z0, x0 + 16, y0 + 16, z0 + 16);
+        Frame frame = Frames.any() ? Frames.at(level, sec[0] * 16, sec[2] * 16) : null;
+        if (frame == null) {
+            return box;
+        }
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double minZ = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double maxY = -Double.MAX_VALUE;
+        double maxZ = -Double.MAX_VALUE;
+        for (int i = 0; i < 8; i++) {
+            double[] p = frame.toShown(
+                    (i & 1) == 0 ? box.minX : box.maxX,
+                    (i & 2) == 0 ? box.minY : box.maxY,
+                    (i & 4) == 0 ? box.minZ : box.maxZ);
+            minX = Math.min(minX, p[0]);
+            minY = Math.min(minY, p[1]);
+            minZ = Math.min(minZ, p[2]);
+            maxX = Math.max(maxX, p[0]);
+            maxY = Math.max(maxY, p[1]);
+            maxZ = Math.max(maxZ, p[2]);
+        }
+        return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
     /**
@@ -602,14 +712,7 @@ public final class Airflow {
         IntOpenHashSet seen = new IntOpenHashSet();
         double reach = s.range() + 1;
         for (int[] sec : st.field.sections()) {
-            AABB box = new AABB(
-                            sec[0] * 16.0,
-                            sec[1] * 16.0,
-                            sec[2] * 16.0,
-                            sec[0] * 16.0 + 16,
-                            sec[1] * 16.0 + 16,
-                            sec[2] * 16.0 + 16)
-                    .inflate(reach);
+            AABB box = shownSection(level, sec).inflate(reach);
             for (Entity e : level.getEntities((Entity) null, box, e -> !(e instanceof Player) && e.isAlive())) {
                 if (seen.add(e.getId())) {
                     found.add(e);
@@ -673,7 +776,7 @@ public final class Airflow {
                 : zoneOf(level, d, table, c);
         List<FlowField.Opening> near = zone == UNRESOLVED
                 ? List.of()
-                : st.field.near(c.x, c.y, c.z, s.range() + SYNC_MARGIN, zone, cls.threshold());
+                : near(level, st.field, c, s.range() + SYNC_MARGIN, zone, cls.threshold());
         if (near.isEmpty()) {
             if (st.synced.remove(id)) {
                 send(player, AirflowSyncPayload.none(level.dimension().location()));
@@ -682,8 +785,9 @@ public final class Airflow {
             return;
         }
         if (near.size() > AirflowSyncPayload.MAX_OPENINGS) {
+            List<Vec3> points = Frames.pointsNear(level, c, s.range() + SYNC_MARGIN);
             near = new ArrayList<>(near);
-            near.sort(Comparator.comparingDouble(o -> o.distance(c.x, c.y, c.z)));
+            near.sort(Comparator.comparingDouble(o -> distance(o, points)));
             near = near.subList(0, AirflowSyncPayload.MAX_OPENINGS);
         }
         int valid = ZasServerConfig.scheduler().periodTicks() * 2 + 20;
@@ -692,7 +796,7 @@ public final class Airflow {
         st.synced.add(id);
         FlowSettings onset = new FlowSettings(s.range(), s.speedAtOneAtm(), s.maxSpeed(), 1);
         double[] flow =
-                anchored(player) ? null : st.field.push(c.x, c.y, c.z, 0, 0, 0, zone, cls.threshold(), onset, r);
+                anchored(player) ? null : pushAt(level, st.field, c, Vec3.ZERO, zone, cls.threshold(), onset, r);
         if (flow == null) {
             st.pushed.remove(id);
         } else if (st.pushed.add(id)) {
@@ -725,7 +829,11 @@ public final class Airflow {
             last = null;
         }
         Vec3 c = player.getBoundingBox().getCenter();
-        List<VisibleFlow> flows = VisibleFlows.near(st.field, c.x, c.y, c.z);
+        List<double[]> points = new ArrayList<>(1);
+        for (Vec3 p : Frames.pointsNear(player.level(), c, VisibleFlows.RANGE)) {
+            points.add(new double[] {p.x, p.y, p.z});
+        }
+        List<VisibleFlow> flows = VisibleFlows.near(st.field, points);
         List<VisibleFlow> before = last == null ? List.of() : last.flows();
         if (!VisibleFlows.shouldSend(before, flows, last == null ? 0 : now - last.sentAt())) {
             return;

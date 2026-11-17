@@ -1,5 +1,6 @@
 package io.github.west3436.zas.airflow;
 
+import io.github.west3436.zas.provider.Frame;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -22,6 +23,9 @@ import java.util.Map;
  *   <li><b>Loudness</b> follows the moles per second through the source's openings, and no flow is
  *       silence: {@link #volume}. It is capped, so a source can't be a roar however much it adds up.
  *   <li><b>Pitch</b> follows the pressure difference: {@link #pitch}.
+ *   <li><b>Where it plays:</b> where the world shows the source. For blocks another mod shows
+ *       somewhere else, such as a Sable sub-level's, that is where their {@link Frame} puts them
+ *       (COMPAT-101), so the sound is at the hole in the ship and follows it.
  * </ul>
  */
 public final class AirflowSoundPlan {
@@ -116,7 +120,25 @@ public final class AirflowSoundPlan {
      */
     public static List<Loop> loops(
             List<VisibleFlow> flows, double px, double py, double pz, double mobKpa, double heavyKpa) {
-        List<Source> sources = plan(flows, px, py, pz);
+        return loops(flows, px, py, pz, mobKpa, heavyKpa, Frame.Lookup.NONE);
+    }
+
+    /**
+     * {@link #loops(List, double, double, double, double, double)} with the frames that show parts of
+     * the level elsewhere.
+     *
+     * @param px the listener's position, as the world shows it
+     * @param frames the frame that shows each block column
+     */
+    public static List<Loop> loops(
+            List<VisibleFlow> flows,
+            double px,
+            double py,
+            double pz,
+            double mobKpa,
+            double heavyKpa,
+            Frame.Lookup frames) {
+        List<Source> sources = plan(flows, px, py, pz, frames);
         List<Loop> loops = new ArrayList<>(sources.size() * 2);
         for (Source s : sources) {
             float volume = s.volume();
@@ -144,14 +166,18 @@ public final class AirflowSoundPlan {
     /** Sums a cell's openings as they are added. */
     private static final class Cell {
         final long key;
+        /** One of its openings, for the frame that shows the cell. */
+        final VisibleOpening first;
+
         double moles;
         double x;
         double y;
         double z;
         double kpa;
 
-        Cell(long key) {
+        Cell(long key, VisibleOpening first) {
             this.key = key;
+            this.first = first;
         }
 
         void add(VisibleOpening o, double share, int flowKpa) {
@@ -162,8 +188,14 @@ public final class AirflowSoundPlan {
             kpa += flowKpa * share;
         }
 
-        Source source() {
-            return new Source(key, x / moles, y / moles, z / moles, moles, kpa / moles);
+        /** Its source, where the world shows it. */
+        Source source(Frame.Lookup frames) {
+            Frame frame = frames.at(first.x(), first.z());
+            if (frame == null) {
+                return new Source(key, x / moles, y / moles, z / moles, moles, kpa / moles);
+            }
+            double[] p = frame.toShown(x / moles, y / moles, z / moles);
+            return new Source(key, p[0], p[1], p[2], moles, kpa / moles);
         }
     }
 
@@ -175,6 +207,17 @@ public final class AirflowSoundPlan {
      * @param px the listener's position
      */
     public static List<Source> plan(List<VisibleFlow> flows, double px, double py, double pz) {
+        return plan(flows, px, py, pz, Frame.Lookup.NONE);
+    }
+
+    /**
+     * {@link #plan(List, double, double, double)} with the frames that show parts of the level
+     * elsewhere: each source is where its frame shows it.
+     *
+     * @param px the listener's position, as the world shows it
+     * @param frames the frame that shows each block column
+     */
+    public static List<Source> plan(List<VisibleFlow> flows, double px, double py, double pz, Frame.Lookup frames) {
         if (flows.isEmpty()) {
             return List.of();
         }
@@ -187,12 +230,12 @@ public final class AirflowSoundPlan {
             // Shared among the openings the client knows of, which may be a sample of those in range.
             double share = moles / flow.openings().size();
             for (VisibleOpening o : flow.openings()) {
-                cells.computeIfAbsent(cellKey(o), Cell::new).add(o, share, flow.kpa());
+                cells.computeIfAbsent(cellKey(o), k -> new Cell(k, o)).add(o, share, flow.kpa());
             }
         }
         List<Source> heard = new ArrayList<>();
         for (Cell cell : cells.values()) {
-            Source s = cell.source();
+            Source s = cell.source(frames);
             if (s.distance(px, py, pz) <= RANGE) {
                 heard.add(s);
             }

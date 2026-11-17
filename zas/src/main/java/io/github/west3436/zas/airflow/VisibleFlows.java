@@ -43,13 +43,26 @@ public final class VisibleFlows {
 
     /** The flows to show a player at this point, in an order that doesn't depend on the player. */
     public static List<VisibleFlow> near(FlowField field, double x, double y, double z) {
+        return near(field, List.<double[]>of(new double[] {x, y, z}));
+    }
+
+    /**
+     * The flows to show a player that stands for each of these points, in an order that doesn't
+     * depend on the player: its own place, and its place in each frame that shows part of the level
+     * elsewhere near it (COMPAT-101). An opening's distance is to the nearest of them.
+     *
+     * @param points {x, y, z} each, at least one
+     */
+    public static List<VisibleFlow> near(FlowField field, List<double[]> points) {
         if (field.isEmpty()) {
             return List.of();
         }
         Map<EdgeKey, List<FlowField.Opening>> edges = new HashMap<>();
-        for (FlowField.Opening o : field.near(x, y, z, RANGE, FlowField.ANY_ZONE, 0)) {
-            edges.computeIfAbsent(new EdgeKey(o.highZone(), o.lowZone()), k -> new ArrayList<>())
-                    .add(o);
+        for (double[] p : points) {
+            for (FlowField.Opening o : field.near(p[0], p[1], p[2], RANGE, FlowField.ANY_ZONE, 0)) {
+                edges.computeIfAbsent(new EdgeKey(o.highZone(), o.lowZone()), k -> new ArrayList<>())
+                        .add(o);
+            }
         }
         if (edges.isEmpty()) {
             return List.of();
@@ -61,7 +74,7 @@ public final class VisibleFlows {
                 nearest.put(
                         key,
                         edges.get(key).stream()
-                                .mapToDouble(o -> o.distance(x, y, z))
+                                .mapToDouble(o -> distance(o, points))
                                 .min()
                                 .orElse(Double.MAX_VALUE));
             }
@@ -81,6 +94,15 @@ public final class VisibleFlows {
                     (int) Math.round(openings.get(0).difference()), VisibleFlow.step(moles), sample(openings, cap)));
         }
         return out;
+    }
+
+    /** An opening's distance to the nearest of the points. */
+    private static double distance(FlowField.Opening o, List<double[]> points) {
+        double best = Double.MAX_VALUE;
+        for (double[] p : points) {
+            best = Math.min(best, o.distance(p[0], p[1], p[2]));
+        }
+        return best;
     }
 
     /** At most {@code cap} of the openings, in position order, evenly across that order. */

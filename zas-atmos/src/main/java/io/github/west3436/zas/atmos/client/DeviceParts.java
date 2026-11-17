@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
@@ -36,6 +37,21 @@ final class DeviceParts {
     /** A device window's text. */
     static Component text(String key, Object... args) {
         return Component.translatable("gui.zas_atmos.device." + key, args);
+    }
+
+    /**
+     * Where a block is, as a player reads it: where the world shows it, which for a block on a Sable
+     * sub-level is on the ship, not in its plot (API-068).
+     */
+    static BlockPos shown(BlockPos p) {
+        Level level = Minecraft.getInstance().level;
+        return level == null ? p : Relocations.shownAt(level, p);
+    }
+
+    /** A block's coordinates, as {@link #shown} places it. */
+    static Component position(BlockPos p) {
+        BlockPos at = shown(p);
+        return Component.literal(at.getX() + ", " + at.getY() + ", " + at.getZ());
     }
 
     /** A row's label. */
@@ -81,7 +97,8 @@ final class DeviceParts {
         Level level = Minecraft.getInstance().level;
         String label = level == null ? "" : Labels.of(level, p);
         if (label.isEmpty()) {
-            return text("controller_at", p.getX(), p.getY(), p.getZ());
+            BlockPos at = shown(p);
+            return text("controller_at", at.getX(), at.getY(), at.getZ());
         }
         float before = ui.width(text("controller_named", ""), Face.BOLD);
         return text("controller_named", ui.fit(Component.literal(label), Face.BOLD, room - before));

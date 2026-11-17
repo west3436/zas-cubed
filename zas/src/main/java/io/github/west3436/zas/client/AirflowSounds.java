@@ -6,6 +6,7 @@ import io.github.west3436.zas.airflow.VisibleFlow;
 import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.api.client.LoopRequest;
 import io.github.west3436.zas.config.AirflowConfig;
+import io.github.west3436.zas.provider.Frames;
 import io.github.west3436.zas.sound.ZasSounds;
 import java.util.List;
 import net.minecraft.client.Camera;
@@ -35,8 +36,14 @@ final class AirflowSounds {
         }
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 ear = camera.isInitialized() ? camera.getPosition() : mc.player.getEyePosition();
-        for (AirflowSoundPlan.Loop loop :
-                AirflowSoundPlan.loops(flows, ear.x, ear.y, ear.z, AirflowConfig.mobKpa(), AirflowConfig.heavyKpa())) {
+        for (AirflowSoundPlan.Loop loop : AirflowSoundPlan.loops(
+                flows,
+                ear.x,
+                ear.y,
+                ear.z,
+                AirflowConfig.mobKpa(),
+                AirflowConfig.heavyKpa(),
+                Frames.lookup(mc.level))) {
             ClientSounds.loop(new LoopRequest(
                     loop.source(),
                     event(loop.sound()),

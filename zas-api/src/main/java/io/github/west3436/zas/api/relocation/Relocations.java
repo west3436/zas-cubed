@@ -1,5 +1,6 @@
 package io.github.west3436.zas.api.relocation;
 
+import io.github.west3436.zas.api.LevelThread;
 import io.github.west3436.zas.api.ServerThread;
 import io.github.west3436.zas.api.ServerThreads;
 import io.github.west3436.zas.api.ZasApi;
@@ -8,7 +9,9 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Moving blocks with their air (API-065): for a mod that moves a box of blocks, such as a ship that
@@ -143,5 +146,53 @@ public final class Relocations {
     public static boolean isMoving(ServerLevel level, BlockPos pos) {
         ServerThreads.require(level, "Relocations.isMoving");
         return ZasApi.provider().isRelocating(level, Objects.requireNonNull(pos, "pos"));
+    }
+
+    /**
+     * Where the world shows a point of a level (API-068). A mod may keep blocks in one place in their
+     * level and show them in another: Sable keeps a sub-level's blocks in its plot, far out in the
+     * level, and shows them where the ship is. Zones, cells and block positions name the place the
+     * blocks are kept; a player sees them, and should be told of them, where they show. Use it for
+     * coordinates a player reads.
+     *
+     * <p>Thread: the level's own: the server thread for a server-side level, the client thread for a
+     * client-side one.
+     *
+     * @param level the level
+     * @param point a point of it, where blocks are kept
+     * @return where the world shows it, now; the point itself where no mod shows it elsewhere, and
+     *     without ZAS³
+     * @throws IllegalStateException if called off the server thread for a server-side level
+     * @since 1.2.0
+     */
+    @LevelThread
+    public static Vec3 shownAt(Level level, Vec3 point) {
+        Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(point, "point");
+        if (level instanceof ServerLevel server) {
+            ServerThreads.require(server, "Relocations.shownAt");
+        }
+        return ZasApi.provider().shownAt(level, point);
+    }
+
+    /**
+     * Where the world shows a block of a level (API-068): the block that holds where its centre shows,
+     * as {@link #shownAt(Level, Vec3)} places it.
+     *
+     * <p>Thread: the level's own, as for {@link #shownAt(Level, Vec3)}.
+     *
+     * @param level the level
+     * @param pos a block of it, where blocks are kept
+     * @return the block where the world shows it; {@code pos} itself where no mod shows it elsewhere,
+     *     and without ZAS³
+     * @throws IllegalStateException if called off the server thread for a server-side level
+     * @since 1.2.0
+     */
+    @LevelThread
+    public static BlockPos shownAt(Level level, BlockPos pos) {
+        Objects.requireNonNull(pos, "pos");
+        Vec3 centre = Vec3.atCenterOf(pos);
+        Vec3 shown = shownAt(level, centre);
+        return shown.equals(centre) ? pos : BlockPos.containing(shown);
     }
 }
