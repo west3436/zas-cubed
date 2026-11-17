@@ -45,12 +45,12 @@ import org.jetbrains.annotations.Nullable;
  * by id so they spread over the interval (LIFE-033), and a check runs again at once whenever the
  * eyes enter or leave a fluid or the internals are switched on or off (LIFE-029). A server tick
  * runs at most {@code max_checks_per_tick} checks; one due beyond that waits for the next tick
- * (LIFE-038). A check takes the verdict ({@link
- * BreathingRules#assess}), applies the gases' hazard profiles for the seconds since the last check
- * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}), deals
- * the pressure and temperature damage ({@link EnvironmentHazards}) and runs other mods' hazard
- * handlers ({@link HandledHazards}). Rates are per second, so the interval changes smoothness, not
- * speed.
+ * (LIFE-038). A check switches off internals left with nothing to breathe from ({@link
+ * Internals#offWithoutSource}, LIFE-029), takes the verdict ({@link BreathingRules#assess}),
+ * applies the gases' hazard profiles for the seconds since the last check ({@link GasHazards}),
+ * adds the O2 used to its zone's respiration ({@link Respiration}), deals the pressure and
+ * temperature damage ({@link EnvironmentHazards}) and runs other mods' hazard handlers ({@link
+ * HandledHazards}). Rates are per second, so the interval changes smoothness, not speed.
  *
  * <p><b>Unresolved atmosphere.</b> Where the atmosphere at the eyes is {@code UNRESOLVED}, such
  * as for the moment a loading room's zone isn't back yet, its mixture is only a last-known guess,
@@ -243,6 +243,7 @@ public final class Breathers {
     private static void check(LivingEntity entity, ServerLevel level, BreathState state, long now, int interval) {
         long last = state.lastCheck();
         double seconds = last < 0 ? 0 : Math.clamp(now - last, 0, interval) / 20.0;
+        Internals.offWithoutSource(entity);
         BreathingRules.Assessment a = BreathingRules.assess(entity);
         Breathability verdict = a.verdict();
         AtmosphereSample sample = a.sample();
