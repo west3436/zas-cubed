@@ -29,7 +29,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Gases in ME storage (COMPAT-070 to COMPAT-074), with AE2 and its buses as a player has them, on a
+ * Gases in ME storage (COMPAT-070 to COMPAT-074; the cells are {@link Ae2CellTests}), with AE2 and its buses as a player has them, on a
  * network powered by a creative energy cell, and {@link TestTank}s for another mod's blocks. None of
  * them needs the content mod, so they run with it off too. The ones with ZAS³'s own pipes and tanks
  * are in {@link Ae2ContentTests}.

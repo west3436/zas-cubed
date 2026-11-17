@@ -3506,3 +3506,115 @@ origin: original
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/gauge.json
 origin: original
 notes: The floor model turned for each face and facing, as a button's is, and on a floor half a turn more, so the dial reads upright on a wall and from where it was placed on a floor or a ceiling.
+
+path: compat-ae2/src/main/resources/assets/zas/models/block/drive/gas_cell_16k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/block/drive/gas_cell_1k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/block/drive/gas_cell_256k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/block/drive/gas_cell_4k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/block/drive/gas_cell_64k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/gas_cell_housing.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/gas_storage_cell_16k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/gas_storage_cell_1k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/gas_storage_cell_256k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/gas_storage_cell_4k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/gas_storage_cell_64k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/portable_gas_cell_16k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/portable_gas_cell_1k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/portable_gas_cell_256k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/portable_gas_cell_4k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/models/item/portable_gas_cell_64k.json
+origin: original
+
+path: compat-ae2/src/main/resources/assets/zas/textures/block/drive/gas_cells.png
+origin: original
+notes: Each size's 6 by 2 front as a drive slot shows it, rows 0 to 9, and gold for its top and bottom.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/gas_cell_housing.png
+origin: original
+notes: A gold cartridge with an empty window, drawn from scratch beside AE2's cells; gold sets it apart from its iron item and copper fluid housings.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/gas_storage_cell_16k.png
+origin: original
+notes: The gas cartridge: a window of pale gas with a cloud in it, and a band in the size's colour with one pip for each size from 1k up.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/gas_storage_cell_1k.png
+origin: original
+notes: The gas cartridge: a window of pale gas with a cloud in it, and a band in the size's colour with one pip for each size from 1k up.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/gas_storage_cell_256k.png
+origin: original
+notes: The gas cartridge: a window of pale gas with a cloud in it, and a band in the size's colour with one pip for each size from 1k up.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/gas_storage_cell_4k.png
+origin: original
+notes: The gas cartridge: a window of pale gas with a cloud in it, and a band in the size's colour with one pip for each size from 1k up.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/gas_storage_cell_64k.png
+origin: original
+notes: The gas cartridge: a window of pale gas with a cloud in it, and a band in the size's colour with one pip for each size from 1k up.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/gas_storage_cell_led.png
+origin: original
+notes: The cell's light, white, coloured by AE2 by how full the cell is (tint index 1).
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_housing.png
+origin: original
+notes: A gold handheld with a cloud below its screen, drawn from scratch.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_led.png
+origin: original
+notes: The light, white, coloured by how full the cell is (tint index 1).
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_screen.png
+origin: original
+notes: The screen, white, in the cell's dye colour (tint index 2).
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_side_16k.png
+origin: original
+notes: The size's band and pips, as on the storage cell.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_side_1k.png
+origin: original
+notes: The size's band and pips, as on the storage cell.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_side_256k.png
+origin: original
+notes: The size's band and pips, as on the storage cell.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_side_4k.png
+origin: original
+notes: The size's band and pips, as on the storage cell.
+
+path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_side_64k.png
+origin: original
+notes: The size's band and pips, as on the storage cell.

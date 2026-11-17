@@ -59,6 +59,17 @@
 
   "zas.ae2.gases": "Gases",
   "zas.ae2.gas_storage": "Gas storage",
+  "item.zas.gas_cell_housing": "ME Gas Cell Housing",
+  "item.zas.gas_storage_cell_1k": "1k ME Gas Storage Cell",
+  "item.zas.gas_storage_cell_4k": "4k ME Gas Storage Cell",
+  "item.zas.gas_storage_cell_16k": "16k ME Gas Storage Cell",
+  "item.zas.gas_storage_cell_64k": "64k ME Gas Storage Cell",
+  "item.zas.gas_storage_cell_256k": "256k ME Gas Storage Cell",
+  "item.zas.portable_gas_cell_1k": "1k Portable Gas Cell",
+  "item.zas.portable_gas_cell_4k": "4k Portable Gas Cell",
+  "item.zas.portable_gas_cell_16k": "16k Portable Gas Cell",
+  "item.zas.portable_gas_cell_64k": "64k Portable Gas Cell",
+  "item.zas.portable_gas_cell_256k": "256k Portable Gas Cell",
 
   "hud.zas.pressure": "%s",
   "hud.zas.oxygen": "O₂ %s",

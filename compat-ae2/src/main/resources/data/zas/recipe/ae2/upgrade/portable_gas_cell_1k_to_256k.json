@@ -1,0 +1,13 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas:gas_cell_housing"
+    }
+  ],
+  "type": "ae2:storage_cell_upgrade",
+  "input_cell": "zas:portable_gas_cell_1k",
+  "input_component": "ae2:cell_component_256k",
+  "result_cell": "zas:portable_gas_cell_256k",
+  "result_component": "ae2:cell_component_1k"
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "zas:item/gas_storage_cell_4k",
+    "layer1": "zas:item/gas_storage_cell_led"
+  }
+}
