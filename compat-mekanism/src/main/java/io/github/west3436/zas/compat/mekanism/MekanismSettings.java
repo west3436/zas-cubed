@@ -1,5 +1,7 @@
 package io.github.west3436.zas.compat.mekanism;
 
+import io.github.west3436.zas.api.gas.GasPurity;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -16,7 +18,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * <p><b>Adding a setting.</b> Each part of the adapter has a section. Add a field for the value,
  * define it in the static block inside a {@code push}/{@code pop} of that part's section, keeping
  * each part's lines together, and read it through a method that falls back to the default while
- * the config isn't loaded, as {@link #litresPerMillibucket} does.
+ * the config isn't loaded, as {@link #minPurity} does.
  */
 public final class MekanismSettings {
     /** The config file's name. */
@@ -24,9 +26,6 @@ public final class MekanismSettings {
 
     /** The whole file. */
     public static final ModConfigSpec SPEC;
-
-    /** {@code [units] litres_per_millibucket}: the mB to mol factor (MEK-002). */
-    public static final ModConfigSpec.DoubleValue LITRES_PER_MILLIBUCKET;
 
     /** {@code [connection] min_purity}: how pure a mixture must be to leave for Mekanism (MEK-013). */
     public static final ModConfigSpec.DoubleValue MIN_PURITY;
@@ -64,18 +63,8 @@ public final class MekanismSettings {
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
-        builder.push("units");
-        LITRES_PER_MILLIBUCKET = builder.comment(
-                        "How much gas 1 mB of a Mekanism chemical is: this many litres at 101.325 kPa and",
-                        "293.15 K. At 1.0, 1,000 mB fill one block at one atmosphere, and 1 mB is about",
-                        "0.0416 mol. It is the same for every chemical, which keeps Mekanism's recipes in",
-                        "balance.")
-                .defineInRange(
-                        "litres_per_millibucket",
-                        ChemicalUnits.DEFAULT_LITRES_PER_MILLIBUCKET,
-                        ChemicalUnits.MIN_LITRES_PER_MILLIBUCKET,
-                        ChemicalUnits.MAX_LITRES_PER_MILLIBUCKET);
-        builder.pop();
+        // The unit factor (MEK-002) is ZAS³'s own, [units] litres_per_millibucket in zas-server.toml, so
+        // that a mB is the same amount whichever mod it comes from (COMPAT-143).
 
         // ---- The connection to tubes, tanks and machines (MEK-013) ----
         builder.push("connection");
@@ -166,12 +155,13 @@ public final class MekanismSettings {
 
     /**
      * The unit factor as it is set: the litres of gas, at standard air's pressure and temperature,
-     * that 1 mB of a chemical is (MEK-002).
+     * that 1 mB of a chemical is (MEK-002). It is ZAS³'s, the same for every mod's millibuckets
+     * (COMPAT-143), and set in {@code zas-server.toml}.
      *
      * @return litres per mB; the default while no server config is loaded
      */
     public static double litresPerMillibucket() {
-        return SPEC.isLoaded() ? LITRES_PER_MILLIBUCKET.get() : ChemicalUnits.DEFAULT_LITRES_PER_MILLIBUCKET;
+        return Millibuckets.litresPerMillibucket();
     }
 
     /**
@@ -180,7 +170,7 @@ public final class MekanismSettings {
      * @return moles per mB
      */
     public static double molesPerMillibucket() {
-        return ChemicalUnits.molesPerMillibucket(litresPerMillibucket());
+        return Millibuckets.molesPerMillibucket();
     }
 
     /**

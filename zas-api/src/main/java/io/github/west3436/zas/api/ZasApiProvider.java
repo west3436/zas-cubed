@@ -11,6 +11,7 @@ import io.github.west3436.zas.api.fire.Ignition;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.api.gas.Millibuckets;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
@@ -429,6 +430,23 @@ public interface ZasApiProvider {
     @AnyThread
     default double nearVacuumDensity() {
         return Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY;
+    }
+
+    /**
+     * The litres of gas, at standard air's pressure and temperature, that 1 mB of another mod's gas
+     * is (COMPAT-143), for {@link Millibuckets#litresPerMillibucket()}.
+     *
+     * <p>The default is the fallback's answer, {@link Millibuckets#DEFAULT_LITRES_PER_MILLIBUCKET}.
+     * It is there for the same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @return litres per mB
+     * @since 1.2.0
+     */
+    @AnyThread
+    default double litresPerMillibucket() {
+        return Millibuckets.DEFAULT_LITRES_PER_MILLIBUCKET;
     }
 
     /**

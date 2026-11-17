@@ -39,13 +39,20 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.slf4j.Logger;
@@ -275,6 +282,100 @@ public final class MekanismConnectionTests {
         b.other(5, 1, 0, "minecraft:stone");
         b.equal(faces(b, 5, 1, 0, true), EnumSet.noneOf(Direction.class), "stone's chemical faces");
         b.equal(faces(b, 5, 1, 0, false), EnumSet.noneOf(Direction.class), "stone's gas faces");
+        h.succeed();
+    }
+
+    // ---- COMPAT-146: a block reached once ---------------------------------------------------
+
+    /** The content's fluid bridge, whose views must not appear on Mekanism's blocks. */
+    private static final String FLUID_BRIDGE = "io.github.west3436.zas.atmos.fluid.";
+
+    /** The class name of what a block offers on a face, or on no face; "none" for nothing. */
+    private static String handler(Bench b, int x, int y, int z, Direction face, boolean gas) {
+        Object found = gas
+                ? b.level.getCapability(IGasHandler.BLOCK, b.at(x, y, z), face)
+                : b.level.getCapability(Capabilities.FluidHandler.BLOCK, b.at(x, y, z), face);
+        return found == null ? "none" : found.getClass().getName();
+    }
+
+    /**
+     * A Rotary Condensentrator offers a chemical handler and a fluid handler. A pipe reaches it once,
+     * through its chemicals: wherever it offers gas, the gas handler is the Mekanism adapter's, and
+     * the fluid bridge adds no gas handler of its own and puts no view on its fluids.
+     */
+    @GameTest(template = LAB)
+    public static void compat_146_a_block_of_chemicals_and_fluids_is_reached_once_through_its_chemicals(
+            GameTestHelper h) {
+        Bench b = new Bench(h);
+        b.other(3, 1, 1, "mekanism:rotary_condensentrator");
+        Map<String, String> gas = new TreeMap<>();
+        Map<String, String> fluid = new TreeMap<>();
+        for (Direction face : new Direction[] {
+            null, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP, Direction.DOWN
+        }) {
+            String side = String.valueOf(face);
+            gas.put(side, handler(b, 3, 1, 1, face, true));
+            fluid.put(side, handler(b, 3, 1, 1, face, false));
+        }
+        LOGGER.info("A Rotary Condensentrator's gas handlers: {}; its fluid handlers: {}", gas, fluid);
+        h.assertTrue(
+                gas.values().contains(ADAPTER + "ChemicalsAsGas"), "it has no gas handler of the adapter's: " + gas);
+        h.assertTrue(fluid.values().stream().anyMatch(c -> !c.equals("none")), "it offers no fluid handler: " + fluid);
+        for (Map.Entry<String, String> entry : gas.entrySet()) {
+            h.assertTrue(
+                    entry.getValue().equals("none") || entry.getValue().equals(ADAPTER + "ChemicalsAsGas"),
+                    "its gas handler on " + entry.getKey() + " is " + entry.getValue());
+        }
+        for (Map.Entry<String, String> entry : fluid.entrySet()) {
+            h.assertFalse(
+                    entry.getValue().startsWith(FLUID_BRIDGE),
+                    "its fluid handler on " + entry.getKey() + " is " + entry.getValue());
+        }
+        h.succeed();
+    }
+
+    /**
+     * Mekanism's liquid oxygen is in {@code #c:oxygen}, as other mods' oxygen gas is, but it is a
+     * liquid, so the adapter lists it in {@code #zas_atmos:never_gas}. A fluid tank full of it gets
+     * no gas handler from the fluid bridge, and a pipe doesn't take it: it would boil for nothing,
+     * and Mekanism's gases already reach a pipe as chemicals.
+     */
+    @GameTest(template = LAB)
+    public static void compat_146_mekanisms_liquid_oxygen_is_never_gas(GameTestHelper h) {
+        Bench b = new Bench(h);
+        Fluid liquid = BuiltInRegistries.FLUID.get(id("mekanism:oxygen"));
+        h.assertTrue(liquid != Fluids.EMPTY, "Mekanism has no liquid oxygen");
+        h.assertTrue(
+                liquid.defaultFluidState().is(TagKey.create(Registries.FLUID, id("c:oxygen"))),
+                "liquid oxygen isn't in #c:oxygen");
+        h.assertTrue(
+                liquid.defaultFluidState().is(TagKey.create(Registries.FLUID, id("zas_atmos:never_gas"))),
+                "liquid oxygen isn't in #zas_atmos:never_gas");
+
+        b.other(3, 1, 1, "mekanism:basic_fluid_tank");
+        // For no face Mekanism's handler is only read, so fill it through the first face that takes it.
+        int taken = 0;
+        for (Direction face : Direction.values()) {
+            IFluidHandler tank = b.level.getCapability(Capabilities.FluidHandler.BLOCK, b.at(3, 1, 1), face);
+            if (tank != null && taken == 0) {
+                taken = tank.fill(new FluidStack(liquid, 1_000), IFluidHandler.FluidAction.EXECUTE);
+            }
+        }
+        b.equal(taken, 1_000, "what the fluid tank took");
+        for (Direction face : Direction.values()) {
+            String found = handler(b, 3, 1, 1, face, true);
+            h.assertFalse(found.startsWith(FLUID_BRIDGE), "the tank's gas handler on " + face + " is " + found);
+        }
+
+        closedPipe(b, 1, 0);
+        IFluidHandler pipe = b.level.getCapability(Capabilities.FluidHandler.BLOCK, b.at(2, 1, 0), Direction.UP);
+        if (pipe != null) {
+            b.equal(
+                    pipe.fill(new FluidStack(liquid, 1_000), IFluidHandler.FluidAction.SIMULATE),
+                    0,
+                    "what a pipe took");
+            h.assertFalse(pipe.isFluidValid(0, new FluidStack(liquid, 1)), "a pipe takes liquid oxygen");
+        }
         h.succeed();
     }
 

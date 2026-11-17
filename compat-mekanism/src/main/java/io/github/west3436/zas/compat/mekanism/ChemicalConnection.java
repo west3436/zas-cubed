@@ -2,6 +2,7 @@ package io.github.west3436.zas.compat.mekanism;
 
 import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.ThirdPartyFaults;
+import io.github.west3436.zas.api.capability.GasHandlerView;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,13 @@ import org.slf4j.Logger;
  * asks, for every block, which of the two capabilities other mods registered. A block gets a view
  * only of the capability that was there before any view was added, and only if it lacks the other.
  * Each view also checks what it finds when it is used, so one that reaches another view, through a
- * proxying block for instance, holds nothing.
+ * proxying block for instance, holds nothing. The views of gas implement {@link GasHandlerView}, so
+ * other adapters' views pass over them as well.
+ *
+ * <p><b>Fluids.</b> The content mod's own connection to fluid handlers (COMPAT-146) runs at the same
+ * priority but after this one, since {@code zas_atmos} loads after {@code zas}. So a Mekanism block
+ * that offers a chemical handler and a fluid handler has its gas handler from here already, and the
+ * fluid connection leaves it alone: it is reached once, through its chemicals.
  */
 final class ChemicalConnection {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -111,9 +118,13 @@ final class ChemicalConnection {
                 tubes.size());
     }
 
-    /** Whether a gas handler is one of the adapter's views, which no view may look through. */
+    /**
+     * Whether a gas handler is a view, which no view may look through: one of the adapter's, or
+     * another adapter's, such as the content mod's view of a fluid tank (COMPAT-141). Without the
+     * second, a tube could reach a fluid tank through two translations.
+     */
     static boolean isView(@Nullable IGasHandler handler) {
-        return handler instanceof ChemicalsAsGas || handler instanceof TubeJoint;
+        return handler instanceof GasHandlerView;
     }
 
     /** Whether a chemical handler is one of the adapter's views, which no view may look through. */
