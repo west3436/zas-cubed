@@ -4,11 +4,14 @@ import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.capability.GasHandlerView;
 import io.github.west3436.zas.api.capability.IGasHandler;
+import io.github.west3436.zas.atmos.ZasAtmosMod;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
@@ -48,6 +51,9 @@ import org.slf4j.Logger;
  * handler that is a {@link GasHandlerView}, such as another adapter's view of a chemical tank, and
  * {@link FluidsAsGas} offers nothing for a fluid handler that is a {@link GasAsFluids}.
  *
+ * <p><b>Not twice through one block.</b> A block in {@link #NO_FLUID_VIEW}, which reaches gas as
+ * gas, is given no fluid view of a gas store it touches.
+ *
  * <p><b>Reached once</b> (COMPAT-146). The Mekanism adapter's connection to chemical handlers runs
  * at the same priority but before this one, since {@code zas} loads before {@code zas_atmos}. A
  * Mekanism block that offers a chemical handler and a fluid handler has a gas handler from there
@@ -57,6 +63,13 @@ import org.slf4j.Logger;
  */
 public final class FluidConnection {
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    /**
+     * Blocks given no {@link GasAsFluids} view of a gas store they touch: they reach ZAS³ gas as gas,
+     * so through a fluid view too they would count it twice. Data, so a pack can add a block; the AE2
+     * adapter adds AE2's cable bus.
+     */
+    public static final TagKey<Block> NO_FLUID_VIEW = TagKey.create(Registries.BLOCK, ZasAtmosMod.id("no_fluid_view"));
 
     private FluidConnection() {}
 
