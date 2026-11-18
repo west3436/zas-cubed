@@ -15,9 +15,9 @@ import org.jetbrains.annotations.Nullable;
  * where it is, and each method here answers as much at once.
  *
  * <p>What uses them: airflow, to find the openings near a player or a mob where the world shows them,
- * and to push it along the flow as the frame turns it; the client, to play airflow's sounds and
- * particles where the hole shows; and {@code Relocations.shownAt}, for the coordinates a player is
- * shown.
+ * and to push it along the flow as the frame turns it; airflow's crawl, to see the blocks a frame
+ * shows in the way ({@link #collides}); the client, to play airflow's sounds and particles where the
+ * hole shows; and {@code Relocations.shownAt}, for the coordinates a player is shown.
  *
  * <p>The level's own thread: the server thread for a server level, the client thread for the
  * client's.
@@ -43,6 +43,17 @@ public final class Frames {
          * @param shown a box of shown points
          */
         List<Frame> near(Level level, AABB shown);
+
+        /**
+         * Whether a box of shown points meets the blocks this source shows somewhere else, as an
+         * entity's box there would: what {@link Level#noCollision} misses, because it looks only
+         * where the blocks are kept. Without it, this source's blocks stop nothing.
+         *
+         * @param shown a box of shown points
+         */
+        default boolean collides(Level level, AABB shown) {
+            return false;
+        }
     }
 
     /** Adds a source. */
@@ -92,6 +103,20 @@ public final class Frames {
             }
         }
         return out == null ? List.of() : out;
+    }
+
+    /**
+     * Whether a box of shown points meets blocks a source shows there (FLOW-019), such as a ship's
+     * hull: the part of a collision check {@link Level#noCollision} can't see. False without a
+     * source.
+     */
+    public static boolean collides(Level level, AABB shown) {
+        for (Source source : SOURCES) {
+            if (source.collides(level, shown)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

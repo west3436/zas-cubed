@@ -473,9 +473,15 @@ public final class Airflow {
         return false;
     }
 
+    /**
+     * Whether a player's box in a pose fits at a point: nothing in the level, and nothing another mod
+     * shows there, such as a Sable ship's hull, whose blocks the level keeps elsewhere ({@link
+     * Frames#collides}).
+     */
     private static boolean fits(Player player, Pose pose, Vec3 at) {
         AABB box = player.getDimensions(pose).makeBoundingBox(at).deflate(1.0E-7);
-        return player.level().noCollision(player, box);
+        Level level = player.level();
+        return level.noCollision(player, box) && !Frames.collides(level, box);
     }
 
     /**

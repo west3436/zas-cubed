@@ -29,7 +29,8 @@ import org.junit.jupiter.api.Test;
  *   <li>the classes of Sable's the adapter names are listed here, and each use of them is covered
  *       by the adapter's GameTests. A new one has to be added here, with its GameTest. Most are in
  *       Sable's {@code api} package or Sable Companion; the rest are the sub-level, its plot and what
- *       Sable holds for an unloaded one, which its API hands out;
+ *       Sable holds for an unloaded one, which its API hands out, and the collision check Sable's
+ *       own stand-up check uses;
  *   <li>it names nothing of Create's or of the Simulated Project's;
  *   <li>the classes asked whether the adapter is on name nothing of Sable's, so loading them never
  *       loads Sable.
@@ -49,6 +50,7 @@ class AdapterReferencesTest {
             "dev/ryanhcode/sable/companion/math/BoundingBox3dc",
             "dev/ryanhcode/sable/companion/math/Pose3d",
             "dev/ryanhcode/sable/companion/math/Pose3dc",
+            "dev/ryanhcode/sable/mixinhelpers/CanFallAtleastHelper",
             "dev/ryanhcode/sable/sublevel/ServerSubLevel",
             "dev/ryanhcode/sable/sublevel/SubLevel",
             "dev/ryanhcode/sable/sublevel/plot/LevelPlot",
