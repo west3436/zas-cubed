@@ -85,6 +85,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.CIRCULATOR.get());
         out.accept(AtmosItems.COMPRESSOR.get());
         out.accept(AtmosItems.TURBINE.get());
+        out.accept(AtmosItems.TURBINE_CONTROLLER.get());
         out.accept(AtmosItems.ELECTROLYZER.get());
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.AIR_CONDITIONER.get());

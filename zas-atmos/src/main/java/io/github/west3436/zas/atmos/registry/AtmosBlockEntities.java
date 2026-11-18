@@ -36,7 +36,9 @@ import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.atmos.teg.CirculatorBlockEntity;
 import io.github.west3436.zas.atmos.teg.TegBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
+import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
 import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
@@ -242,6 +244,18 @@ public final class AtmosBlockEntities {
             "turbine",
             () -> BlockEntityType.Builder.of(TurbineBlockEntity::new, AtmosBlocks.TURBINE.get())
                     .build(null));
+
+    public static final Supplier<BlockEntityType<CompressorBlockEntity>> COMPRESSOR = BLOCK_ENTITIES.register(
+            "compressor",
+            () -> BlockEntityType.Builder.of(CompressorBlockEntity::new, AtmosBlocks.COMPRESSOR.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<TurbineControllerBlockEntity>> TURBINE_CONTROLLER =
+            BLOCK_ENTITIES.register(
+                    "turbine_controller",
+                    () -> BlockEntityType.Builder.of(
+                                    TurbineControllerBlockEntity::new, AtmosBlocks.TURBINE_CONTROLLER.get())
+                            .build(null));
 
     // The tank transfer valve, placed (CONT-103, D-86).
 

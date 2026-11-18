@@ -15,8 +15,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The gas turbine (CONT-161, CONT-162): it lets the combustion chamber's gas out to the cell in front
  * of it, taking work from the gas into the shaft it shares with its {@linkplain CompressorBlock
- * compressor}, and its generator turns the shaft's energy into FE. Its block entity does the work of
- * the pair.
+ * compressor}, and its generator turns the shaft's energy into FE in its {@linkplain
+ * TurbineControllerBlockEntity controller}'s store. Its block entity runs the shaft.
  */
 public class TurbineBlock extends TurbinePartBlock implements EntityBlock {
     public static final MapCodec<TurbineBlock> CODEC = simpleCodec(TurbineBlock::new);
@@ -44,11 +44,9 @@ public class TurbineBlock extends TurbinePartBlock implements EntityBlock {
     @SuppressWarnings("unchecked")
     public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(
             Level level, BlockState state, BlockEntityType<T> type) {
-        if (type != AtmosBlockEntities.TURBINE.get()) {
+        if (!level.isClientSide || type != AtmosBlockEntities.TURBINE.get()) {
             return null;
         }
-        return level.isClientSide
-                ? (l, p, s, be) -> TurbineBlockEntity.clientTick(s, p)
-                : (l, p, s, be) -> ((TurbineBlockEntity) be).serverTick();
+        return (l, p, s, be) -> TurbineBlockEntity.clientTick(s, p);
     }
 }

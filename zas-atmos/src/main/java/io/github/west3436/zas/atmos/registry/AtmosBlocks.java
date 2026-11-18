@@ -41,6 +41,7 @@ import io.github.west3436.zas.atmos.teg.TegBlock;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlock;
 import io.github.west3436.zas.atmos.turbine.CompressorBlock;
 import io.github.west3436.zas.atmos.turbine.TurbineBlock;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
@@ -274,6 +275,10 @@ public final class AtmosBlocks {
     /** The gas turbine (CONT-161). */
     public static final DeferredBlock<TurbineBlock> TURBINE =
             BLOCKS.registerBlock("turbine", TurbineBlock::new, metal());
+
+    /** The gas turbine's controller, which drives it and holds its FE (CONT-163, CONT-164). */
+    public static final DeferredBlock<TurbineControllerBlock> TURBINE_CONTROLLER =
+            BLOCKS.registerBlock("turbine_controller", TurbineControllerBlock::new, metal());
 
     // ---- The tank transfer valve, placed (CONT-103, D-86) ----
 

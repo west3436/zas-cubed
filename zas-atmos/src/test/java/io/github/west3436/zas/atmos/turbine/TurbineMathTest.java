@@ -55,12 +55,38 @@ class TurbineMathTest {
     }
 
     @Test
-    void cont_160_the_compressor_draws_more_as_the_shaft_spins_faster() {
-        double slow = TurbineMath.compressorMoles(0.25, 250, 101.3, 293, Double.POSITIVE_INFINITY);
-        double fast = TurbineMath.compressorMoles(1, 250, 101.3, 293, Double.POSITIVE_INFINITY);
-        assertEquals(4 * slow, fast, 1e-9);
-        assertEquals(0, TurbineMath.compressorMoles(0, 250, 101.3, 293, 100));
-        assertEquals(2.5, TurbineMath.compressorMoles(1, 250, 101.3, 293, 10), 1e-9);
+    void cont_160_a_lean_chamber_gets_fuel_and_no_oxidizer() {
+        // 100 mol, a quarter of it oxidizer, no fuel: lean.
+        double[] r = TurbineMath.release(0.5, 0.5, 0, 25, 100, 0.2, false, 10, 10);
+        assertEquals(0.5, r[0], 1e-12);
+        assertEquals(0, r[1], 1e-12);
+    }
+
+    @Test
+    void cont_160_a_rich_chamber_gets_oxidizer_and_no_fuel() {
+        // 10 mol of fuel and 1 of oxidizer: rich, so oxidizer to burn it, capped at four times the fuel's.
+        double[] r = TurbineMath.release(0.5, 0.5, 10, 1, 100, 0.2, false, 10, 10);
+        assertEquals(0, r[0], 1e-12);
+        assertEquals(TurbineMath.OXIDIZER_CATCH_UP * 0.5 * 0.5, r[1], 1e-12);
+        // Uncapped when the shortfall is small.
+        double[] s = TurbineMath.release(0.5, 0.5, 2.2, 1, 5, 0.2, false, 10, 10);
+        assertEquals(0, s[0], 1e-12);
+        assertEquals(0.1, s[1], 1e-9);
+    }
+
+    @Test
+    void cont_160_a_primed_chamber_waits_and_the_buffer_bounds_each_gas() {
+        double[] primed = TurbineMath.release(0.5, 0.5, 1, 30, 100, 0.2, true, 10, 10);
+        assertEquals(0, primed[0], 1e-12);
+        assertEquals(0, primed[1], 1e-12);
+        // An empty chamber wants both; the buffer holds a little fuel and no oxidizer.
+        double[] r = TurbineMath.release(0.5, 0.5, 0, 0, 100, 0.2, false, 0.1, 0);
+        assertEquals(0.1, r[0], 1e-12);
+        assertEquals(0, r[1], 1e-12);
+        double[] none = TurbineMath.release(0, 0.5, 0, 0, 100, 0.2, false, 10, 10);
+        assertEquals(0, none[0] + none[1], 1e-12);
+        double[] noReaction = TurbineMath.release(0.5, Double.NaN, 0, 0, 100, 0.2, false, 10, 10);
+        assertEquals(0, noReaction[0] + noReaction[1], 1e-12);
     }
 
     @Test

@@ -124,6 +124,8 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> CIRCULATOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.CIRCULATOR);
     public static final DeferredItem<BlockItem> COMPRESSOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.COMPRESSOR);
     public static final DeferredItem<BlockItem> TURBINE = ITEMS.registerSimpleBlockItem(AtmosBlocks.TURBINE);
+    public static final DeferredItem<BlockItem> TURBINE_CONTROLLER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.TURBINE_CONTROLLER);
 
     // The station blocks (CONT-129 to CONT-131).
 

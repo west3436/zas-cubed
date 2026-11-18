@@ -263,7 +263,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.ANALYZER.get(), AnalyzerScreen::new);
         event.register(AtmosMenus.AIRLOCK_CONTROLLER.get(), AirlockControllerScreen::new);
         event.register(AtmosMenus.TEG.get(), TegScreen::new);
-        event.register(AtmosMenus.TURBINE.get(), TurbineScreen::new);
+        event.register(AtmosMenus.TURBINE_CONTROLLER.get(), TurbineControllerScreen::new);
         event.register(AtmosMenus.GAS_MINER.get(), GasMinerScreen::new);
         event.register(AtmosMenus.REMOTE_SIGNALER.get(), RemoteSignalerScreen::new);
     }
