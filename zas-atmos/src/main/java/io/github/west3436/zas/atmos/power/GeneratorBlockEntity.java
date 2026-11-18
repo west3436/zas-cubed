@@ -3,8 +3,11 @@ package io.github.west3436.zas.atmos.power;
 import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.api.client.LoopRequest;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.device.DeviceData;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
@@ -32,7 +35,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  * from it goes out instead of wasting fuel. Its store gives FE to any block that takes it, and its
  * fuel slot takes fuel from hoppers. It never touches the air (D-35, CONT-067).
  */
-public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
+public class GeneratorBlockEntity extends BlockEntity implements MenuProvider, RedstoneControlled {
     /** How far its running loop is heard, in blocks: as far as any device's. */
     private static final double LOOP_RANGE = 8;
 
@@ -51,6 +54,7 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
     private final EnergyStore energy = new EnergyStore(
             () -> AtmosServerConfig.get(AtmosServerConfig.GENERATOR_BUFFER), false, true, this::setChanged);
 
+    private final RedstoneControl redstone = new RedstoneControl(this);
     private int burnLeft;
     private int burnTotal;
 
@@ -62,6 +66,7 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
                 case 1 -> burnTotal;
                 case 2 -> energy.getEnergyStored();
                 case 3 -> energy.getMaxEnergyStored();
+                case GeneratorMenu.DATA_REDSTONE -> redstone.data();
                 default -> 0;
             };
         }
@@ -71,7 +76,7 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
 
         @Override
         public int getCount() {
-            return 4;
+            return GeneratorMenu.DATA_COUNT;
         }
     };
 
@@ -101,8 +106,16 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
         return (int) Math.max(1, Math.min(Integer.MAX_VALUE, ticks));
     }
 
-    /** One game tick: burn, make FE, start the next piece of fuel, and light or put out the block. */
+    /**
+     * One game tick: burn, make FE, start the next piece of fuel, and light or put out the block. While
+     * its redstone setting holds it (CONT-170), the piece it was burning waits, half burnt, and it
+     * makes nothing.
+     */
     public void serverTick() {
+        if (!redstone.read()) {
+            show(false);
+            return;
+        }
         if (burnLeft > 0) {
             burnLeft--;
             energy.fill(AtmosServerConfig.get(AtmosServerConfig.GENERATOR_OUTPUT));
@@ -114,7 +127,16 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
             burnLeft = burnTotal;
             setChanged();
         }
-        boolean lit = burnLeft > 0;
+        show(burnLeft > 0);
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
+    }
+
+    /** Lights or puts out the block, with its sound. */
+    private void show(boolean lit) {
         BlockState state = getBlockState();
         if (level != null && state.getValue(GeneratorBlock.LIT) != lit) {
             level.setBlock(worldPosition, state.setValue(GeneratorBlock.LIT, lit), 3);
@@ -150,6 +172,12 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
         }
     }
 
+    /** What a comparator reads (CONT-175): its store over its capacity. A change saves, which tells it. */
+    public int signal() {
+        int capacity = energy.getMaxEnergyStored();
+        return capacity <= 0 ? 0 : Comparators.fill((double) energy.getEnergyStored() / capacity);
+    }
+
     /** The fuel slot. */
     public ItemStackHandler fuel() {
         return fuel;
@@ -178,6 +206,7 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
         tag.putInt("Energy", energy.getEnergyStored());
         tag.putInt("BurnLeft", burnLeft);
         tag.putInt("BurnTotal", burnTotal);
+        redstone.save(tag);
     }
 
     @Override
@@ -190,6 +219,7 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
         energy.set(tag.getInt("Energy"));
         burnLeft = Math.max(0, tag.getInt("BurnLeft"));
         burnTotal = Math.max(burnLeft, tag.getInt("BurnTotal"));
+        redstone.load(tag);
     }
 
     @Override

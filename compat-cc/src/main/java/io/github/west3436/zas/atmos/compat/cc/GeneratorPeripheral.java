@@ -56,4 +56,15 @@ public final class GeneratorPeripheral extends DevicePeripheral<GeneratorBlockEn
     public int getEnergyCapacity() throws LuaException {
         return device().energy().getMaxEnergyStored();
     }
+
+    /** Its redstone setting (COMPAT-023): {@code ignored}, {@code high} or {@code low}. */
+    @LuaFunction(mainThread = true)
+    public final String getRedstoneMode() throws LuaException {
+        return Lua.redstoneMode(device());
+    }
+
+    @LuaFunction(mainThread = true)
+    public final void setRedstoneMode(String mode) throws LuaException {
+        Lua.setRedstoneMode(device(), mode);
+    }
 }

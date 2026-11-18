@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
@@ -104,6 +105,11 @@ public class ElectrolyzerBlockEntity extends InlineDeviceEntity {
     @Override
     protected Supplier<SoundEvent> switchSound(boolean on) {
         return null;
+    }
+
+    /** What a comparator reads (CONT-175): its water over its tank. A change saves, which tells it. */
+    public int signal() {
+        return Comparators.fill(tank.water() / ElectrolyzerMath.TANK_MB);
     }
 
     /** Saves the water, and shows its level on the block. */

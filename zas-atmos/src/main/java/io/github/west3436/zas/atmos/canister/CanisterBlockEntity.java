@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
@@ -85,6 +86,8 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
         }
     };
 
+    private final Comparators.Output comparator = new Comparators.Output();
+
     public CanisterBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.CANISTER.get(), pos, state, PipeVolumes.CANISTER);
     }
@@ -102,6 +105,11 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
     public double pressure() {
         GasParcel gas = gasNow();
         return GasMixture.GAS_CONSTANT * gas.temperature() * gas.totalMoles() / nodeVolume();
+    }
+
+    /** What a comparator reads (CONT-174): its pressure over its rating, 15 just short of it. */
+    public int signal() {
+        return Comparators.pressure(pressure(), RATED_KPA);
     }
 
     /** Whether it stands on a connector port, as its GUI shows it. */
@@ -200,6 +208,7 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
         if (CanisterFailure.check(level, worldPosition, gas)) {
             return;
         }
+        comparator.update(level, worldPosition, getBlockState().getBlock(), signal());
         if (!valveOpen()) {
             reportStopped();
             return;

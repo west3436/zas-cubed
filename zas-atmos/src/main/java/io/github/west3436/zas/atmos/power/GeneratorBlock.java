@@ -71,6 +71,17 @@ public class GeneratorBlock extends HorizontalDirectionalBlock implements Entity
     }
 
     @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full its FE store is (CONT-175). */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof GeneratorBlockEntity generator ? generator.signal() : 0;
+    }
+
+    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new GeneratorBlockEntity(pos, state);
     }

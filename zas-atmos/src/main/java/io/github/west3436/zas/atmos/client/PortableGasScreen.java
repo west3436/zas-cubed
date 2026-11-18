@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.portable.PortableGasMenu;
 import io.github.west3436.zas.atmos.portable.PortableStatus;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -19,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
  */
 abstract class PortableGasScreen<M extends PortableGasMenu> extends TguiScreen<M> {
     private static final int WIDTH = 176;
-    private static final int TOP_ROWS = 2 + Ui.BUTTON_ROW + Ui.ROW;
+    private static final int TOP_ROWS = 2 + 2 * Ui.BUTTON_ROW + Ui.ROW;
     private static final int SLOT_ROWS = 2 * 18 + 3;
     private static final int BATTERY_SLOT = 0;
     private static final int TANK_SLOT = 1;
@@ -45,9 +46,18 @@ abstract class PortableGasScreen<M extends PortableGasMenu> extends TguiScreen<M
 
         DeviceParts.label(ui, "state", labelX, row, Ui.BUTTON_HEIGHT);
         PortableStatus status = menu.status();
-        DeviceParts.status(ui, Component.translatable(status.key()), colour(status), valueX, row, Ui.BUTTON_HEIGHT);
-        DeviceParts.onOff(
-                ui, x + w - Ui.PAD, row, menu.value(PortableGasMenu.DATA_ON) != 0, () -> press(PortableGasMenu.TOGGLE));
+        boolean on = menu.value(PortableGasMenu.DATA_ON) != 0;
+        boolean held = on && RedstoneControl.holds(menu.redstone());
+        DeviceParts.status(
+                ui,
+                held ? DeviceParts.held() : Component.translatable(status.key()),
+                held ? Ui.AVERAGE : colour(status),
+                valueX,
+                row,
+                Ui.BUTTON_HEIGHT);
+        DeviceParts.onOff(ui, x + w - Ui.PAD, row, on, () -> press(PortableGasMenu.TOGGLE));
+        row += Ui.BUTTON_ROW;
+        DeviceParts.redstone(ui, x, row, w, menu.redstone(), this::press);
         row += Ui.BUTTON_ROW;
 
         ownRows(ui, labelX, valueX, valueW, row);

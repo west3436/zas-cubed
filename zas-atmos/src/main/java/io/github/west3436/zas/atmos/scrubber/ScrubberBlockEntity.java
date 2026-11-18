@@ -9,6 +9,8 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.ScrubberControl;
 import io.github.west3436.zas.atmos.controller.ScrubberOrder;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.label.Labelled;
@@ -57,7 +59,7 @@ import net.minecraft.world.phys.Vec3;
  * ScrubberStatus}: whether it took gas at its last atmos tick, or why not.
  */
 public class ScrubberBlockEntity extends PipeNodeEntity
-        implements PoweredDevice, ScrubberControl, MenuProvider, Labelled {
+        implements PoweredDevice, ScrubberControl, MenuProvider, Labelled, RedstoneControlled {
     /** Who a scrubber's changes are made by. */
     public static final SourceId SCRUBBER = SourceId.of(ZasAtmosMod.MOD_ID, "scrubber");
 
@@ -68,6 +70,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
 
     private final ZonePort port = new ZonePort(SCRUBBER);
     private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
+    private final RedstoneControl redstone = new RedstoneControl(this);
     private ScrubberMode mode = ScrubberMode.OFF;
     private GasSelection selection = GasSelection.DEFAULT;
     private long controlledUntil = Long.MIN_VALUE;
@@ -89,6 +92,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
                 case ScrubberMenu.DATA_Z_HIGH -> high(controller == null ? 0 : controller.getZ());
                 case ScrubberMenu.DATA_NETWORK -> (int) Math.min(Short.MAX_VALUE, Math.round(networkPressure()));
                 case ScrubberMenu.DATA_STATUS -> status.ordinal();
+                case ScrubberMenu.DATA_REDSTONE -> redstone.data();
                 default -> 0;
             };
         }
@@ -116,8 +120,14 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         return (short) (v >> 16);
     }
 
-    /** What the scrubber draws now: nothing while off, twice as much in panic (CONT-065). */
+    /**
+     * What the scrubber draws now: nothing while off or held by redstone (CONT-172), twice as much in
+     * panic (CONT-065).
+     */
     private int currentDraw() {
+        if (!redstone.allows()) {
+            return 0;
+        }
         return switch (mode) {
             case OFF -> 0;
             case PANIC -> AtmosServerConfig.get(AtmosServerConfig.SCRUBBER_PANIC_DRAW);
@@ -227,9 +237,14 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         return status;
     }
 
-    /** Whether the scrubber is running: on and powered. */
+    /** Whether the scrubber is running: on, let run by its redstone setting (CONT-170), and powered. */
     public boolean running() {
-        return mode != ScrubberMode.OFF && power.isPowered();
+        return mode != ScrubberMode.OFF && redstone.allows() && power.isPowered();
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
     }
 
     @Override
@@ -240,6 +255,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
     @Override
     protected void atmosTick(ServerLevel level) {
         cellWatch().step();
+        redstone.read();
         GasStore net = network().gas();
         ScrubberMode shown = running() ? mode : ScrubberMode.OFF;
         BlockState state = getBlockState();
@@ -286,6 +302,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         tag.putString(MODE, mode.getSerializedName());
         tag.put(SELECTION, selection.save());
         power.save(tag);
+        redstone.save(tag);
         // Shown to /data get block while a controller controls the scrubber; never loaded, since a
         // controller's orders don't outlast a reload and it sends them again.
         if (controlled()) {
@@ -302,6 +319,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         mode = ScrubberMode.byName(tag.getString(MODE));
         selection = GasSelection.load(tag.getCompound(SELECTION));
         power.load(tag);
+        redstone.load(tag);
     }
 
     @Override

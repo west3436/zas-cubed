@@ -204,6 +204,18 @@ public class LargeTankBlock extends Block implements EntityBlock, PipeConnector 
         return super.playerWillDestroy(level, pos, state, player);
     }
 
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full it is, from either half (CONT-174): its pressure over its rating. */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        LargeTankBlockEntity tank = entity(level, pos);
+        return tank == null ? 0 : tank.signal();
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {

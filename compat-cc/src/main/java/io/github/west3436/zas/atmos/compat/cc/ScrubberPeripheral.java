@@ -88,6 +88,17 @@ public final class ScrubberPeripheral extends DevicePeripheral<ScrubberBlockEnti
         return device().power().isPowered();
     }
 
+    /** Its redstone setting (COMPAT-023): {@code ignored}, {@code high} or {@code low}. */
+    @LuaFunction(mainThread = true)
+    public final String getRedstoneMode() throws LuaException {
+        return Lua.redstoneMode(device());
+    }
+
+    @LuaFunction(mainThread = true)
+    public final void setRedstoneMode(String mode) throws LuaException {
+        Lua.setRedstoneMode(device(), mode);
+    }
+
     /** Whether an area air controller orders it, so its settings can't be changed here. */
     @LuaFunction(mainThread = true)
     public boolean isControlled() throws LuaException {

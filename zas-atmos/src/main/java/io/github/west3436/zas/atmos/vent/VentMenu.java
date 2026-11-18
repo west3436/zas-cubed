@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.vent;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.LabelledMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -55,8 +56,10 @@ public class VentMenu extends AbstractContainerMenu implements LabelledMenu {
     public static final int DATA_NETWORK = 10;
     /** The {@link VentStatus}'s ordinal. */
     public static final int DATA_STATUS = 11;
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = 12;
 
-    public static final int DATA_COUNT = 12;
+    public static final int DATA_COUNT = 13;
 
     private static final double[] STEPS = {-100, -10, 10, 100};
 
@@ -115,12 +118,21 @@ public class VentMenu extends AbstractContainerMenu implements LabelledMenu {
         return (high << 16) | (low & 0xFFFF);
     }
 
+    /** Its redstone setting and signal, as synced. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
     /**
      * Applies a button: the server's half of the GUI. Unknown ids are refused, and so is every
-     * button while a controller controls the vent.
+     * button but the redstone setting's while a controller controls the vent: redstone only ever
+     * stops a vent, so it never fights a controller's orders (CONT-172).
      */
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if (vent != null && !vent.isRemoved() && RedstoneControl.isButton(id)) {
+            return vent.redstone().button(id);
+        }
         if (vent == null || vent.isRemoved() || id < SET_MODE || id > LAST_BUTTON) {
             return false;
         }

@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.inline.InlineDeviceMenu;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.inline.SidePortMenu;
@@ -19,8 +20,8 @@ import net.minecraft.world.entity.player.Inventory;
 abstract class InlineScreen<M extends InlineDeviceMenu> extends TguiScreen<M> {
     static final int WIDTH = 216;
 
-    /** The state row, with its switch. */
-    static final int STATE_ROW = Ui.BUTTON_ROW;
+    /** The state row, with its switch, and the redstone setting's row under it. */
+    static final int STATE_ROW = 2 * Ui.BUTTON_ROW;
 
     /** A port's cell in the strip. */
     static final int CELL_WIDTH = 72;
@@ -120,14 +121,21 @@ abstract class InlineScreen<M extends InlineDeviceMenu> extends TguiScreen<M> {
         }
     }
 
-    /** The state and the switch. */
+    /** The state and the switch, and under them the redstone setting (CONT-170). */
     protected final void stateRow(Ui ui, int x, int y, int w) {
         int labelX = x + Ui.PAD;
         DeviceParts.label(ui, "state", labelX, y, Ui.BUTTON_HEIGHT);
         InlineStatus status = menu.status();
+        boolean held = menu.on() && RedstoneControl.holds(menu.redstone());
         DeviceParts.status(
-                ui, statusWord(status), colour(status), labelX + DeviceParts.LABEL_WIDTH, y, Ui.BUTTON_HEIGHT);
+                ui,
+                held ? DeviceParts.held() : statusWord(status),
+                held ? Ui.AVERAGE : colour(status),
+                labelX + DeviceParts.LABEL_WIDTH,
+                y,
+                Ui.BUTTON_HEIGHT);
         DeviceParts.onOff(ui, x + w - Ui.PAD, y, menu.on(), () -> press(InlineDeviceMenu.TOGGLE));
+        DeviceParts.redstone(ui, x, y + Ui.BUTTON_ROW, w, menu.redstone(), this::press);
     }
 
     /** The words of its state row. The default is the status's own. */
