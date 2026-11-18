@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.miner;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.netty.buffer.ByteBuf;
@@ -18,8 +19,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A gas miner's window (CONT-180, CONT-074): its switch, state and room, its target and temperature,
- * and the gas it makes. The server fixes the gas list when the window opens and sends it, and a
+ * A gas miner's window (CONT-180, CONT-074): its switch, state and room, its redstone setting
+ * (CONT-170), its target and temperature, and the gas it makes. The server fixes the gas list when the window opens and sends it, and a
  * button names a gas only by its place in that list, so a client can't name a gas the server doesn't
  * define. The server clamps the target and temperature.
  */
@@ -39,8 +40,14 @@ public class GasMinerMenu extends AbstractContainerMenu {
     /** Sets the temperature back to a new miner's. */
     public static final int TEMPERATURE_DEFAULT = 10;
 
-    /** Picks the list's first gas; the others follow in order. */
+    /**
+     * Picks the list's first gas; the others follow in order, past the redstone setting's buttons
+     * ({@link #gasButton}).
+     */
     public static final int GAS = 11;
+
+    /** How many ids the redstone setting's buttons take. */
+    private static final int REDSTONE_BUTTONS = RedstoneControl.LAST_BUTTON - RedstoneControl.FIRST_BUTTON + 1;
 
     public static final int DATA_ON = 0;
     /** The place of its gas in the list, or −1. */
@@ -54,7 +61,10 @@ public class GasMinerMenu extends AbstractContainerMenu {
     /** The {@link GasMinerStatus}'s ordinal. */
     public static final int DATA_STATUS = 5;
 
-    public static final int DATA_COUNT = 6;
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = 6;
+
+    public static final int DATA_COUNT = 7;
 
     /** {@link #DATA_ROOM} with no reading. */
     public static final int NO_ROOM = -1;
@@ -114,6 +124,25 @@ public class GasMinerMenu extends AbstractContainerMenu {
         return gases;
     }
 
+    /** Its redstone setting and signal, as synced: read with {@link RedstoneControl#mode(int)} and the rest. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
+    /** The button that picks the gas at a place in the list: they skip the redstone setting's. */
+    public static int gasButton(int index) {
+        int id = GAS + index;
+        return id < RedstoneControl.FIRST_BUTTON ? id : id + REDSTONE_BUTTONS;
+    }
+
+    /** The place in the list of the gas a button picks, or -1 for a button that picks none. */
+    static int gasIndex(int id) {
+        if (id < GAS || RedstoneControl.isButton(id)) {
+            return -1;
+        }
+        return id < RedstoneControl.FIRST_BUTTON ? id - GAS : id - GAS - REDSTONE_BUTTONS;
+    }
+
     /** The synced status. */
     public GasMinerStatus status() {
         return GasMinerStatus.of(data.get(DATA_STATUS));
@@ -125,6 +154,10 @@ public class GasMinerMenu extends AbstractContainerMenu {
         if (miner == null || miner.isRemoved() || player.isSpectator()) {
             return false;
         }
+        if (RedstoneControl.isButton(id)) {
+            return miner.redstone().button(id);
+        }
+        int gas = gasIndex(id);
         if (id == TOGGLE) {
             miner.setOn(!miner.isOn());
         } else if (id >= TARGET_DOWN_100 && id < TARGET_DEFAULT) {
@@ -135,8 +168,8 @@ public class GasMinerMenu extends AbstractContainerMenu {
             miner.setTemperature(miner.temperature() + STEPS[id - TEMPERATURE_DOWN_100]);
         } else if (id == TEMPERATURE_DEFAULT) {
             miner.setTemperature(GasMinerBlockEntity.DEFAULT_TEMPERATURE);
-        } else if (id >= GAS && id - GAS < gases.size()) {
-            return miner.setGas(gases.get(id - GAS));
+        } else if (gas >= 0 && gas < gases.size()) {
+            return miner.setGas(gases.get(gas));
         } else {
             return false;
         }

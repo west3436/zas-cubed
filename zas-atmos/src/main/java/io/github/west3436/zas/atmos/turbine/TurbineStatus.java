@@ -4,7 +4,10 @@ import java.util.Locale;
 
 /** What a gas turbine did at its last atmos tick, for its window and a computer (CONT-163). */
 public enum TurbineStatus {
-    /** Switched off: it lets nothing out and its compressor draws nothing; the shaft runs down. */
+    /**
+     * Switched off, or held by its redstone setting: it lets nothing out and its compressor draws
+     * nothing; the shaft runs down.
+     */
     OFF,
     /** It has no compressor paired with it. */
     NO_COMPRESSOR,
