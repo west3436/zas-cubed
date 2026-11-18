@@ -46,9 +46,11 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
@@ -97,6 +99,12 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  *       tick. A player moves on its own client, and a client's numbers aren't trusted (NFR-011), so
  *       its speed is the distance the server saw it cover. Only the tick a side first meets a block
  *       counts, so an entity held against a wall isn't hit again and again.
+ *   <li><b>Tumbling</b>: a living entity the flow has carried that has been off the ground for
+ *       {@link #LIFT_TICKS} game ticks is flung, until it lands, enters a liquid, takes hold of a
+ *       ladder, rides, glides or hangs nearly still out of the flow. The players tracking it, and
+ *       itself if it is a player, are told when that starts and ends ({@link TumblePayload}), and so
+ *       is a player that starts tracking it while it is flung. Their clients turn its model end over
+ *       end ({@link Tumble}, CLIENT-027).
  * </ul>
  */
 public final class Airflow {
@@ -133,6 +141,15 @@ public final class Airflow {
     /** How much each other side of a box shrinks when looking along an axis, to miss what it touches. */
     private static final double IMPACT_MARGIN = 1e-3;
 
+    /** The game ticks a carried entity must be off the ground for to be flung (CLIENT-027). */
+    public static final int LIFT_TICKS = 3;
+
+    /** The speed below which a flung entity out of the flow hangs nearly still, blocks per tick. */
+    static final double HANG_SPEED = 0.05;
+
+    /** The game ticks a flung entity may hang nearly still out of the flow before it stops tumbling. */
+    public static final int HANG_TICKS = 10;
+
     private static final Map<ResourceKey<Level>, LevelState> STATES = new HashMap<>();
 
     /** The players the server has put in the swimming pose (FLOW-019). Server thread. */
@@ -140,6 +157,9 @@ public final class Airflow {
 
     /** For GameTests: takes every payload instead of the network; null sends normally. */
     private static volatile BiConsumer<ServerPlayer, CustomPacketPayload> sendHook;
+
+    /** For GameTests: takes every tumble change instead of the entity's trackers; null sends normally. */
+    private static volatile BiConsumer<Entity, TumblePayload> tumbleHook;
 
     /** One dimension's airflow between game ticks. Server thread. */
     private static final class LevelState {
@@ -152,6 +172,28 @@ public final class Airflow {
         final Set<UUID> pushed = new HashSet<>();
         final Map<UUID, Shown> shown = new HashMap<>();
         final Int2ObjectMap<Carried> carried = new Int2ObjectOpenHashMap<>();
+        final Int2ObjectMap<Flung> flung = new Int2ObjectOpenHashMap<>();
+    }
+
+    /** A living entity the flow has flung off the ground, which tumbles (CLIENT-027). Server thread. */
+    private static final class Flung {
+        final LivingEntity entity;
+        /** Whether the flow acts on it this game tick. */
+        boolean inFlow = true;
+        /** The game ticks it has hung nearly still out of the flow. */
+        int hanging;
+        /** Where it was at the last game tick. */
+        double x;
+
+        double y;
+        double z;
+
+        Flung(LivingEntity entity) {
+            this.entity = entity;
+            this.x = entity.getX();
+            this.y = entity.getY();
+            this.z = entity.getZ();
+        }
     }
 
     /**
@@ -172,6 +214,8 @@ public final class Airflow {
         double vx;
 
         double vz;
+        /** The game ticks it has been off the ground in a row (CLIENT-027). */
+        int airborne;
         /** Whether a block holds it along each axis, so that meeting that block again is no blow. */
         boolean heldX;
 
@@ -212,6 +256,13 @@ public final class Airflow {
                 AirflowReceiver.CLIENT.tick(p);
             }
         });
+        gameBus.addListener((PlayerEvent.StartTracking e) -> {
+            if (e.getEntity() instanceof ServerPlayer player
+                    && e.getTarget().level() instanceof ServerLevel level
+                    && flung(level, e.getTarget())) {
+                send(player, new TumblePayload(e.getTarget().getId(), true));
+            }
+        });
         gameBus.addListener((ServerStoppedEvent e) -> {
             STATES.clear();
             CRAWLING.clear();
@@ -224,7 +275,8 @@ public final class Airflow {
                 .playToClient(
                         AirflowImpulsePayload.TYPE, AirflowImpulsePayload.STREAM_CODEC, AirflowReceiver::handleImpulse)
                 .playToClient(
-                        AirflowEffectsPayload.TYPE, AirflowEffectsPayload.STREAM_CODEC, AirflowReceiver::handleEffects);
+                        AirflowEffectsPayload.TYPE, AirflowEffectsPayload.STREAM_CODEC, AirflowReceiver::handleEffects)
+                .playToClient(TumblePayload.TYPE, TumblePayload.STREAM_CODEC, AirflowReceiver::handleTumble);
     }
 
     // ---- The push, shared by the server and the client ------------------------------------
@@ -537,6 +589,7 @@ public final class Airflow {
         }
         crawlPlayers(level, d, table, st, st.field, settings);
         rememberCarried(st, settings);
+        land(level, st);
     }
 
     /**
@@ -625,10 +678,57 @@ public final class Airflow {
             c.fresh = false;
             c.x = e.getX();
             c.z = e.getZ();
+            c.airborne = airborne(e) ? c.airborne + 1 : 0;
+            if (c.airborne >= LIFT_TICKS) {
+                fling(st, e, c.inFlow);
+            }
             if (!c.inFlow && Math.hypot(c.vx, c.vz) <= FlowImpact.LEAST_SPEED_LOST) {
                 it.remove();
             }
             c.inFlow = false;
+        }
+    }
+
+    /**
+     * Whether an entity is off the ground in a way a tumble can show (CLIENT-027): not standing,
+     * swimming, climbing, riding, gliding, anchored or exempt.
+     */
+    static boolean airborne(LivingEntity e) {
+        return !e.onGround() && !e.isInLiquid() && !e.onClimbable() && !e.isFallFlying() && !exempt(e) && !anchored(e);
+    }
+
+    /** Flings a carried entity off the ground, or notes that the flow still acts on one flung. */
+    private static void fling(LevelState st, LivingEntity e, boolean inFlow) {
+        Flung f = st.flung.get(e.getId());
+        if (f == null || f.entity != e) {
+            st.flung.put(e.getId(), new Flung(e));
+            sendTracking(e, new TumblePayload(e.getId(), true));
+        } else if (inFlow) {
+            f.inFlow = true;
+        }
+    }
+
+    /**
+     * Ends the tumble of each flung entity that has come down, or has hung nearly still out of the
+     * flow for {@link #HANG_TICKS}, as a bat might (CLIENT-027). One that has gone is dropped
+     * without a word, as its trackers drop it themselves.
+     */
+    private static void land(ServerLevel level, LevelState st) {
+        for (var it = st.flung.values().iterator(); it.hasNext(); ) {
+            Flung f = it.next();
+            LivingEntity e = f.entity;
+            double moved = Math.sqrt(e.distanceToSqr(f.x, f.y, f.z));
+            f.x = e.getX();
+            f.y = e.getY();
+            f.z = e.getZ();
+            f.hanging = f.inFlow || moved >= HANG_SPEED ? 0 : f.hanging + 1;
+            f.inFlow = false;
+            if (e.isRemoved()) {
+                it.remove();
+            } else if (!e.isAlive() || e.level() != level || !airborne(e) || f.hanging >= HANG_TICKS) {
+                it.remove();
+                sendTracking(e, new TumblePayload(e.getId(), false));
+            }
         }
     }
 
@@ -700,6 +800,12 @@ public final class Airflow {
         }
         st.shown.clear();
         st.carried.clear();
+        for (Flung f : st.flung.values()) {
+            if (!f.entity.isRemoved()) {
+                sendTracking(f.entity, new TumblePayload(f.entity.getId(), false));
+            }
+        }
+        st.flung.clear();
         st.field = FlowField.EMPTY;
         st.tick = NONE;
         st.processed = 0;
@@ -878,7 +984,32 @@ public final class Airflow {
         }
     }
 
+    /** Sends a payload to the players tracking an entity, and to the entity if it is a player. */
+    private static void sendTracking(Entity e, TumblePayload payload) {
+        BiConsumer<Entity, TumblePayload> hook = tumbleHook;
+        if (hook != null) {
+            hook.accept(e, payload);
+            return;
+        }
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(e, payload);
+    }
+
     // ---- For GameTests and the profiler ---------------------------------------------------
+
+    /** Whether airflow has flung an entity in a level off the ground, so that it tumbles (CLIENT-027). */
+    public static boolean flung(ServerLevel level, Entity e) {
+        LevelState st = STATES.get(level.dimension());
+        if (st == null) {
+            return false;
+        }
+        Flung f = st.flung.get(e.getId());
+        return f != null && f.entity == e;
+    }
+
+    /** For GameTests: every tumble change goes to {@code hook} instead of the trackers; null ends it. */
+    public static void tumbleHookForTest(BiConsumer<Entity, TumblePayload> hook) {
+        tumbleHook = hook;
+    }
 
     /**
      * For GameTests: syncs one player with the level's current field as each atmos tick does, for
