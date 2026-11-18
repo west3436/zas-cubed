@@ -8,8 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * A gas turbine (CONT-161, CONT-162): its switch, what it is doing, its shaft's speed, its chamber
- * and its FE. Its compressor is the same peripheral.
+ * A gas turbine (CONT-161, CONT-162): its switch, what it is doing, its shaft's speed, its chamber,
+ * its FE and its redstone setting (COMPAT-023). Its compressor is the same peripheral.
  */
 public final class TurbinePeripheral extends DevicePeripheral<TurbineBlockEntity> {
     TurbinePeripheral(TurbineBlockEntity turbine) {
@@ -71,5 +71,16 @@ public final class TurbinePeripheral extends DevicePeripheral<TurbineBlockEntity
     @LuaFunction(mainThread = true)
     public int getEnergyCapacity() throws LuaException {
         return device().energy().getMaxEnergyStored();
+    }
+
+    /** Its redstone setting (COMPAT-023): {@code ignored}, {@code high} or {@code low}. */
+    @LuaFunction(mainThread = true)
+    public final String getRedstoneMode() throws LuaException {
+        return Lua.redstoneMode(device());
+    }
+
+    @LuaFunction(mainThread = true)
+    public final void setRedstoneMode(String mode) throws LuaException {
+        Lua.setRedstoneMode(device(), mode);
     }
 }

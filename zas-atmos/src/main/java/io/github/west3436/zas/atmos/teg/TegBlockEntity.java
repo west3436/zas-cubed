@@ -5,7 +5,10 @@ import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.WorkToFe;
@@ -38,19 +41,22 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>It makes nothing when its store is full, so the heat then just passes from one stream to the
  * other. Switched off, it passes nothing, and its circulators pass their gas on their own. New, it is
- * off. Every game tick it gives its FE to the blocks next to it that take FE ({@link WorkToFe#push});
+ * off. Held by its redstone setting (CONT-170), it is as if switched off: it makes no FE and passes
+ * no work, and its circulators pass their gas, unchanged, on their own. Every game tick it gives its FE to the blocks next to it that take FE ({@link WorkToFe#push});
  * an area air controller next to it takes it into its buffer, as from a generator.
  *
  * <p>For a redstone or computer reading: {@link #on()}, {@link #status()}, {@link #powerPerTick()}
- * (how hard) and {@link #energy()} (how full).
+ * (how hard) and {@link #energy()} (how full); a comparator reads its store's fill ({@link #signal()},
+ * CONT-175).
  */
-public class TegBlockEntity extends AtmosDevice implements MenuProvider {
+public class TegBlockEntity extends AtmosDevice implements MenuProvider, RedstoneControlled {
     private static final String ON = "On";
     private static final String ENERGY = "Energy";
 
     private final EnergyStore energy =
             new EnergyStore(() -> AtmosServerConfig.get(AtmosServerConfig.TEG_BUFFER), false, true, this::setChanged);
     private final WorkToFe work = new WorkToFe();
+    private final RedstoneControl redstone = new RedstoneControl(this);
 
     private boolean on;
     private TegStatus status = TegStatus.OFF;
@@ -106,16 +112,19 @@ public class TegBlockEntity extends AtmosDevice implements MenuProvider {
         return TegBlock.coreOf(server, at, state) == this ? c : null;
     }
 
-    /** Whether it passes its circulators' gas itself this atmos tick: on, and stepping. */
+    /**
+     * Whether it passes its circulators' gas itself this atmos tick: on, let run by its redstone
+     * setting at its last step (CONT-170), and stepping.
+     */
     public boolean drives() {
-        return on && stepping();
+        return on && redstone.allows() && stepping();
     }
 
     @Override
     protected void atmosTick(ServerLevel level) {
         CirculatorBlockEntity left = circulator(0);
         CirculatorBlockEntity right = circulator(1);
-        if (!on) {
+        if (!redstone.read() || !on) {
             finish(level, TegStatus.OFF, 0);
             return;
         }
@@ -223,6 +232,17 @@ public class TegBlockEntity extends AtmosDevice implements MenuProvider {
 
     // ---- Its state --------------------------------------------------------------------------
 
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
+    }
+
+    /** What a comparator reads (CONT-175): its store over its capacity. A change saves, which tells it. */
+    public int signal() {
+        int capacity = energy.getMaxEnergyStored();
+        return capacity <= 0 ? 0 : Comparators.fill((double) energy.getEnergyStored() / capacity);
+    }
+
     /** Whether it is switched on. */
     public boolean on() {
         return on;
@@ -299,6 +319,7 @@ public class TegBlockEntity extends AtmosDevice implements MenuProvider {
             case TegMenu.DATA_STORED_LOW -> energy.getEnergyStored() & 0xFFFF;
             case TegMenu.DATA_CAPACITY_HIGH -> energy.getMaxEnergyStored() >>> 16;
             case TegMenu.DATA_CAPACITY_LOW -> energy.getMaxEnergyStored() & 0xFFFF;
+            case TegMenu.DATA_REDSTONE -> redstone.data();
             default -> {
                 int i = index - TegMenu.DATA_TEMPERATURE;
                 if (i >= 0 && i < 4) {
@@ -328,6 +349,7 @@ public class TegBlockEntity extends AtmosDevice implements MenuProvider {
         tag.putBoolean(ON, on);
         tag.putInt(ENERGY, energy.getEnergyStored());
         work.save(tag);
+        redstone.save(tag);
     }
 
     @Override
@@ -336,5 +358,6 @@ public class TegBlockEntity extends AtmosDevice implements MenuProvider {
         on = tag.getBoolean(ON);
         energy.set(tag.getInt(ENERGY));
         work.load(tag);
+        redstone.load(tag);
     }
 }

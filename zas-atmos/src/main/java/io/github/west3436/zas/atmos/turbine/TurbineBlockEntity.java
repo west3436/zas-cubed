@@ -18,8 +18,11 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
@@ -50,8 +53,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The gas turbine's block entity, which does the work of the pair (CONT-160 to CONT-164).
  *
- * <p><b>Each atmos tick</b>, while it is switched on and paired with a compressor and its chamber is
- * a zone:
+ * <p><b>Each atmos tick</b>, while it is switched on, let run by its redstone setting (CONT-170),
+ * paired with a compressor and its chamber is a zone:
  * <ul>
  *   <li>The turbine lets out {@code turbine_nozzle} of what would even out the chamber and the
  *       exhaust, the cell in front of it ({@link TurbineMath#turbineMoles}). When that gas arrives,
@@ -64,7 +67,9 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  * Whether on or not, the generator then takes its share of the shaft's energy as FE ({@link
  * TurbineMath#generatorJoules}), and friction takes {@code turbine_friction} of it each second, as
- * heat into the chamber. So with nothing burning, the shaft only slows.
+ * heat into the chamber. So with nothing burning, the shaft only slows. Held by its redstone setting,
+ * which reads the signal at the turbine's block, it is as if switched off: it moves no gas, and the
+ * shaft runs down.
  *
  * <p><b>Conservation.</b> Every change to a zone goes through the API's mutations, each port with at
  * most one outstanding (CONT-071, CONT-072), as {@link #SOURCE}. Gas on its way between a removal and
@@ -73,9 +78,10 @@ import org.jetbrains.annotations.Nullable;
  * ({@link TurbineMath}).
  *
  * <p>For a redstone or computer reading: {@link #on()}, {@link #status()}, {@link #rpm()} (how hard)
- * and {@link #energy()} (how full).
+ * and {@link #energy()} (how full); a comparator at the turbine reads its store's fill ({@link
+ * #signal()}, CONT-175).
  */
-public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
+public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, RedstoneControlled {
     /** Who the turbine's changes to zones are made by. */
     public static final SourceId SOURCE = SourceId.of(ZasAtmosMod.MOD_ID, "gas_turbine");
 
@@ -91,6 +97,7 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
     private final EnergyStore energy = new EnergyStore(
             () -> AtmosServerConfig.get(AtmosServerConfig.TURBINE_BUFFER), false, true, this::setChanged);
     private final WorkToFe work = new WorkToFe();
+    private final RedstoneControl redstone = new RedstoneControl(this);
 
     private final ZonePort intakePort = new ZonePort(SOURCE);
     private final ZonePort chamberAddPort = new ZonePort(SOURCE);
@@ -192,8 +199,9 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
         lastTurbineWork = 0;
         lastCompressorWork = 0;
 
+        boolean allowed = redstone.read();
         TurbineStatus next;
-        if (!on) {
+        if (!on || !allowed) {
             next = TurbineStatus.OFF;
         } else if (comp == null) {
             next = TurbineStatus.NO_COMPRESSOR;
@@ -441,6 +449,17 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
         return on;
     }
 
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
+    }
+
+    /** What a comparator reads (CONT-175): its store over its capacity. A change saves, which tells it. */
+    public int signal() {
+        int capacity = energy.getMaxEnergyStored();
+        return capacity <= 0 ? 0 : Comparators.fill((double) energy.getEnergyStored() / capacity);
+    }
+
     /**
      * Switches the pair on or off, with a click. Off, it lets nothing out and its compressor draws
      * nothing, and its shaft runs down. Server side.
@@ -542,6 +561,7 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
             case TurbineMenu.DATA_CAPACITY_LOW -> energy.getMaxEnergyStored() & 0xFFFF;
             case TurbineMenu.DATA_TOP_RPM ->
                 TurbineMenu.shortOf(AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_RPM));
+            case TurbineMenu.DATA_REDSTONE -> redstone.data();
             default -> 0;
         };
     }
@@ -598,6 +618,7 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
         tag.putDouble(SHAFT, shaft);
         tag.putInt(ENERGY, energy.getEnergyStored());
         work.save(tag);
+        redstone.save(tag);
         if (!toChamber.isEmpty()) {
             tag.put(TO_CHAMBER, GasStore.save(toChamber));
         }
@@ -614,6 +635,7 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
         shaft = Double.isFinite(saved) ? Math.max(0, Math.min(saved, topEnergy())) : 0;
         energy.set(tag.getInt(ENERGY));
         work.load(tag);
+        redstone.load(tag);
         toChamber = tag.contains(TO_CHAMBER) ? GasStore.parcel(tag.getCompound(TO_CHAMBER)) : GasParcel.EMPTY;
         toExhaust = tag.contains(TO_EXHAUST) ? GasStore.parcel(tag.getCompound(TO_EXHAUST)) : GasParcel.EMPTY;
     }

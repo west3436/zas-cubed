@@ -4,19 +4,21 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.teg.TegMenu;
 import io.github.west3436.zas.atmos.teg.TegStatus;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * A TEG core's window (CONT-159): its state and switch; a table of the hot and the cold stream, each
- * with its temperature and pressure in and out; then what it makes and what it has stored.
+ * A TEG core's window (CONT-159): its state and switch, and its redstone setting (CONT-170); a table
+ * of the hot and the cold stream, each with its temperature and pressure in and out; then what it
+ * makes and what it has stored.
  */
 public final class TegScreen extends TguiScreen<TegMenu> {
     private static final int WIDTH = 216;
     private static final int TABLE = 3 * Ui.ROW + 2;
-    private static final int STATE = 2 + Ui.BUTTON_ROW;
+    private static final int STATE = 2 + 2 * Ui.BUTTON_ROW;
     private static final int POWER = 2 + 2 * Ui.ROW + 1;
     private static final int HEIGHT = Ui.TITLE_HEIGHT + 2 * Ui.PAD + STATE + Ui.PAD + TABLE + Ui.PAD + POWER;
     private static final int SIDE_WIDTH = 30;
@@ -37,14 +39,16 @@ public final class TegScreen extends TguiScreen<TegMenu> {
         int row = y + 1;
         DeviceParts.label(ui, "state", labelX, row, Ui.BUTTON_HEIGHT);
         TegStatus status = menu.status();
+        boolean held = menu.on() && RedstoneControl.holds(menu.redstone());
         DeviceParts.status(
                 ui,
-                Component.translatable(status.key()),
-                colour(status),
+                held ? DeviceParts.held() : Component.translatable(status.key()),
+                held ? Ui.AVERAGE : colour(status),
                 labelX + DeviceParts.LABEL_WIDTH,
                 row,
                 Ui.BUTTON_HEIGHT);
         DeviceParts.onOff(ui, x + w - Ui.PAD, row, menu.on(), () -> press(TegMenu.TOGGLE));
+        DeviceParts.redstone(ui, x, row + Ui.BUTTON_ROW, w, menu.redstone(), this::press);
         y += STATE + Ui.PAD;
 
         ui.section(x, y, w, TABLE, null);

@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.miner.GasMinerMenu;
 import io.github.west3436.zas.atmos.miner.GasMinerStatus;
 import java.util.List;
@@ -12,14 +13,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * A gas miner's window (CONT-181): its state and switch, its room's pressure, its target and its gas's
- * temperature, and a box per gas, of which the ticked one is what it makes. Pressures and temperatures
- * follow the player's units (CLIENT-006), while the steps are in kPa and K, which the server applies.
- * The list scrolls a row at a time when it doesn't all fit.
+ * A gas miner's window (CONT-181): its state and switch, its redstone setting (CONT-170), its room's
+ * pressure, its target and its gas's temperature, and a box per gas, of which the ticked one is what
+ * it makes. Pressures and temperatures follow the player's units (CLIENT-006), while the steps are in
+ * kPa and K, which the server applies. The list scrolls a row at a time when it doesn't all fit.
  */
 final class GasMinerScreen extends TguiScreen<GasMinerMenu> {
     private static final int WIDTH = 216;
-    private static final int SETTINGS = 2 + Ui.BUTTON_ROW + Ui.ROW + 2 * Ui.BUTTON_ROW + 1;
+    private static final int SETTINGS = 2 + 2 * Ui.BUTTON_ROW + Ui.ROW + 2 * Ui.BUTTON_ROW + 1;
     private static final int MOST_ROWS = 8;
     private static final int COLUMNS = 3;
 
@@ -51,9 +52,18 @@ final class GasMinerScreen extends TguiScreen<GasMinerMenu> {
 
         DeviceParts.label(ui, "state", labelX, row, Ui.BUTTON_HEIGHT);
         GasMinerStatus status = menu.status();
-        DeviceParts.status(ui, Component.translatable(status.key()), colour(status), valueX, row, Ui.BUTTON_HEIGHT);
-        DeviceParts.onOff(
-                ui, x + w - Ui.PAD, row, menu.value(GasMinerMenu.DATA_ON) != 0, () -> press(GasMinerMenu.TOGGLE));
+        boolean on = menu.value(GasMinerMenu.DATA_ON) != 0;
+        boolean held = on && RedstoneControl.holds(menu.redstone());
+        DeviceParts.status(
+                ui,
+                held ? DeviceParts.held() : Component.translatable(status.key()),
+                held ? Ui.AVERAGE : colour(status),
+                valueX,
+                row,
+                Ui.BUTTON_HEIGHT);
+        DeviceParts.onOff(ui, x + w - Ui.PAD, row, on, () -> press(GasMinerMenu.TOGGLE));
+        row += Ui.BUTTON_ROW;
+        DeviceParts.redstone(ui, x, row, w, menu.redstone(), this::press);
         row += Ui.BUTTON_ROW;
 
         DeviceParts.label(ui, "room", labelX, row, Ui.ROW);
@@ -108,7 +118,7 @@ final class GasMinerScreen extends TguiScreen<GasMinerMenu> {
                     Ui.ROW,
                     GasParts.label(gases.get(i)),
                     i == chosen,
-                    () -> press(GasMinerMenu.GAS + index));
+                    () -> press(GasMinerMenu.gasButton(index)));
         }
         ui.scrollbar(
                 x + w - 3,

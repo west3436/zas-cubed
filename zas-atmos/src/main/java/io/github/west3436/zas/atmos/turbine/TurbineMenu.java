@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.turbine;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -12,8 +13,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A gas turbine's window (CONT-163): its switch and state, the shaft's speed, the chamber's pressure
- * and temperature, what its generator makes and what it has stored. The client sends only the switch.
- * Menu data syncs as shorts, so the store's FE comes in two halves.
+ * and temperature, what its generator makes and what it has stored, and its redstone setting
+ * (CONT-170). The client sends only the switch and the redstone setting's buttons. Menu data syncs as
+ * shorts, so the store's FE comes in two halves.
  */
 public class TurbineMenu extends AbstractContainerMenu {
     /** Switches it on or off. */
@@ -36,7 +38,10 @@ public class TurbineMenu extends AbstractContainerMenu {
     /** Its top speed, rpm, for the speed bar. */
     public static final int DATA_TOP_RPM = 10;
 
-    public static final int DATA_COUNT = 11;
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = 11;
+
+    public static final int DATA_COUNT = 12;
 
     private final ContainerData data;
     private final @Nullable TurbineBlockEntity turbine;
@@ -77,6 +82,11 @@ public class TurbineMenu extends AbstractContainerMenu {
         return TurbineStatus.of(data.get(DATA_STATUS));
     }
 
+    /** Its redstone setting and signal, as synced: read with {@link RedstoneControl#mode(int)} and the rest. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
     /** Its stored FE. */
     public int energy() {
         return join(DATA_STORED_HIGH);
@@ -93,7 +103,13 @@ public class TurbineMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (turbine == null || turbine.isRemoved() || id != TOGGLE) {
+        if (turbine == null || turbine.isRemoved()) {
+            return false;
+        }
+        if (RedstoneControl.isButton(id)) {
+            return turbine.redstone().button(id);
+        }
+        if (id != TOGGLE) {
             return false;
         }
         turbine.setOn(!turbine.on());

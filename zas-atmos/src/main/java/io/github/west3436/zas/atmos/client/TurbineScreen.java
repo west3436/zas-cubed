@@ -4,18 +4,20 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.turbine.TurbineMenu;
 import io.github.west3436.zas.atmos.turbine.TurbineStatus;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * A gas turbine's window (CONT-163): its state and switch; the shaft's speed as a bar; the chamber's
- * pressure and temperature; then what it makes and what it has stored.
+ * A gas turbine's window (CONT-163): its state and switch, and its redstone setting (CONT-170); the
+ * shaft's speed as a bar; the chamber's pressure and temperature; then what it makes and what it has
+ * stored.
  */
 public final class TurbineScreen extends TguiScreen<TurbineMenu> {
     private static final int WIDTH = 216;
-    private static final int STATE = 2 + Ui.BUTTON_ROW;
+    private static final int STATE = 2 + 2 * Ui.BUTTON_ROW;
     private static final int READINGS = 2 + 4 * Ui.ROW + 1;
     private static final int HEIGHT = Ui.TITLE_HEIGHT + 2 * Ui.PAD + STATE + Ui.PAD + READINGS;
 
@@ -37,8 +39,16 @@ public final class TurbineScreen extends TguiScreen<TurbineMenu> {
         int row = y + 1;
         DeviceParts.label(ui, "state", labelX, row, Ui.BUTTON_HEIGHT);
         TurbineStatus status = menu.status();
-        DeviceParts.status(ui, Component.translatable(status.key()), colour(status), valueX, row, Ui.BUTTON_HEIGHT);
+        boolean held = menu.on() && RedstoneControl.holds(menu.redstone());
+        DeviceParts.status(
+                ui,
+                held ? DeviceParts.held() : Component.translatable(status.key()),
+                held ? Ui.AVERAGE : colour(status),
+                valueX,
+                row,
+                Ui.BUTTON_HEIGHT);
         DeviceParts.onOff(ui, x + w - Ui.PAD, row, menu.on(), () -> press(TurbineMenu.TOGGLE));
+        DeviceParts.redstone(ui, x, row + Ui.BUTTON_ROW, w, menu.redstone(), this::press);
         y += STATE + Ui.PAD;
 
         ui.section(x, y, w, READINGS, null);

@@ -200,7 +200,9 @@ final class Devices {
                         "getHot",
                         "getCold",
                         "getEnergy",
-                        "getEnergyCapacity"));
+                        "getEnergyCapacity",
+                        "getRedstoneMode",
+                        "setRedstoneMode"));
         surface.put(
                 "zas_turbine",
                 List.of(
@@ -212,7 +214,9 @@ final class Devices {
                         "getChamber",
                         "getPower",
                         "getEnergy",
-                        "getEnergyCapacity"));
+                        "getEnergyCapacity",
+                        "getRedstoneMode",
+                        "setRedstoneMode"));
         surface.put(
                 "zas_gas_miner",
                 List.of(
@@ -226,7 +230,9 @@ final class Devices {
                         "setTargetPressure",
                         "getTemperature",
                         "setTemperature",
-                        "getRoomPressure"));
+                        "getRoomPressure",
+                        "getRedstoneMode",
+                        "setRedstoneMode"));
         return surface;
     }
 

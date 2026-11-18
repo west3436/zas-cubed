@@ -14,6 +14,9 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
+import io.github.west3436.zas.atmos.device.Comparators;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
@@ -52,8 +55,12 @@ import org.jetbrains.annotations.Nullable;
  * does (CORE-055). An addition that goes to the open air instead is lost there, and the miner then
  * waits {@code [gas_miner] open_air_wait} seconds before it tries again, so one in the open costs the
  * engine one bounded addition in that time (CONT-181).
+ *
+ * <p>Held by its redstone setting (CONT-170), it adds nothing and its lamp goes out, but it still
+ * reads its room. A comparator reads the room's pressure as a share of its target, on the
+ * containers' scale ({@link #signal()}, CONT-175): the room is what it fills, and its target is full.
  */
-public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
+public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider, RedstoneControlled {
     /** Who a gas miner's additions are made by, for the conservation ledger. */
     public static final SourceId SOURCE = SourceId.of(ZasAtmosMod.MOD_ID, "gas_miner");
 
@@ -82,6 +89,8 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
 
     private final ZonePort port = new ZonePort(SOURCE);
     private final CellWatch cellWatch = new CellWatch();
+    private final RedstoneControl redstone = new RedstoneControl(this);
+    private final Comparators.Output comparator = new Comparators.Output();
 
     private boolean on;
     private ResourceLocation gas = DEFAULT_GAS;
@@ -110,6 +119,7 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
                 case GasMinerMenu.DATA_ROOM ->
                     Double.isNaN(room) ? GasMinerMenu.NO_ROOM : (int) Math.min(Short.MAX_VALUE, Math.round(room));
                 case GasMinerMenu.DATA_STATUS -> status.ordinal();
+                case GasMinerMenu.DATA_REDSTONE -> redstone.data();
                 default -> 0;
             };
         }
@@ -191,13 +201,33 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
         if (on != this.on) {
             this.on = on;
             setChanged();
-            if (level != null && !level.isClientSide) {
-                BlockState state = getBlockState();
-                if (state.hasProperty(GasMinerBlock.ON) && state.getValue(GasMinerBlock.ON) != on) {
-                    level.setBlock(worldPosition, state.setValue(GasMinerBlock.ON, on), Block.UPDATE_CLIENTS);
-                }
+            lamp();
+        }
+    }
+
+    /** Lights its lamp while it is on and redstone doesn't hold it, telling clients. Server side. */
+    private void lamp() {
+        boolean lit = on && redstone.allows();
+        if (level != null && !level.isClientSide) {
+            BlockState state = getBlockState();
+            if (state.hasProperty(GasMinerBlock.ON) && state.getValue(GasMinerBlock.ON) != lit) {
+                level.setBlock(worldPosition, state.setValue(GasMinerBlock.ON, lit), Block.UPDATE_CLIENTS);
             }
         }
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
+    }
+
+    /**
+     * What a comparator reads (CONT-175): the room's pressure at its last step over its target, on
+     * the containers' scale, so 15 is within a fifteenth of its target or above it; 0 while it is
+     * switched off or has no reading.
+     */
+    public int signal() {
+        return Double.isNaN(room) ? 0 : Comparators.fill(room / target);
     }
 
     /**
@@ -257,9 +287,17 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
         return !port.busy();
     }
 
+    /** One step: its work, then its lamp and its comparators. */
     @Override
     protected void atmosTick(ServerLevel level) {
         cellWatch.step();
+        boolean allowed = redstone.read();
+        work(level, allowed);
+        lamp();
+        comparator.update(level, worldPosition, getBlockState().getBlock(), signal());
+    }
+
+    private void work(ServerLevel level, boolean allowed) {
         if (!on) {
             status = GasMinerStatus.OFF;
             room = Double.NaN;
@@ -269,12 +307,18 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
         Vec3 point = airPoint();
         AtmosphereSample sample = Atmospheres.at(level, point);
         if (!cellWatch.trust(sample)) {
-            status = GasMinerStatus.WAITING;
+            status = allowed ? GasMinerStatus.WAITING : GasMinerStatus.OFF;
             room = Double.NaN;
             return;
         }
         GasMixture mixture = sample.mixture();
         room = mixture.pressure();
+        if (!allowed) {
+            // Held by redstone (CONT-170): it reads its room, and adds nothing.
+            status = GasMinerStatus.OFF;
+            reportStopped();
+            return;
+        }
         if (openAirWait > 0) {
             openAirWait--;
             status = GasMinerStatus.OPEN_AIR;
@@ -348,6 +392,7 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
         tag.putString(GAS, gas.toString());
         tag.putDouble(TARGET, target);
         tag.putDouble(TEMPERATURE, temperature);
+        redstone.save(tag);
     }
 
     @Override
@@ -358,6 +403,7 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider {
         gas = read == null ? DEFAULT_GAS : read;
         target = tag.contains(TARGET) ? clampTarget(tag.getDouble(TARGET)) : DEFAULT_TARGET;
         temperature = tag.contains(TEMPERATURE) ? clampTemperature(tag.getDouble(TEMPERATURE)) : DEFAULT_TEMPERATURE;
+        redstone.load(tag);
     }
 
     /** Clients are sent its gas, which tints its lamp. */
