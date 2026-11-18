@@ -1,0 +1,10 @@
+{
+  "items": [
+    "northstar:iron_space_suit_chestpiece",
+    "northstar:iron_space_suit_leggings",
+    "northstar:iron_space_suit_boots"
+  ],
+  "min_pressure_kpa": 0,
+  "min_temperature_k": 0,
+  "max_temperature_k": 573.15
+}

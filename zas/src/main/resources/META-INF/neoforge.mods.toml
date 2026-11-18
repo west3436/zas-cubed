@@ -38,6 +38,13 @@ requiredMods = ["aeronautics", "sable"]
 config = "zas.sable.mixins.json"
 requiredMods = ["sable"]
 
+# The Northstar adapter's hooks (SPACE-011): stopping Northstar's own breathing and temperature
+# checks of entities, which ZAS³ makes. Only with Northstar installed, and its own plugin then
+# applies them only to a Northstar the adapter supports.
+[[mixins]]
+config = "zas.northstar.mixins.json"
+requiredMods = ["northstar"]
+
 [[dependencies.zas]]
 modId = "neoforge"
 type = "required"

@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "io.github.west3436.zas.compat.northstar.mixin",
+  "plugin": "io.github.west3436.zas.compat.northstar.mixin.NorthstarMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "OxygenCheckMixin",
+    "TemperatureCheckMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

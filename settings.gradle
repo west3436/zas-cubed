@@ -60,5 +60,11 @@ include 'compat-aeronautics'
 // The Sable adapter (COMPAT-100 to COMPAT-102), bundled into the zas jar like compat-mekanism.
 include 'compat-sable'
 
+// The Create Cosmonautics adapter (SPACE-012), bundled into the zas jar like compat-mekanism.
+include 'compat-cosmonautics'
+
+// The Create: Northstar – Redux adapter (SPACE-011), bundled into the zas jar like compat-mekanism.
+include 'compat-northstar'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'
