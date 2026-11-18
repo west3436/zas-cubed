@@ -245,16 +245,23 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
 
     @Override
     public RelocationTicket beginRelocation(ServerLevel level, BoundingBox box, SourceId mover) {
+        return beginRelocation(level, box, null, mover);
+    }
+
+    @Override
+    public RelocationTicket beginRelocation(
+            ServerLevel level, BoundingBox box, @Nullable Destination destination, SourceId mover) {
         AtmosService service = AtmosService.current();
         if (service == null) {
             return new RelocationTicket(
                     level,
                     box,
+                    destination,
                     mover,
                     0,
                     CompletableFuture.completedFuture(RelocationResult.of(RelocationOutcome.ENDED)));
         }
-        return service.relocator().begin(level, box, mover);
+        return service.relocator().begin(level, box, destination, mover);
     }
 
     @Override

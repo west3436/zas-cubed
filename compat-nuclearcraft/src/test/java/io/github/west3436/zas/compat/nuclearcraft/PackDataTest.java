@@ -189,18 +189,25 @@ class PackDataTest {
     @Test
     void compat_152_steams_become_water_vapour_at_their_own_temperatures() throws IOException {
         Map<String, JsonObject> mappings = files(PACK.resolve("data/c/zas/fluid_gas"));
-        // Plain #c:steam is the content's own mapping; NuclearCraft's other steams are here.
+        // Plain #c:steam and #c:high_pressure_steam are the content's own mappings, since Modern
+        // Industrialization has them too (COMPAT-093); NuclearCraft's spent steams are here.
         assertFalse(mappings.containsKey("steam"));
-        for (String steam :
-                List.of("high_pressure_steam", "exhaust_steam", "low_pressure_steam", "low_quality_steam")) {
+        assertFalse(mappings.containsKey("high_pressure_steam"));
+        Map<String, JsonObject> content = files(ATMOS.resolve("datapacks/content/data/c/zas/fluid_gas"));
+        JsonObject high = content.get("high_pressure_steam");
+        assertEquals("zas:water_vapor", high.get("gas").getAsString());
+        assertEquals("fluid", high.get("temperature").getAsString());
+        // NuclearCraft's own 383 K, so it arrives as before.
+        assertEquals(383, high.get("min_temperature").getAsDouble(), 1e-9);
+        assertFalse(high.has("one_way") && high.get("one_way").getAsBoolean(), "high-pressure steam: one way");
+        for (String steam : List.of("exhaust_steam", "low_pressure_steam", "low_quality_steam")) {
             JsonObject mapping = mappings.get(steam);
             assertEquals("zas:water_vapor", mapping.get("gas").getAsString(), steam);
             assertEquals("fluid", mapping.get("temperature").getAsString(), steam);
             assertEquals(373.15, mapping.get("min_temperature").getAsDouble(), 1e-9, steam);
             // Only high-pressure steam is made of water vapour going back into a tank; the spent
-            // steams would otherwise tie with it, and with plain steam, at the same temperature.
-            boolean oneWay = mapping.has("one_way") && mapping.get("one_way").getAsBoolean();
-            assertEquals(!steam.equals("high_pressure_steam"), oneWay, steam + ": one way");
+            // steams would otherwise tie with plain steam at the same temperature.
+            assertTrue(mapping.get("one_way").getAsBoolean(), steam + ": one way");
         }
         JsonObject hotHelium = mappings.get("hot_helium");
         assertEquals("zas:helium", hotHelium.get("gas").getAsString());

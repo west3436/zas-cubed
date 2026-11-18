@@ -96,6 +96,8 @@ dependencies {
 
     gametestCompileOnly project(':zas')
     gametestCompileOnly project(':engine')
+    // The content's device table, for the device sounds on board. The adapter itself never names it.
+    gametestCompileOnly project(':zas-atmos')
 
     releaseJar project(':dist')
 

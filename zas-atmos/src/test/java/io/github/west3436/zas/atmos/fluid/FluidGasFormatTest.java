@@ -107,7 +107,7 @@ class FluidGasFormatTest {
         try (Stream<Path> found = Files.list(root)) {
             files = found.filter(p -> p.toString().endsWith(".json")).sorted().toList();
         }
-        assertEquals(8, files.size(), "shipped mappings: " + files);
+        assertEquals(9, files.size(), "shipped mappings: " + files);
         for (Path file : files) {
             String name = file.getFileName().toString();
             ResourceLocation tag = ResourceLocation.fromNamespaceAndPath("c", name.substring(0, name.length() - 5));

@@ -1,8 +1,12 @@
 package io.github.west3436.zas.atmos.device;
 
+import io.github.west3436.zas.api.relocation.Relocations;
 import it.unimi.dsi.fastutil.longs.Long2ByteMap;
 import it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -24,6 +28,16 @@ public final class ClientDeviceActivity {
     /** Takes each device in the table. */
     public interface Visitor {
         void visit(long pos, int level);
+    }
+
+    /** Takes a device a listener hears, and where. */
+    public interface Heard {
+        /**
+         * @param pos the device's block, where the level keeps it; the same object each call
+         * @param level how hard it is working
+         * @param at the middle of its block, where the world shows it
+         */
+        void visit(BlockPos pos, int level, Vec3 at);
     }
 
     private final Long2ByteOpenHashMap levels = new Long2ByteOpenHashMap();
@@ -65,6 +79,31 @@ public final class ClientDeviceActivity {
     public void forEach(Visitor visitor) {
         for (Long2ByteMap.Entry e : levels.long2ByteEntrySet()) {
             visitor.visit(e.getLongKey(), e.getByteValue());
+        }
+    }
+
+    /**
+     * Visits every device listed whose chunk the level has and whose middle, where the world shows
+     * it, is within {@code range} of a listener: on a Sable ship, where the ship is now, not in its
+     * plot (API-068). Called each tick, so what plays there follows the ship. The visitor mustn't
+     * change the table.
+     *
+     * @param level the level the devices are in, on its own thread
+     * @param ear where the listener is, as the world shows it
+     * @param range how far away a device is heard, blocks
+     */
+    public void forEachHeard(Level level, Vec3 ear, double range, Heard visitor) {
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
+        for (Long2ByteMap.Entry e : levels.long2ByteEntrySet()) {
+            at.set(e.getLongKey());
+            if (!level.getChunkSource()
+                    .hasChunk(SectionPos.blockToSectionCoord(at.getX()), SectionPos.blockToSectionCoord(at.getZ()))) {
+                continue;
+            }
+            Vec3 shown = Relocations.shownAt(level, Vec3.atCenterOf(at));
+            if (ear.distanceToSqr(shown) <= range * range) {
+                visitor.visit(at, e.getByteValue(), shown);
+            }
         }
     }
 

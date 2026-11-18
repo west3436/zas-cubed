@@ -102,6 +102,14 @@ public final class Adapters {
         // newest build too, every night (COMPAT-004).
         rows.add(new Row("nuclearcraft", "[1.3.2,)", "io.github.west3436.zas.compat.nuclearcraft.NuclearCraftCompat"));
 
+        // Modern Industrialization (COMPAT-090 to COMPAT-093): 2.2.27 is its first build whose gas
+        // fluids carry the c: tags of their names, which the adapter's data relies on. No upper
+        // bound: the adapter's GameTests run with the newest build too, every night (COMPAT-004).
+        rows.add(new Row(
+                "modern_industrialization",
+                "[2.2.27,)",
+                "io.github.west3436.zas.compat.mi.ModernIndustrializationCompat"));
+
         // Create Aeronautics (COMPAT-080 to COMPAT-083): 1.3.0 is its first build on Sable 2, which
         // every later one needs, and the adapter's one hook into Sable is the same in all of them. No
         // upper bound: the adapter's GameTests run with the newest build too, every night

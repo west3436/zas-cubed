@@ -1,8 +1,13 @@
 package io.github.west3436.zas.atmos.particle;
 
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.vent.VentMode;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * What a client shows for a vent or a scrubber (CLIENT-019), from what the server already tells it: how
@@ -26,6 +31,34 @@ public final class DeviceJets {
     public static final int MIN_LEVEL = DeviceActivity.WORKING;
 
     private DeviceJets() {}
+
+    /**
+     * Where a device's jet starts, and which way it points, where the world shows the device: on a
+     * Sable ship, at the grille on the ship, the way the ship turns it (COMPAT-101, API-068). A device
+     * where it is gives its mouth, {@link #MOUTH} out along its facing, and the facing itself.
+     *
+     * @param mouth where the jet starts
+     * @param way the facing as the world shows it, one block long
+     */
+    public record Placed(Vec3 mouth, Vec3 way) {}
+
+    /**
+     * Places a device's jet (see {@link Placed}).
+     *
+     * @param level the device's level, on its own thread
+     * @param pos its block, where the level keeps it
+     * @param facing the way its grille faces in the level
+     */
+    public static Placed place(Level level, BlockPos pos, Direction facing) {
+        Vec3 centre = Vec3.atCenterOf(pos);
+        Vec3 step = new Vec3(facing.getStepX(), facing.getStepY(), facing.getStepZ());
+        Vec3 mouth = Relocations.shownAt(level, centre.add(step.scale(MOUTH)));
+        Vec3 shownCentre = Relocations.shownAt(level, centre);
+        Vec3 way = shownCentre.equals(centre)
+                ? step
+                : Relocations.shownAt(level, centre.add(step)).subtract(shownCentre);
+        return new Placed(mouth, way);
+    }
 
     /**
      * The amount of a vent's {@link GasJetKind#DEVICE} jet.

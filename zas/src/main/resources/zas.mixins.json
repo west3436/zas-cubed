@@ -10,6 +10,9 @@
     "FireBlockMixin",
     "LevelChunkMixin"
   ],
+  "client": [
+    "client.LivingEntityRendererMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

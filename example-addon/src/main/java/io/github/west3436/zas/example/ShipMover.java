@@ -84,8 +84,10 @@ public final class ShipMover {
         }
         List<Entity> riders = new ArrayList<>(from.getEntities((Entity) null, AABB.of(box), e -> !e.isPassenger()));
 
-        // 2. Begin before the first block changes: the rooms inside are held for the move.
-        RelocationTicket ticket = Relocations.begin(from, box, MOVER);
+        // 2. Begin before the first block changes: the rooms inside are held for the move. Naming the
+        // destination holds it too, so a mover that sets its blocks down over several ticks keeps the
+        // devices that arrive first waiting for the rest (API-069); this one does it all in one tick.
+        RelocationTicket ticket = Relocations.begin(from, box, to, MOVER);
 
         // 3. Take the blocks away without breaking them: each block entity first, so a container has
         // nothing to spill, then its block. Top down, so what rests on a block goes before it, even if

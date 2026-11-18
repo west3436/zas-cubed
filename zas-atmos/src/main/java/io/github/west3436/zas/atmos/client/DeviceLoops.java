@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Block;
@@ -27,6 +25,9 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  * working at its kind's lowest level or above, within {@value #RANGE} blocks and whose block is still
  * there, as loud as its level, and the looping sounds' manager does the rest: a device that stops
  * being asked for fades out by itself.
+ *
+ * <p>A device on blocks another mod shows somewhere else, as on a Sable ship, plays where the world
+ * shows it and is measured from there (API-068). It is placed again each tick, so it follows the ship.
  *
  * <p>It also keeps the client's table to the current level, so it runs whether or not any sound has
  * been added. Client thread only.
@@ -87,28 +88,16 @@ public final class DeviceLoops {
             return;
         }
         Vec3 ear = mc.gameRenderer.getMainCamera().getPosition();
-        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
-        ClientDeviceActivity.LOCAL.forEach((pos, activity) -> {
-            at.set(pos);
-            double x = at.getX() + 0.5;
-            double y = at.getY() + 0.5;
-            double z = at.getZ() + 0.5;
-            if (ear.distanceToSqr(x, y, z) > RANGE * RANGE
-                    || !level.getChunkSource()
-                            .hasChunk(
-                                    SectionPos.blockToSectionCoord(at.getX()),
-                                    SectionPos.blockToSectionCoord(at.getZ()))) {
-                return;
-            }
+        ClientDeviceActivity.LOCAL.forEachHeard(level, ear, RANGE, (at, activity, shown) -> {
             Loop loop = BY_BLOCK.get(level.getBlockState(at).getBlock());
             if (loop != null && activity >= loop.minLevel()) {
                 ClientSounds.loop(new LoopRequest(
                         at.immutable(),
                         loop.sound().get(),
                         SoundSource.BLOCKS,
-                        x,
-                        y,
-                        z,
+                        shown.x,
+                        shown.y,
+                        shown.z,
                         DeviceActivity.volume(activity),
                         1f,
                         RANGE));

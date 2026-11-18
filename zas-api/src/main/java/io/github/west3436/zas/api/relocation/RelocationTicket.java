@@ -3,6 +3,7 @@ package io.github.west3436.zas.api.relocation;
 import io.github.west3436.zas.api.AnyThread;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -22,6 +23,7 @@ public final class RelocationTicket {
     private final SourceId mover;
     private final long id;
     private final CompletableFuture<RelocationResult> begun;
+    private final Destination destination;
 
     /**
      * Creates a ticket. Only a provider creates them; a mover gets one from {@link
@@ -37,8 +39,34 @@ public final class RelocationTicket {
      */
     public RelocationTicket(
             ServerLevel level, BoundingBox box, SourceId mover, long id, CompletableFuture<RelocationResult> begun) {
+        this(level, box, null, mover, id, begun);
+    }
+
+    /**
+     * Creates a ticket for a move whose destination is known from the start. Only a provider creates
+     * them; a mover gets one from {@link Relocations#begin(ServerLevel, BoundingBox, Destination,
+     * SourceId)}.
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level the blocks leave
+     * @param box the blocks
+     * @param destination where they are going, or null if the mover didn't say
+     * @param mover who moves them
+     * @param id the provider's number for it
+     * @param begun completes with the begin's result
+     * @since 1.3.0
+     */
+    public RelocationTicket(
+            ServerLevel level,
+            BoundingBox box,
+            Destination destination,
+            SourceId mover,
+            long id,
+            CompletableFuture<RelocationResult> begun) {
         this.level = Objects.requireNonNull(level, "level");
         this.box = Objects.requireNonNull(box, "box");
+        this.destination = destination;
         this.mover = Objects.requireNonNull(mover, "mover");
         this.id = id;
         this.begun = Objects.requireNonNull(begun, "begun");
@@ -64,6 +92,19 @@ public final class RelocationTicket {
      */
     public BoundingBox box() {
         return box;
+    }
+
+    /**
+     * Where the blocks are going, if the mover said so at {@link Relocations#begin(ServerLevel,
+     * BoundingBox, Destination, SourceId)}.
+     *
+     * <p>Thread: any.
+     *
+     * @return the destination given at the begin, or empty
+     * @since 1.3.0
+     */
+    public Optional<Destination> destination() {
+        return Optional.ofNullable(destination);
     }
 
     /**

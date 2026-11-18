@@ -13,6 +13,8 @@ import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.pipe.PipeBlock;
+import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -26,6 +28,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -35,7 +38,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * Devices moved with their blocks by another mod through the relocation API (CONT-156): they keep
  * their gas, which the mover carries in the data it copies, instead of handing it back to the world
- * as they are taken away.
+ * as they are taken away. A move spread over several ticks keeps it too, since a device doesn't step
+ * while its block is moving (CONT-157).
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -43,6 +47,10 @@ public final class MovedDeviceTests {
     private static final SourceId MOVER = SourceId.of("zas_gametest", "mover");
     private static final ResourceLocation CO2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
     private static final double MOLES = 1_000;
+
+    /** How a mover sets blocks: no neighbour updates, no shape checks, no drops. */
+    private static final int QUIET =
+            Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_MOVE_BY_PISTON;
 
     private MovedDeviceTests() {}
 
@@ -121,5 +129,97 @@ public final class MovedDeviceTests {
         a.close(after.mixture().totalMoles(), room.mixture().totalMoles(), "the room's moles");
         h.assertFalse(Relocations.isMoving(a.level, a.abs(34, 2, 2)), "the moved row is still moving after it arrived");
         h.succeed();
+    }
+
+    /**
+     * Moves one block as a mover that slices its box does: copies it, takes it away, and sets it down
+     * at the destination with its data, telling no neighbour.
+     */
+    private static void moveOne(ServerLevel level, BlockPos p, Destination d) {
+        BlockState state = level.getBlockState(p);
+        BlockEntity was = level.getBlockEntity(p);
+        CompoundTag tag = was == null ? null : was.saveWithoutMetadata(level.registryAccess());
+        level.removeBlockEntity(p);
+        level.setBlock(p, Area.AIR, QUIET);
+        BlockPos to = d.map(p);
+        d.level().setBlock(to, state.rotate(d.rotation()), QUIET);
+        BlockEntity be = d.level().getBlockEntity(to);
+        if (be != null && tag != null) {
+            be.loadWithComponents(tag, level.registryAccess());
+            be.setChanged();
+            if (be instanceof AtmosDevice device && !DeviceTicker.isScheduled(device)) {
+                device.onLoad(); // the game would at the start of the next tick
+            }
+        }
+    }
+
+    /**
+     * A capped run of four pipes in the open air, holding 500 mol of carbon dioxide, moved 10 blocks
+     * one block at a time, with every device stepping three times between blocks, under a ticket that
+     * named its destination (CONT-157, API-069). Halfway, pipes at both ends of the move have air
+     * where a neighbour was or is still to come; a pipe that stepped there would drop that arm and
+     * vent the run through the open end it made. None does: every pipe keeps both arms, and the run
+     * keeps its 500 mol, before the move completes and after.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void cont_157_a_run_moved_a_block_at_a_time_keeps_its_gas(GameTestHelper h) {
+        Area a = new Area(h, 5501);
+        a.clear(-1, -1, 20, 5);
+        a.place(1, 2, 2, cap(Direction.EAST));
+        for (int x = 2; x <= 5; x++) {
+            a.place(x, 2, 2, GasDeviceTests.pipe());
+        }
+        a.place(6, 2, 2, cap(Direction.WEST));
+        PipeNodeEntity first = a.entity(2, 2, 2);
+        first.network().gas().add(new GasParcel(Map.of(CO2, 500.0), T));
+        for (int i = 0; i < 3; i++) {
+            a.step();
+        }
+        a.close(first.network().gas().moles(CO2), 500, "carbon dioxide in the run before");
+
+        BoundingBox box = BoundingBox.fromCorners(a.abs(1, 2, 2), a.abs(6, 2, 2));
+        Destination d = Destination.offset(a.level, new Vec3i(10, 0, 0));
+        RelocationTicket ticket = Relocations.begin(a.level, box, d, MOVER);
+        h.assertValueEqual(a.settle(ticket.begun()).outcome(), RelocationOutcome.BEGUN, "the begin");
+        for (int x = 1; x <= 6; x++) {
+            moveOne(a.level, a.abs(x, 2, 2), d);
+            for (int i = 0; i < 3; i++) {
+                a.step();
+            }
+            for (int at = x + 1; at <= 5; at++) {
+                arms(h, a, at, "at the source after " + x);
+            }
+            for (int at = 12; at <= Math.min(x, 5) + 10; at++) {
+                arms(h, a, at, "at the destination after " + x);
+            }
+        }
+        double moles = 0;
+        for (int x = 11; x <= 16; x++) {
+            moles += a.<PipeNodeEntity>entity(x, 2, 2).share().moles(CO2);
+        }
+        a.close(moles, 500, "carbon dioxide in the run before the complete");
+
+        RelocationResult moved = a.settle(Relocations.complete(ticket, d));
+        h.assertValueEqual(moved.outcome(), RelocationOutcome.MOVED, "the move");
+        for (int i = 0; i < 5; i++) {
+            a.step();
+        }
+        for (int x = 12; x <= 15; x++) {
+            arms(h, a, x, "after the move");
+        }
+        PipeNodeEntity after = a.entity(12, 2, 2);
+        a.close(after.network().gas().moles(CO2), 500, "carbon dioxide in the moved run");
+        h.assertValueEqual(after.network().members().size(), 6, "the moved run's nodes");
+        h.succeed();
+    }
+
+    /** Checks the pipe at (x, 2, 2) still joins along x on both sides, and has no open end. */
+    private static void arms(GameTestHelper h, Area a, int x, String when) {
+        BlockState state = a.get(x, 2, 2);
+        h.assertTrue(
+                state.getValue(PipeBlock.CONNECTIONS.get(Direction.WEST))
+                        && state.getValue(PipeBlock.CONNECTIONS.get(Direction.EAST)),
+                "the pipe at x " + x + " lost an arm " + when + ": " + state);
+        h.assertFalse(a.<PipeBlockEntity>entity(x, 2, 2).isOpen(), "the pipe at x " + x + " is open " + when);
     }
 }

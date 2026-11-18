@@ -11,6 +11,7 @@ evaluationDependsOn(':compat-jei')
 evaluationDependsOn(':compat-emi')
 evaluationDependsOn(':compat-pneumaticcraft')
 evaluationDependsOn(':compat-nuclearcraft')
+evaluationDependsOn(':compat-mi')
 evaluationDependsOn(':compat-ae2')
 evaluationDependsOn(':compat-aeronautics')
 evaluationDependsOn(':compat-sable')
@@ -35,7 +36,8 @@ def viewers = [project(':compat-jei'), project(':compat-emi')]
 def onZas = viewers + [project(':compat-ae2'), project(':compat-aeronautics'), project(':compat-sable'),
                        project(':compat-cosmonautics'), project(':compat-northstar')]
 def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots'),
-                project(':compat-kubejs'), project(':compat-pneumaticcraft'), project(':compat-nuclearcraft')]
+                project(':compat-kubejs'), project(':compat-pneumaticcraft'), project(':compat-nuclearcraft'),
+                project(':compat-mi')]
         + onZas)
         .collect { it.sourceSets.main }
 
@@ -96,6 +98,7 @@ dependencies {
     runtimeOnly project(':compat-slots')
     runtimeOnly project(':compat-pneumaticcraft')
     runtimeOnly project(':compat-nuclearcraft')
+    runtimeOnly project(':compat-mi')
     // Found by KubeJS, through the kubejs.plugins.txt that ships with it.
     runtimeOnly project(':compat-kubejs')
     onZas.each { runtimeOnly it }
