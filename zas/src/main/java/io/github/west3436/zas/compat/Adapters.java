@@ -121,6 +121,19 @@ public final class Adapters {
         // the newest build every night (COMPAT-004).
         rows.add(new Row("sable", "[2.0.0,)", "io.github.west3436.zas.compat.sable.SableCompat"));
 
+        // Create Cosmonautics (SPACE-012): 26.08.291 is its first build whose mod metadata gives its
+        // version; the ones before call themselves 0.0NONE, which no range can place. The adapter
+        // names none of its classes, only its breathing check in NeoForge's event. No upper bound:
+        // the adapter's GameTests run with the newest build too, every night (COMPAT-004).
+        rows.add(new Row(
+                "rocketnautics", "[26.08.291,)", "io.github.west3436.zas.compat.cosmonautics.CosmonauticsCompat"));
+
+        // Create: Northstar – Redux (SPACE-011): 0.6.6 is the first build with the oxygen and
+        // temperature providers and planet data the adapter uses as they are now. No upper bound:
+        // the adapter's GameTests run with the newest build too, every night (COMPAT-004). The range
+        // is NorthstarVersions.SUPPORTED, which its mixin plugin reads.
+        rows.add(new Row("northstar", "[0.6.6,)", "io.github.west3436.zas.compat.northstar.NorthstarCompat"));
+
         return rows;
     }
 

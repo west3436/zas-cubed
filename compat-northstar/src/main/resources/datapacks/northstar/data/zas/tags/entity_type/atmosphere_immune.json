@@ -1,0 +1,64 @@
+{
+  "values": [
+    {
+      "id": "northstar:venus_mimic",
+      "required": false
+    },
+    {
+      "id": "northstar:venus_scorpion",
+      "required": false
+    },
+    {
+      "id": "northstar:venus_stone_bull",
+      "required": false
+    },
+    {
+      "id": "northstar:venus_vulture",
+      "required": false
+    },
+    {
+      "id": "northstar:mars_worm",
+      "required": false
+    },
+    {
+      "id": "northstar:mars_toad",
+      "required": false
+    },
+    {
+      "id": "northstar:mars_cobra",
+      "required": false
+    },
+    {
+      "id": "northstar:mars_moth",
+      "required": false
+    },
+    {
+      "id": "northstar:moon_lunargrade",
+      "required": false
+    },
+    {
+      "id": "northstar:moon_snail",
+      "required": false
+    },
+    {
+      "id": "northstar:moon_eel",
+      "required": false
+    },
+    {
+      "id": "northstar:frozen_zombie",
+      "required": false
+    },
+    {
+      "id": "northstar:mercury_raptor",
+      "required": false
+    },
+    {
+      "id": "northstar:mercury_roach",
+      "required": false
+    },
+    {
+      "id": "northstar:mercury_tortoise",
+      "required": false
+    }
+  ]
+}

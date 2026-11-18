@@ -1,0 +1,10 @@
+{
+  "items": [
+    "northstar:martian_steel_space_suit_helmet"
+  ],
+  "min_pressure_kpa": 0,
+  "max_pressure_kpa": 1.0E9,
+  "min_temperature_k": 0,
+  "max_temperature_k": 1.0E9,
+  "sealed_breathing": true
+}

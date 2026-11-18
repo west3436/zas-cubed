@@ -159,6 +159,24 @@ jobs:
             task: ":compat-sable:runAdapterGameTestServer"
           - adapter: sable (older than supported)
             task: ":compat-sable:runAdapterGameTestServer -Psable.version=unsupported"
+          # SPACE-012: the Create Cosmonautics adapter, with the first build
+          # that gives its version and the newest, each with the Aeronautics,
+          # Sable and Create of the Aeronautics adapter's newest row.
+          # COMPAT-002: with the last build before it, the adapter stays off.
+          - adapter: cosmonautics (oldest supported)
+            task: ":compat-cosmonautics:runAdapterGameTestServer -Pcosmonautics.version=floor"
+          - adapter: cosmonautics (newest)
+            task: ":compat-cosmonautics:runAdapterGameTestServer"
+          - adapter: cosmonautics (older than supported)
+            task: ":compat-cosmonautics:runAdapterGameTestServer -Pcosmonautics.version=unsupported"
+          # SPACE-011: the Create: Northstar – Redux adapter, with the newest
+          # build, which is also the oldest it supports, with Create and
+          # GeckoLib. COMPAT-002: with the build before it, the adapter stays
+          # off.
+          - adapter: northstar (oldest supported and newest)
+            task: ":compat-northstar:runAdapterGameTestServer"
+          - adapter: northstar (older than supported)
+            task: ":compat-northstar:runAdapterGameTestServer -Pnorthstar.version=unsupported"
           # CONT-155: with the adapter's target mod installed and the content
           # switched off, the game starts and the tests that need none of the
           # content pass. For the adapters that do something as a server
@@ -222,6 +240,14 @@ jobs:
           # so every test runs.
           - adapter: sable (content off)
             task: ":compat-sable:runAdapterGameTestServer -Pcontent=off"
+          # The Cosmonautics adapter needs none of the content; only its test
+          # of ZAS³'s internals, with the content's mask and tank, is left out.
+          - adapter: cosmonautics (content off)
+            task: ":compat-cosmonautics:runAdapterGameTestServer -Pcontent=off"
+          # The Northstar adapter needs none of the content: its rooms are
+          # stone and its suits Northstar's, so every test runs.
+          - adapter: northstar (content off)
+            task: ":compat-northstar:runAdapterGameTestServer -Pcontent=off"
           # COMPAT-070 to COMPAT-077: the AE2 adapter, with the oldest AE2 it
           # supports and the newest. COMPAT-002: with the last build before the
           # oldest, the adapter stays off. With the content off it still works
