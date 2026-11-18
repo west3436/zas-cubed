@@ -1,7 +1,9 @@
 /**
- * The CC: Tweaked adapter (COMPAT-020 to COMPAT-022): each atmospherics device with a window is a
- * peripheral, and a computer attached to an area air controller hears of its zone's breaches and
- * fires.
+ * The CC: Tweaked adapter (COMPAT-020 to COMPAT-028): each atmospherics device with a window is a
+ * peripheral, and so is each with something to read (the gauge, the air sensor, the large tank,
+ * the tank holder, the recharger, the igniter, the fire alarm, a firelock and a placed TTV, which
+ * is read only), and a computer attached to an area air controller hears of its zone's breaches and
+ * fires. A device with a redstone setting has {@code getRedstoneMode} and {@code setRedstoneMode}.
  *
  * <p><b>One source for what a computer sees and does.</b> A peripheral reads the values its device's
  * window shows from the device itself, the same getters the window's menu syncs. It changes a

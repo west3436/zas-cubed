@@ -121,7 +121,7 @@ public final class CcReadTests {
                 h.assertTrue(found != again && found.equals(again), type + ": two lookups aren't equal");
             }
         }
-        for (Block block : List.of(AtmosBlocks.PIPE.get(), AtmosBlocks.PASSIVE_VENT.get(), AtmosBlocks.IGNITER.get())) {
+        for (Block block : List.of(AtmosBlocks.PIPE.get(), AtmosBlocks.PASSIVE_VENT.get())) {
             s.set(1, 5, 2, block.defaultBlockState());
             for (Direction side : Direction.values()) {
                 h.assertTrue(s.peripheral(s.abs(1, 5, 2), side) == null, block + " is a peripheral");
