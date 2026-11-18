@@ -163,6 +163,29 @@ final class Devices {
                         "clear",
                         "cycle",
                         "stop"));
+        surface.put(
+                "zas_teg",
+                List.of(
+                        "isOn",
+                        "setOn",
+                        "getState",
+                        "getPower",
+                        "getHot",
+                        "getCold",
+                        "getEnergy",
+                        "getEnergyCapacity"));
+        surface.put(
+                "zas_turbine",
+                List.of(
+                        "isOn",
+                        "setOn",
+                        "getState",
+                        "getRpm",
+                        "getMaxRpm",
+                        "getChamber",
+                        "getPower",
+                        "getEnergy",
+                        "getEnergyCapacity"));
         return surface;
     }
 
@@ -201,6 +224,8 @@ final class Devices {
             case "zas_portable_scrubber" -> AtmosBlocks.PORTABLE_SCRUBBER.get();
             case "zas_portable_pump" -> AtmosBlocks.PORTABLE_PUMP.get();
             case "zas_generator" -> AtmosBlocks.GENERATOR.get();
+            case "zas_teg" -> AtmosBlocks.TEG.get();
+            case "zas_turbine" -> AtmosBlocks.TURBINE.get();
             default -> throw new GameTestAssertException("no block for " + type);
         };
     }
