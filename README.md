@@ -14,12 +14,13 @@ ZAS³ adds fluid mechanics to your world inspired by Space Station 13's early at
 This mod contains two modules; **ZAS³** (`zas`) is the air itself and the public API while **ZAS³ Atmospherics** (`zas_atmos`) is the SS13-style content. A pack can turn the content off and keep the simulation alone.
 
  - **Pipe network:** pipes, end caps, manual and redstone valves, connector ports, pressure and volume pumps, filters, mixers, radiator pipes, heat exchangers and gauges that read a pipe, canister or tank and give a redstone signal.
- - **Room air:** vents, scrubbers, passive vents, area air controllers, a central atmospherics controller, air sensors, heaters and air conditioners.
+ - **Room air:** vents, scrubbers, passive vents, area air controllers with a thermostat that heats through their vents and cools through their scrubbers, a central atmospherics controller, air sensors, heaters and air conditioners.
  - **Fire and doors:** fire alarms, firelocks, igniters, airlocks and airlock controllers.
- - **Gas handling:** canisters, large gas tanks, portable pumps and scrubbers, tank holders, tank transfer valves and a water electrolyzer.
+ - **Gas handling:** canisters, large gas tanks, portable pumps and scrubbers, tank holders, tank transfer valves with timers, remote signalers or proximity sensors, a water electrolyzer and a creative gas miner.
  - **Staying alive:** oxygen and air tanks, breath masks and gas masks, softsuits, hardsuits and magnetic boots.
  - **Tools:** atmos analyzer, multitool, wrench, crowbar and fire extinguisher. Also a bike horn.
- - **Power:** devices run on FE from a generator or any other mod's power source, handed out through the controllers. There are no cables. Portables and heaters run on rechargeable batteries.
+ - **Power:** devices run on FE from a generator or any other mod's power source, handed out through the controllers. There are no cables. Portables and heaters run on rechargeable batteries. A thermoelectric generator makes FE from a hot and a cold gas loop, and a gas turbine from a fire in a sealed chamber.
+ - **Automation:** most devices can be held by redstone, comparators read containers, gauges and air sensors, and devices are CC: Tweaked peripherals.
  - **Building:** station walls, reinforced station walls, reinforced glass and floor grilles. A pipe can run through a station wall or under a floor grille and the room stays airtight.
  - **Labels:** name a device with a name tag, an anvil or its window's title bar, and controllers list it by that name.
 
