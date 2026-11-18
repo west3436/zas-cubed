@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.inline;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.LabelledMenu;
 import net.minecraft.world.entity.player.Player;
@@ -17,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
  * settings.
  *
  * <p>A device's own data slots follow {@link #DATA_COUNT}, and its own buttons follow {@link
- * #TOGGLE}.
+ * #TOGGLE}. Its redstone setting's buttons are {@link RedstoneControl#FIRST_BUTTON} on (CONT-170).
  */
 public abstract class InlineDeviceMenu extends AbstractContainerMenu implements LabelledMenu {
     /** Switches the device on or off. */
@@ -32,8 +33,11 @@ public abstract class InlineDeviceMenu extends AbstractContainerMenu implements 
     /** The {@link InlineStatus}'s ordinal. */
     public static final int DATA_STATUS = 2;
 
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = 3;
+
     /** Each port's network's pressure from here on, kPa, rounded and capped at 32,767. */
-    public static final int DATA_PRESSURE = 3;
+    public static final int DATA_PRESSURE = 4;
 
     /** The most ports a device has. */
     public static final int MAX_PORTS = 3;
@@ -84,6 +88,11 @@ public abstract class InlineDeviceMenu extends AbstractContainerMenu implements 
         return InlineStatus.of(data.get(DATA_STATUS));
     }
 
+    /** Its redstone setting and signal, as synced: read with {@link RedstoneControl#mode(int)} and the rest. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
     /** A port's network's pressure, as synced: kPa, rounded. */
     public int pressure(int port) {
         return data.get(DATA_PRESSURE + port);
@@ -98,6 +107,9 @@ public abstract class InlineDeviceMenu extends AbstractContainerMenu implements 
         if (id == TOGGLE) {
             device.setOn(!device.on());
             return true;
+        }
+        if (RedstoneControl.isButton(id)) {
+            return device.redstone().button(id);
         }
         return ownButton(id);
     }

@@ -11,12 +11,15 @@ import net.minecraft.world.item.Items;
 
 /**
  * The generator's window (CONT-061): its fuel slot beside two bars, how long the burning fuel lasts
- * and what it has stored. Energy is teal, as TGUI keeps red for trouble.
+ * and what it has stored, then its redstone setting. Energy is teal, as TGUI keeps red for trouble.
  */
 public class GeneratorScreen extends TguiScreen<GeneratorMenu> {
     private static final int WIDTH = 176;
     private static final int HEIGHT = heightWithInventory(GeneratorMenu.INVENTORY_Y);
-    private static final int SECTION_HEIGHT = 24;
+    /** The slot and its bars, then the redstone setting's row (CONT-170). */
+    private static final int SLOT_HEIGHT = 24;
+
+    private static final int SECTION_HEIGHT = SLOT_HEIGHT + Ui.BUTTON_ROW;
     private static final int LABEL_WIDTH = 24;
     private static final int TICKS_PER_SECOND = 20;
 
@@ -66,5 +69,7 @@ public class GeneratorScreen extends TguiScreen<GeneratorMenu> {
                 Ui.TEAL,
                 Ui.TEAL_EDGE,
                 DeviceParts.text("fe", BatteryItem.fe(menu.energy()), BatteryItem.fe(capacity)));
+
+        DeviceParts.redstone(ui, x, y + SLOT_HEIGHT - 1, w, menu.redstone(), this::press);
     }
 }

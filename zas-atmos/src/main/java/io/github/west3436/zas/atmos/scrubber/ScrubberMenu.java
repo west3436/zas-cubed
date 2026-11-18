@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.LabelledMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -77,7 +78,10 @@ public class ScrubberMenu extends AbstractContainerMenu implements LabelledMenu 
     /** The {@link ScrubberStatus}'s ordinal. */
     public static final int DATA_STATUS = 10;
 
-    public static final int DATA_COUNT = 11;
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = 11;
+
+    public static final int DATA_COUNT = 12;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
@@ -112,6 +116,11 @@ public class ScrubberMenu extends AbstractContainerMenu implements LabelledMenu 
             }
         }
         return mask;
+    }
+
+    /** Its redstone setting and signal, as synced. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
     }
 
     /** A synced value, by its {@code DATA_} index. */
@@ -160,6 +169,10 @@ public class ScrubberMenu extends AbstractContainerMenu implements LabelledMenu 
      */
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        // Redstone only ever stops a scrubber, so it is set by hand under a controller too (CONT-172).
+        if (scrubber != null && !scrubber.isRemoved() && RedstoneControl.isButton(id)) {
+            return scrubber.redstone().button(id);
+        }
         if (scrubber == null || scrubber.isRemoved() || id < SET_MODE || id > LAST_BUTTON) {
             return false;
         }

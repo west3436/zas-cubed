@@ -104,6 +104,17 @@ public class ElectrolyzerBlock extends BaseEntityBlock implements PipeConnector,
     }
 
     @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full its water tank is (CONT-175). */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof ElectrolyzerBlockEntity electrolyzer ? electrolyzer.signal() : 0;
+    }
+
+    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ElectrolyzerBlockEntity(pos, state);
     }

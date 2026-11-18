@@ -5,8 +5,12 @@ import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.label.Labels;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.IntConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -28,6 +32,11 @@ final class DeviceParts {
 
     static final String[] BIG_STEPS = {"−100", "−10", "+10", "+100"};
     static final String[] SMALL_STEPS = {"−10", "−1", "+1", "+10"};
+
+    /** The redstone row's dot, lit while the device gets a signal, as redstone dust is. */
+    private static final int SIGNAL_ON = 0xFFFF2020;
+
+    private static final int SIGNAL_OFF = 0xFF4A1010;
 
     private static final int LOW_CHARGE_PERCENT = 15;
     private static final int LOCK_ROOM = 8;
@@ -69,6 +78,44 @@ final class DeviceParts {
         Component label = text(on ? "on" : "off");
         int w = ui.buttonWidth(text("off"));
         ui.button(right - w, y, w, Ui.BUTTON_HEIGHT, label, on ? Tone.SELECTED : Tone.DEFAULT, toggle);
+    }
+
+    /**
+     * The redstone setting's row (CONT-170): its label, a button for each mode, and, unless it is
+     * ignored, a dot lit while the device gets a signal.
+     *
+     * @param data the menu's {@link RedstoneControl#data()}
+     * @param press presses a button by its id
+     */
+    static void redstone(Ui ui, int x, int y, int w, int data, IntConsumer press) {
+        int labelX = x + Ui.PAD;
+        label(ui, "redstone", labelX, y, Ui.BUTTON_HEIGHT);
+        List<Component> labels = new ArrayList<>();
+        for (RedstoneControl.Mode mode : RedstoneControl.Mode.values()) {
+            labels.add(mode.label());
+        }
+        RedstoneControl.Mode mode = RedstoneControl.mode(data);
+        int end = ui.choice(
+                labelX + LABEL_WIDTH,
+                y,
+                labels,
+                mode.ordinal(),
+                -1,
+                i -> press.accept(RedstoneControl.FIRST_BUTTON + i));
+        if (mode != RedstoneControl.Mode.IGNORED) {
+            int size = 4;
+            ui.fill(
+                    end + Ui.PAD + 1,
+                    y + (Ui.BUTTON_HEIGHT - size) / 2,
+                    size,
+                    size,
+                    RedstoneControl.signal(data) ? SIGNAL_ON : SIGNAL_OFF);
+        }
+    }
+
+    /** What a device's state row says while redstone holds it. */
+    static Component held() {
+        return text("redstone.held");
     }
 
     /** A battery's or a buffer's charge. With no capacity, an empty bar and a dash. */

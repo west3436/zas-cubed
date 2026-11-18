@@ -9,6 +9,8 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.VentControl;
 import io.github.west3436.zas.atmos.controller.VentOrder;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.label.Labelled;
@@ -59,7 +61,8 @@ import net.minecraft.world.phys.Vec3;
  * <p>Its GUI also shows its network's pressure, which the internal bound is compared with, and
  * its {@link VentStatus}: whether it moved gas at its last atmos tick, or why not.
  */
-public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, VentControl, MenuProvider, Labelled {
+public class VentBlockEntity extends PipeNodeEntity
+        implements PoweredDevice, VentControl, MenuProvider, Labelled, RedstoneControlled {
     /** Who a vent's changes are made by. */
     public static final SourceId VENT = SourceId.of(ZasAtmosMod.MOD_ID, "vent");
 
@@ -71,6 +74,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
 
     private final ZonePort port = new ZonePort(VENT);
     private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
+    private final RedstoneControl redstone = new RedstoneControl(this);
     private VentSettings settings = VentSettings.OFF;
     private long controlledUntil = Long.MIN_VALUE;
     private long airlockUntil = Long.MIN_VALUE;
@@ -96,6 +100,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                 case VentMenu.DATA_Z_HIGH -> high(controller == null ? 0 : controller.getZ());
                 case VentMenu.DATA_NETWORK -> (int) Math.min(Short.MAX_VALUE, Math.round(networkPressure()));
                 case VentMenu.DATA_STATUS -> status.ordinal();
+                case VentMenu.DATA_REDSTONE -> redstone.data();
                 default -> 0;
             };
         }
@@ -123,9 +128,16 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
         return (short) (v >> 16);
     }
 
-    /** What the vent draws now: its configured draw unless it is off (CONT-065). */
+    /** What the vent draws now: its configured draw unless it is off (CONT-065) or redstone holds it (CONT-172). */
     private int currentDraw() {
-        return settings.mode() == VentMode.OFF ? 0 : AtmosServerConfig.get(AtmosServerConfig.VENT_DRAW);
+        return settings.mode() == VentMode.OFF || !redstone.allows()
+                ? 0
+                : AtmosServerConfig.get(AtmosServerConfig.VENT_DRAW);
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
     }
 
     /** The vent's settings. */
@@ -310,9 +322,9 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
         return status;
     }
 
-    /** Whether the vent is running: on and powered. */
+    /** Whether the vent is running: on, let run by its redstone setting (CONT-170), and powered. */
     public boolean running() {
-        return settings.mode() != VentMode.OFF && power.isPowered();
+        return settings.mode() != VentMode.OFF && redstone.allows() && power.isPowered();
     }
 
     @Override
@@ -323,6 +335,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
     @Override
     protected void atmosTick(ServerLevel level) {
         cellWatch().step();
+        redstone.read();
         GasStore net = network().gas();
         VentMode shown = running() ? settings.mode() : VentMode.OFF;
         BlockState state = getBlockState();
@@ -403,6 +416,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
         tag.putDouble(EXTERNAL, settings.external());
         tag.putDouble(INTERNAL, settings.internal());
         power.save(tag);
+        redstone.save(tag);
         // Shown to /data get block while a controller controls the vent; never loaded, since a
         // controller's orders don't outlast a reload and it sends them again.
         if (controlled()) {
@@ -427,6 +441,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                 tag.contains(EXTERNAL) ? tag.getDouble(EXTERNAL) : VentSettings.DEFAULT_EXTERNAL,
                 tag.getDouble(INTERNAL));
         power.load(tag);
+        redstone.load(tag);
     }
 
     @Override

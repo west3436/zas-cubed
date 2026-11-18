@@ -27,10 +27,10 @@ public abstract class ThermoMachineMenu extends PortableMenu {
     /** Where the battery slot is drawn. */
     public static final int BATTERY_X = 8;
 
-    public static final int BATTERY_Y = 54;
+    public static final int BATTERY_Y = 65;
 
     /** Where the player's inventory starts. */
-    public static final int INVENTORY_Y = 79;
+    public static final int INVENTORY_Y = 90;
 
     /** The setpoint in tenths of a kelvin. */
     public static final int DATA_SETPOINT = PortableMenu.DATA_COUNT;
