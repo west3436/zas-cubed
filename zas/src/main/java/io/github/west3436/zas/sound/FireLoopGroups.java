@@ -1,5 +1,6 @@
 package io.github.west3436.zas.sound;
 
+import io.github.west3436.zas.provider.Frame;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,6 +18,11 @@ import java.util.Set;
  * in it, so its loop follows the fire rather than restarting. The {@value #MAX_SOURCES} cubes that
  * reach the listener loudest play, with a bonus for those already playing, so walking past a big fire
  * doesn't swap its loops back and forth.
+ *
+ * <p>Blocks another mod shows somewhere else, as Sable shows a sub-level's plot at the ship, are
+ * grouped where they are kept, in cubes fixed in the plot, and play where their {@link Frame} shows
+ * them (COMPAT-101): a fire in a ship's cabin is heard in the cabin, and keeps its loops as the ship
+ * flies and turns. {@link #follow} places them again between looks, so they keep up with the ship.
  *
  * <p>Not thread-safe: the client thread only.
  */
@@ -44,16 +50,16 @@ public final class FireLoopGroups {
 
     private static final int CELL_BITS = 3;
 
-    /** A cube of the world, by its coordinates in cubes: what names a loop. */
+    /** A cube of the level, by its coordinates in cubes: what names a loop. */
     public record Source(int x, int y, int z) {}
 
     /**
      * One source to play.
      *
      * @param source what names its loop
-     * @param x the middle of its blocks
-     * @param y the middle of its blocks
-     * @param z the middle of its blocks
+     * @param x where it plays: the middle of its blocks, where the world shows them
+     * @param y where it plays
+     * @param z where it plays
      * @param blocks how many blocks it stands for
      * @param volume its volume at the source
      * @param pitch its pitch
@@ -69,8 +75,12 @@ public final class FireLoopGroups {
 
     private record Candidate(Group group, double loudness) {}
 
+    /** A chosen source on a frame, with the middle of its blocks where they are kept. */
+    private record Moving(Group group, double x, double y, double z) {}
+
     private final Map<Source, Sum> sums = new HashMap<>();
     private Set<Source> playing = Set.of();
+    private List<Moving> moving = List.of();
 
     /** Counts a fire block in this round. */
     public void add(int x, int y, int z) {
@@ -91,11 +101,37 @@ public final class FireLoopGroups {
      * @return at most {@value #MAX_SOURCES} sources
      */
     public List<Group> choose(double lx, double ly, double lz) {
+        return choose(lx, ly, lz, Frame.Lookup.NONE);
+    }
+
+    /**
+     * Ends the round, for blocks some of which may show somewhere else: each source plays where its
+     * frame shows the middle of its blocks, and its distance is measured from there.
+     *
+     * @param lx where the listener is, as the world shows it
+     * @param ly where the listener is
+     * @param lz where the listener is
+     * @param frames the frames that show the level's blocks
+     * @return at most {@value #MAX_SOURCES} sources, placed where they show
+     */
+    public List<Group> choose(double lx, double ly, double lz, Frame.Lookup frames) {
         List<Candidate> candidates = new ArrayList<>(sums.size());
+        Map<Source, double[]> kept = new HashMap<>();
         sums.forEach((source, sum) -> {
-            double x = (double) sum.x / sum.blocks + 0.5;
-            double y = (double) sum.y / sum.blocks + 0.5;
-            double z = (double) sum.z / sum.blocks + 0.5;
+            double kx = (double) sum.x / sum.blocks + 0.5;
+            double ky = (double) sum.y / sum.blocks + 0.5;
+            double kz = (double) sum.z / sum.blocks + 0.5;
+            double x = kx;
+            double y = ky;
+            double z = kz;
+            Frame frame = frameOf(source, frames);
+            if (frame != null) {
+                double[] shown = frame.toShown(kx, ky, kz);
+                x = shown[0];
+                y = shown[1];
+                z = shown[2];
+                kept.put(source, new double[] {kx, ky, kz});
+            }
             float volume = volume(sum.blocks);
             double reach = 1 - Math.sqrt(squared(x - lx) + squared(y - ly) + squared(z - lz)) / RANGE;
             if (reach > 0) {
@@ -113,13 +149,51 @@ public final class FireLoopGroups {
         });
         List<Group> chosen = new ArrayList<>(MAX_SOURCES);
         Set<Source> nowPlaying = new HashSet<>();
+        List<Moving> nowMoving = List.of();
         for (int i = 0; i < candidates.size() && i < MAX_SOURCES; i++) {
             Group group = candidates.get(i).group();
             chosen.add(group);
             nowPlaying.add(group.source());
+            double[] k = kept.get(group.source());
+            if (k != null) {
+                if (nowMoving.isEmpty()) {
+                    nowMoving = new ArrayList<>(MAX_SOURCES);
+                }
+                nowMoving.add(new Moving(group, k[0], k[1], k[2]));
+            }
         }
         playing = nowPlaying;
+        moving = nowMoving;
         return chosen;
+    }
+
+    /**
+     * Between looks: the sources of the last round that a frame shows, placed again where it shows
+     * them now, so a fire on a ship keeps up with it as it flies and turns. A source where it is was
+     * asked for at the look, as it always was, and isn't here; nor is one whose frame has gone.
+     *
+     * @param frames the frames that show the level's blocks
+     * @return those sources, as the last round chose them but where they show now
+     */
+    public List<Group> follow(Frame.Lookup frames) {
+        if (moving.isEmpty()) {
+            return List.of();
+        }
+        List<Group> out = new ArrayList<>(moving.size());
+        for (Moving m : moving) {
+            Frame frame = frameOf(m.group().source(), frames);
+            if (frame != null) {
+                double[] shown = frame.toShown(m.x(), m.y(), m.z());
+                Group g = m.group();
+                out.add(new Group(g.source(), shown[0], shown[1], shown[2], g.blocks(), g.volume(), g.pitch()));
+            }
+        }
+        return out;
+    }
+
+    /** The frame that shows a cube, or null: a cube lies in one chunk, so one frame shows all of it. */
+    private static Frame frameOf(Source s, Frame.Lookup frames) {
+        return frames == Frame.Lookup.NONE ? null : frames.at(s.x() << CELL_BITS, s.z() << CELL_BITS);
     }
 
     /**

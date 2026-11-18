@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.zas.provider.Frame;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -216,5 +217,120 @@ class FireLoopGroupsTest {
         }
         assertEquals(0, book.voices().size(), "voices after it went out");
         assertEquals(0, book.leaseCount(), "leases after it went out");
+    }
+
+    // ---- Fire on blocks shown somewhere else, as on a Sable ship (COMPAT-101) ----------------
+
+    /** Where the plot is: far out in the level, as Sable's first plot. */
+    private static final int PX = 20_481_024;
+
+    private static final int PY = 128;
+    private static final int PZ = 20_481_024;
+
+    /**
+     * The plot shown with its corner at {@code shown}, turned a quarter so its east is the world's
+     * south. {@code shown} can be changed, as a ship flies.
+     */
+    private static Frame ship(double[] shown) {
+        return new Frame() {
+            @Override
+            public double[] toShown(double x, double y, double z) {
+                double[] t = turnToShown(x - PX, y - PY, z - PZ);
+                return new double[] {t[0] + shown[0], t[1] + shown[1], t[2] + shown[2]};
+            }
+
+            @Override
+            public double[] toLevel(double x, double y, double z) {
+                double[] t = turnToLevel(x - shown[0], y - shown[1], z - shown[2]);
+                return new double[] {t[0] + PX, t[1] + PY, t[2] + PZ};
+            }
+
+            @Override
+            public double[] turnToShown(double x, double y, double z) {
+                return new double[] {-z, y, x};
+            }
+
+            @Override
+            public double[] turnToLevel(double x, double y, double z) {
+                return new double[] {z, y, -x};
+            }
+
+            @Override
+            public double[] shownVelocity(double x, double y, double z) {
+                return new double[3];
+            }
+        };
+    }
+
+    private static Frame.Lookup onThePlot(Frame ship) {
+        return (x, z) -> x >= PX - 1024 && z >= PZ - 1024 ? ship : null;
+    }
+
+    private static double distance(FireLoopGroups.Group g, double[] p) {
+        double dx = g.x() - p[0];
+        double dy = g.y() - p[1];
+        double dz = g.z() - p[2];
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /**
+     * A fire in a ship's cabin plays where the ship shows it, and is heard by a listener there, though
+     * its blocks are kept 20 million blocks away; one on the ground is where it is.
+     */
+    @Test
+    void fire_036_a_fire_on_a_ship_plays_where_the_ship_shows_it() {
+        double[] corner = {10.25, 200.5, -3.75};
+        Frame ship = ship(corner);
+        FireLoopGroups groups = new FireLoopGroups();
+        box(groups, PX + 2, PY + 1, PZ + 2, PX + 3, PY + 1, PZ + 3);
+        double[] fire = ship.toShown(PX + 3, PY + 1.5, PZ + 3);
+        List<FireLoopGroups.Group> chosen = groups.choose(fire[0] + 2, fire[1], fire[2], onThePlot(ship));
+        assertEquals(1, chosen.size(), "a listener in the cabin");
+        assertEquals(0, distance(chosen.get(0), fire), EPSILON);
+        assertEquals(4, chosen.get(0).blocks());
+
+        box(groups, PX + 2, PY + 1, PZ + 2, PX + 3, PY + 1, PZ + 3);
+        assertTrue(
+                groups.choose(PX + 3, PY + 1.5, PZ + 5, onThePlot(ship)).isEmpty(),
+                "a listener in the plot, away from where the ship shows it");
+
+        groups.add(2, 3, 4);
+        FireLoopGroups.Group ground =
+                groups.choose(2.5, 3.5, 8.5, onThePlot(ship)).get(0);
+        assertEquals(2.5, ground.x(), EPSILON);
+        assertEquals(4.5, ground.z(), EPSILON);
+        assertTrue(groups.follow(onThePlot(ship)).isEmpty(), "a fire on the ground is asked for at the look only");
+    }
+
+    /**
+     * Between looks the ship's fire is placed again where the ship shows it now, so it keeps up with
+     * a ship that flies and turns, and at the next look it keeps its source, so its loop goes on.
+     */
+    @Test
+    void fire_036_a_fire_on_a_ship_follows_it_and_keeps_its_loop() {
+        double[] corner = {10.25, 200.5, -3.75};
+        Frame ship = ship(corner);
+        Frame.Lookup frames = onThePlot(ship);
+        FireLoopGroups groups = new FireLoopGroups();
+        groups.add(PX + 2, PY + 1, PZ + 2);
+        groups.add(PX + 30, PY + 1, PZ + 2); // another cube, out of the listener's range
+        double[] fire = ship.toShown(PX + 2.5, PY + 1.5, PZ + 2.5);
+        List<FireLoopGroups.Group> first = groups.choose(fire[0], fire[1] + 1, fire[2], frames);
+        assertEquals(1, first.size());
+
+        corner[0] += 1.5;
+        corner[2] -= 0.5;
+        double[] moved = ship.toShown(PX + 2.5, PY + 1.5, PZ + 2.5);
+        List<FireLoopGroups.Group> followed = groups.follow(frames);
+        assertEquals(1, followed.size());
+        assertEquals(0, distance(followed.get(0), moved), EPSILON);
+        assertEquals(first.get(0).source(), followed.get(0).source());
+        assertEquals(first.get(0).volume(), followed.get(0).volume());
+        assertEquals(first.get(0).pitch(), followed.get(0).pitch());
+
+        groups.add(PX + 2, PY + 1, PZ + 2);
+        List<FireLoopGroups.Group> next = groups.choose(moved[0], moved[1] + 1, moved[2], frames);
+        assertEquals(first.get(0).source(), next.get(0).source(), "the same loop at the next look");
+        assertTrue(groups.follow(Frame.Lookup.NONE).isEmpty(), "with the ship gone, nothing follows it");
     }
 }

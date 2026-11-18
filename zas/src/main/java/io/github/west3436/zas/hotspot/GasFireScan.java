@@ -1,6 +1,11 @@
 package io.github.west3436.zas.hotspot;
 
+import io.github.west3436.zas.provider.Frames;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
+import java.util.List;
 import java.util.function.Predicate;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -8,6 +13,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Finds the gas fire blocks around a point, as they are now, for their sound (FIRE-036). It reads
@@ -25,6 +31,38 @@ public final class GasFireScan {
     }
 
     private GasFireScan() {}
+
+    /**
+     * Finds the gas fire blocks within reach of a listener, where the world shows them: around the
+     * listener, and around its point in each frame shown near it (COMPAT-101), so a fire in a Sable
+     * ship's cabin is found in the ship's plot. Each block is told once, where it is kept in the
+     * level; {@link io.github.west3436.zas.sound.FireLoopGroups} places it where it shows. With no
+     * frame near, this is {@link #forEach} around the listener.
+     *
+     * @param level the level
+     * @param x where the listener is, as the world shows it
+     * @param y where the listener is
+     * @param z where the listener is
+     * @param radius how far the cube reaches on each side, in blocks
+     * @param found told each block
+     */
+    public static void around(Level level, double x, double y, double z, double radius, Found found) {
+        List<Vec3> points = Frames.pointsNear(level, new Vec3(x, y, z), radius);
+        if (points.size() == 1) {
+            forEach(level, x, y, z, radius, found);
+            return;
+        }
+        // Two frames' cubes could meet, so a block is told once however many find it.
+        LongSet told = new LongOpenHashSet();
+        Found once = (bx, by, bz) -> {
+            if (told.add(BlockPos.asLong(bx, by, bz))) {
+                found.at(bx, by, bz);
+            }
+        };
+        for (Vec3 p : points) {
+            forEach(level, p.x, p.y, p.z, radius, once);
+        }
+    }
 
     /**
      * Finds the gas fire blocks in a cube.
