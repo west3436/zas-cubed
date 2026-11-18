@@ -565,13 +565,27 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/circulator_en
 origin: original
 notes: The drum's ends, around its pipe flanges.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_side.png
+origin: vgstation13
+source: icons/obj/pipes.dmi
+state: compressor
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px as the casing's side: vg's white ribbed housing and two grey flanges with dark rivets and orange bolts. The gas goes in at the left.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_top.png
+origin: vgstation13
+source: icons/obj/pipes.dmi
+state: compressor
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The same casing turned for the top and bottom.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor.png
 origin: original
-notes: The compressor's rotor face, drawn from scratch: curved blades in a blue ring. Still.
+notes: The intake fan in vg's compressor colours: five white twisted blades, an orange spinner and a dark shroud in a round bezel with four bolts. Still.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin1.png
 origin: original
-notes: Spinning, speed 1 of 3: 4 frames of the blades turning.
+notes: Spinning, speed 1 of 3: 4 frames of the fan turning.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin1.png.mcmeta
 origin: original
@@ -579,7 +593,7 @@ notes: 4 ticks a frame.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin2.png
 origin: original
-notes: Spinning, speed 2 of 3: 4 frames of the blades turning.
+notes: Spinning, speed 2 of 3: 4 frames of the fan turning, the blades smeared.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin2.png.mcmeta
 origin: original
@@ -587,31 +601,59 @@ notes: 2 ticks a frame.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin3.png
 origin: original
-notes: Spinning, speed 3 of 3: 4 frames of the blades turning.
+notes: Spinning, speed 3 of 3: 4 frames of the fan turning, the blades smeared.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin3.png.mcmeta
 origin: original
 notes: 1 tick a frame.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_side_east.png
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_lip.png
 origin: original
-notes: Its casing: a blue band and an arrow for the way the gas goes.
+notes: The 1 px lip round the compressor's openings.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_side_west.png
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_wall.png
 origin: original
-notes: Its casing from the other side, the arrow turned to match.
+notes: The dark inside walls of those openings, so they read deep.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_top.png
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_port.png
 origin: original
-notes: Its casing from above, with its blue band.
+notes: The chamber side: a round, bolted outlet duct with a grate, on the white housing.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_side.png
+origin: vgstation13
+source: icons/obj/pipes.dmi
+state: turbine
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px as the casing's side: vg's white ribbed housing, its control panel with the red cross and two lamps, and the black exhaust bell's flare at the out end.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_top.png
+origin: vgstation13
+source: icons/obj/pipes.dmi
+state: turbine
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The casing from above: a flange and the bell's flare.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_exhaust.png
+origin: vgstation13
+source: icons/obj/pipes.dmi
+state: turbine
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's flared exhaust bell, black to grey, drawn as the fronts of three steps.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_bell.png
+origin: vgstation13
+source: icons/obj/pipes.dmi
+state: turbine
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The inside walls of the bell, in its greys.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor.png
 origin: original
-notes: The gas turbine's rotor face, drawn from scratch: curved blades in a orange ring. Still.
+notes: The turbine wheel in vg's turbine colours: twelve grey blades round an orange nut, in the same bezel as the compressor's fan. Still.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin1.png
 origin: original
-notes: Spinning, speed 1 of 3: 4 frames of the blades turning.
+notes: Spinning, speed 1 of 3: 4 frames of the wheel turning.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin1.png.mcmeta
 origin: original
@@ -619,7 +661,7 @@ notes: 4 ticks a frame.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin2.png
 origin: original
-notes: Spinning, speed 2 of 3: 4 frames of the blades turning.
+notes: Spinning, speed 2 of 3: 4 frames of the wheel turning, the blades smeared.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin2.png.mcmeta
 origin: original
@@ -627,23 +669,19 @@ notes: 2 ticks a frame.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin3.png
 origin: original
-notes: Spinning, speed 3 of 3: 4 frames of the blades turning.
+notes: Spinning, speed 3 of 3: 4 frames of the wheel turning, the blades smeared.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin3.png.mcmeta
 origin: original
 notes: 1 tick a frame.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_side_east.png
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_lip.png
 origin: original
-notes: Its casing: a orange band and an arrow for the way the gas goes.
+notes: The 1 px lip round the turbine's openings.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_side_west.png
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_wall.png
 origin: original
-notes: Its casing from the other side, the arrow turned to match.
-
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_top.png
-origin: original
-notes: Its casing from above, with its orange band.
+notes: The dark inside walls of those openings, so they read deep.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/teg_0.json
 origin: original
@@ -679,7 +717,7 @@ notes: The circulator moving gas.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/compressor.json
 origin: original
-notes: The compressor, a full block with a rotor face front and back. Still.
+notes: The compressor: the intake fan 2 px deep behind a lip, the outlet duct 1 px deep. Still.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/compressor_spin1.json
 origin: original
@@ -695,7 +733,7 @@ notes: The compressor spinning, speed 3 of 3.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/turbine.json
 origin: original
-notes: The gas turbine, a full block with a rotor face front and back. Still.
+notes: The gas turbine: the wheel 2 px deep on the chamber side, a three-step exhaust bell on the other. Still.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/turbine_spin1.json
 origin: original
