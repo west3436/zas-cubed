@@ -68,7 +68,7 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
 
 ## For mod developers
 
-The public API (`zas-api`) is what space, tech and survival mods can build on: read and change a zone's gas and heat, give a dimension its open air, offer a block's gas store to pipes, and make items that protect or supply breath. A mod can bundle it and still run when ZAS³ isn't installed. The Mekanism and Ad Astra adapters use the public API alone, so they double as worked examples. The guide and Javadoc are on the [wiki](https://github.com/west3436/zas-cubed/wiki).
+The public API (`zas-api`) is what space, tech and survival mods can build on: read and change a zone's gas and heat, give a dimension its open air, offer a block's gas store to pipes, make items that protect or supply breath, and carry a room's air along when a mod moves its blocks. A mod can bundle it and still run when ZAS³ isn't installed. The Mekanism and Ad Astra adapters use the public API alone, so they double as worked examples. The guide and Javadoc are on the [wiki](https://github.com/west3436/zas-cubed/wiki).
 
 ## Licensing
 
