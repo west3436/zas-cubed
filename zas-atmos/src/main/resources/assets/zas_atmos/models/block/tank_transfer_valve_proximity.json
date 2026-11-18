@@ -1,0 +1,68 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "trigger": "zas_atmos:block/tank_transfer_valve_trigger",
+    "particle": "zas_atmos:block/tank_transfer_valve"
+  },
+  "elements": [
+    {
+      "from": [
+        5.5,
+        0.5,
+        3.5
+      ],
+      "to": [
+        10.5,
+        4.5,
+        5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            0,
+            10,
+            4
+          ],
+          "texture": "#trigger"
+        },
+        "east": {
+          "uv": [
+            12,
+            0,
+            13.5,
+            4
+          ],
+          "texture": "#trigger"
+        },
+        "west": {
+          "uv": [
+            12,
+            0,
+            13.5,
+            4
+          ],
+          "texture": "#trigger"
+        },
+        "up": {
+          "uv": [
+            5,
+            4,
+            10,
+            5.5
+          ],
+          "texture": "#trigger"
+        },
+        "down": {
+          "uv": [
+            5,
+            4,
+            10,
+            5.5
+          ],
+          "texture": "#trigger"
+        }
+      }
+    }
+  ]
+}

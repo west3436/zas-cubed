@@ -18,6 +18,7 @@ import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
+import io.github.west3436.zas.atmos.miner.GasMinerBlockEntity;
 import io.github.west3436.zas.atmos.mixer.MixerBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
@@ -250,6 +251,13 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<GaugeBlockEntity>> GAUGE = BLOCK_ENTITIES.register(
             "gauge",
             () -> BlockEntityType.Builder.of(GaugeBlockEntity::new, AtmosBlocks.GAUGE.get())
+                    .build(null));
+
+    // The gas miner (CONT-180).
+
+    public static final Supplier<BlockEntityType<GasMinerBlockEntity>> GAS_MINER = BLOCK_ENTITIES.register(
+            "gas_miner",
+            () -> BlockEntityType.Builder.of(GasMinerBlockEntity::new, AtmosBlocks.GAS_MINER.get())
                     .build(null));
 
     private AtmosBlockEntities() {}

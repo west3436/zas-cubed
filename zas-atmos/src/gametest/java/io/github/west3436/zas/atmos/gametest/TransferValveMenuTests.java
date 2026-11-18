@@ -697,7 +697,8 @@ public final class TransferValveMenuTests {
         p.getInventory().setItem(p.getInventory().selected, hydrogen());
         TransferValveMenu menu = open(p, InteractionHand.OFF_HAND);
         h.assertTrue(menu.getSlot(menu.valveSlot()).getItem() == stack, "the TTV's slot shows something else");
-        h.assertValueEqual(menu.slots.size(), HOTBAR_START + 9 + 1, "slots");
+        // The off hand's slot, then the trigger's (CONT-184).
+        h.assertValueEqual(menu.slots.size(), HOTBAR_START + 9 + 2, "slots");
 
         // What the main hand holds isn't locked, and is the one a number key would take in from.
         menu.setCarried(oxygen());

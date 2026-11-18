@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
+import io.github.west3436.zas.atmos.ttv.Signal;
 import io.netty.buffer.Unpooled;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -174,6 +175,11 @@ public final class ItemDataTests {
         samples.put(AtmosComponents.TTV_TANKS.get(), ItemContainerContents.fromItems(List.of(tank(), tank())));
         samples.put(AtmosComponents.TTV_OPEN.get(), true);
         samples.put(AtmosComponents.TTV_TIMER.get(), 45);
+        samples.put(
+                AtmosComponents.TTV_TRIGGER.get(),
+                ItemContainerContents.fromItems(List.of(new ItemStack(AtmosItems.PROXIMITY_SENSOR.get()))));
+        samples.put(AtmosComponents.SIGNAL.get(), new Signal(1475, 12));
+        samples.put(AtmosComponents.PROXIMITY_RANGE.get(), 4);
         return samples;
     }
 

@@ -110,7 +110,7 @@ public final class CcReadTests {
         int i = 0;
         for (String type : Devices.SURFACE.keySet()) {
             // Two rows, three blocks apart, so nothing joins and each wall panel has its stone.
-            BlockEntity device = Devices.place(s, type, 1 + 3 * (i % 8), 2, i < 8 ? 2 : 5);
+            BlockEntity device = Devices.place(s, type, 1 + 3 * (i % 10), 2, i < 10 ? 2 : 5);
             i++;
             for (Direction side : Direction.values()) {
                 IPeripheral found = s.peripheral(device.getBlockPos(), side);

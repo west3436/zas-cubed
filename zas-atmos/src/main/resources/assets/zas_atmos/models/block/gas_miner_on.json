@@ -1,0 +1,145 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "front": "zas_atmos:block/gas_miner_front_on",
+    "side": "zas_atmos:block/gas_miner_side",
+    "top": "zas_atmos:block/gas_miner_top",
+    "band": "zas_atmos:block/gas_miner_band",
+    "particle": "zas_atmos:block/gas_miner_side"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#front",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side",
+          "cullface": "south"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#top",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#band",
+          "cullface": "north",
+          "tintindex": 0
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#band",
+          "cullface": "south",
+          "tintindex": 0
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#band",
+          "cullface": "east",
+          "tintindex": 0
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#band",
+          "cullface": "west",
+          "tintindex": 0
+        }
+      }
+    }
+  ]
+}

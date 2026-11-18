@@ -163,6 +163,20 @@ final class Devices {
                         "clear",
                         "cycle",
                         "stop"));
+        surface.put(
+                "zas_gas_miner",
+                List.of(
+                        "isOn",
+                        "setOn",
+                        "getState",
+                        "getGas",
+                        "setGas",
+                        "getGases",
+                        "getTargetPressure",
+                        "setTargetPressure",
+                        "getTemperature",
+                        "setTemperature",
+                        "getRoomPressure"));
         return surface;
     }
 
@@ -201,6 +215,7 @@ final class Devices {
             case "zas_portable_scrubber" -> AtmosBlocks.PORTABLE_SCRUBBER.get();
             case "zas_portable_pump" -> AtmosBlocks.PORTABLE_PUMP.get();
             case "zas_generator" -> AtmosBlocks.GENERATOR.get();
+            case "zas_gas_miner" -> AtmosBlocks.GAS_MINER.get();
             default -> throw new GameTestAssertException("no block for " + type);
         };
     }

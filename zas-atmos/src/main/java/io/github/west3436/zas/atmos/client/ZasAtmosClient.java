@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
+import io.github.west3436.zas.atmos.miner.GasMinerBlockEntity;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
@@ -165,6 +166,16 @@ public final class ZasAtmosClient {
                         ? ttv.tint(tintIndex)
                         : -1,
                 AtmosBlocks.TANK_TRANSFER_VALVE.get());
+
+        // A gas miner's band is its gas's colour (CONT-180).
+        event.register(
+                (state, level, pos, tintIndex) -> tintIndex == 0
+                                && level != null
+                                && pos != null
+                                && level.getBlockEntity(pos) instanceof GasMinerBlockEntity miner
+                        ? 0xFF000000 | GasParts.colour(miner.gas().toString())
+                        : -1,
+                AtmosBlocks.GAS_MINER.get());
     }
 
     /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */
@@ -182,6 +193,11 @@ public final class ZasAtmosClient {
                 (stack, tintIndex) ->
                         tintIndex == 0 ? 0xFF000000 | HeatExchangerTint.colour(HeatExchangerTint.COPPER) : -1,
                 AtmosItems.HEAT_EXCHANGER.get());
+        // A gas miner's item shows the gas a new one is set to (CONT-180).
+        event.register(
+                (stack, tintIndex) ->
+                        tintIndex == 0 ? 0xFF000000 | GasParts.colour(GasMinerBlockEntity.DEFAULT_GAS.toString()) : -1,
+                AtmosItems.GAS_MINER.get());
     }
 
     /** A TTV item's tanks are tinted by their kinds: layer 1 its first tank, or a lone tank, and layer 2 its second. */
@@ -203,6 +219,11 @@ public final class ZasAtmosClient {
     private static void transferValveModels(ModelEvent.RegisterAdditional event) {
         for (var byOpen : PrimedTransferValveRenderer.MODELS) {
             for (var model : byOpen) {
+                event.register(model);
+            }
+        }
+        for (var model : PrimedTransferValveRenderer.TRIGGERS) {
+            if (model != null) {
                 event.register(model);
             }
         }
@@ -237,6 +258,8 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.TANK_TRANSFER_VALVE.get(), TransferValveScreen::new);
         event.register(AtmosMenus.ANALYZER.get(), AnalyzerScreen::new);
         event.register(AtmosMenus.AIRLOCK_CONTROLLER.get(), AirlockControllerScreen::new);
+        event.register(AtmosMenus.GAS_MINER.get(), GasMinerScreen::new);
+        event.register(AtmosMenus.REMOTE_SIGNALER.get(), RemoteSignalerScreen::new);
     }
 
     /**

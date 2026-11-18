@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.ItemData;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
+import io.github.west3436.zas.atmos.ttv.Signal;
 import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -93,6 +94,25 @@ public final class AtmosComponents {
             "ttv_timer",
             b -> b.persistent(ItemData.versioned(ExtraCodecs.NON_NEGATIVE_INT))
                     .networkSynchronized(ByteBufCodecs.VAR_INT));
+
+    /**
+     * The trigger fitted to a TTV in place of its timer (CONT-184): a remote signaler or a proximity
+     * sensor, in slot 0. Without it, its timer.
+     */
+    public static final Supplier<DataComponentType<ItemContainerContents>> TTV_TRIGGER =
+            COMPONENTS.registerComponentType(
+                    "ttv_trigger",
+                    b -> b.persistent(ItemData.versioned(ItemContainerContents.CODEC))
+                            .networkSynchronized(ItemContainerContents.STREAM_CODEC));
+
+    /** A remote signaler's frequency and code (CONT-185); without it, the default. */
+    public static final Supplier<DataComponentType<Signal>> SIGNAL = COMPONENTS.registerComponentType(
+            "signal", b -> b.persistent(ItemData.versioned(Signal.CODEC)).networkSynchronized(Signal.STREAM_CODEC));
+
+    /** A proximity sensor's range in blocks (CONT-187); without it, the default. */
+    public static final Supplier<DataComponentType<Integer>> PROXIMITY_RANGE = COMPONENTS.registerComponentType(
+            "proximity_range",
+            b -> b.persistent(ItemData.versioned(ExtraCodecs.POSITIVE_INT)).networkSynchronized(ByteBufCodecs.VAR_INT));
 
     private AtmosComponents() {}
 

@@ -69,6 +69,7 @@ public final class CcCompat {
         device(event, AtmosBlockEntities.GENERATOR, GeneratorPeripheral::new);
         device(event, AtmosBlockEntities.AREA_AIR_CONTROLLER, AreaAirControllerPeripheral::new);
         device(event, AtmosBlockEntities.AIRLOCK_CONTROLLER, AirlockControllerPeripheral::new);
+        device(event, AtmosBlockEntities.GAS_MINER, GasMinerPeripheral::new);
         // The console is four blocks with one block entity, in its lower left block: any of them is
         // the peripheral, as any of them opens its window.
         event.registerBlock(

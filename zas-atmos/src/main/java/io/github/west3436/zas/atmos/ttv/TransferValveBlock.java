@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -45,7 +46,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * where it stands (CONT-104). Redstone does nothing to it.
  *
  * <p>{@link #FACING} is the way its timer faces: toward whoever placed it. {@link #TANKS} and {@link
- * #OPEN} pick its model, and follow what its block entity holds.
+ * #OPEN} pick its model, and {@link #TRIGGER} what it shows in its timer's place; all three follow
+ * what its block entity holds.
  */
 public class TransferValveBlock extends BaseEntityBlock {
     public static final MapCodec<TransferValveBlock> CODEC = simpleCodec(TransferValveBlock::new);
@@ -58,6 +60,9 @@ public class TransferValveBlock extends BaseEntityBlock {
 
     /** Whether its valve is open, which turns its lever. */
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
+
+    /** What it is fitted with in its timer's place, which its model shows (CONT-184). */
+    public static final EnumProperty<TtvTrigger> TRIGGER = EnumProperty.create("trigger", TtvTrigger.class);
 
     /** Its shapes with its timer to the north, by tank count, as its models are drawn: 7 px high. */
     private static final VoxelShape[] NORTH = {body(), Shapes.or(body(), tank(0)), Shapes.or(body(), tank(0), tank(12))
@@ -80,7 +85,8 @@ public class TransferValveBlock extends BaseEntityBlock {
                 .any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(TANKS, 0)
-                .setValue(OPEN, false));
+                .setValue(OPEN, false)
+                .setValue(TRIGGER, TtvTrigger.TIMER));
     }
 
     private static VoxelShape body() {
@@ -111,7 +117,7 @@ public class TransferValveBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, TANKS, OPEN);
+        builder.add(FACING, TANKS, OPEN, TRIGGER);
     }
 
     /** It faces whoever places it, and shows the tanks and valve of the item it was placed from. */
@@ -123,13 +129,17 @@ public class TransferValveBlock extends BaseEntityBlock {
                 context.getItemInHand());
     }
 
-    /** A state showing what a TTV stack holds: how many tanks, and whether its valve is open. */
+    /**
+     * A state showing what a TTV stack holds: how many tanks, whether its valve is open, and what it is
+     * fitted with in its timer's place.
+     */
     static BlockState showing(BlockState state, ItemStack ttv) {
         if (!state.hasProperty(TANKS)) {
             return state;
         }
         return state.setValue(TANKS, Math.min(2, TransferValveItem.tankCount(ttv)))
-                .setValue(OPEN, TransferValveItem.valve(ttv).isOpen());
+                .setValue(OPEN, TransferValveItem.valve(ttv).isOpen())
+                .setValue(TRIGGER, TtvTrigger.ofTtv(ttv));
     }
 
     @Override
@@ -167,6 +177,9 @@ public class TransferValveBlock extends BaseEntityBlock {
             Player player,
             InteractionHand hand,
             BlockHitResult hit) {
+        if (TtvTrigger.fits(stack)) {
+            return fitTrigger(stack, state, level, pos);
+        }
         if (!(stack.getItem() instanceof GasTankItem)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
@@ -176,6 +189,24 @@ public class TransferValveBlock extends BaseEntityBlock {
         if (!level.isClientSide
                 && level.getBlockEntity(pos) instanceof TransferValveBlockEntity ttv
                 && ttv.fit(stack)) {
+            stack.shrink(1);
+            level.playSound(null, pos, SoundEvents.BUNDLE_INSERT, SoundSource.BLOCKS, 0.8f, 1.0f);
+        }
+        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /**
+     * A signaler or proximity sensor in hand goes on in its timer's place (CONT-184), with the sound a
+     * tank makes going on. On a TTV already fitted with one, it stays in hand and nothing happens, not
+     * even the item's own use.
+     */
+    private static ItemInteractionResult fitTrigger(ItemStack stack, BlockState state, Level level, BlockPos pos) {
+        if (state.getValue(TRIGGER) != TtvTrigger.TIMER) {
+            return ItemInteractionResult.CONSUME;
+        }
+        if (!level.isClientSide
+                && level.getBlockEntity(pos) instanceof TransferValveBlockEntity ttv
+                && ttv.fitTrigger(stack)) {
             stack.shrink(1);
             level.playSound(null, pos, SoundEvents.BUNDLE_INSERT, SoundSource.BLOCKS, 0.8f, 1.0f);
         }
