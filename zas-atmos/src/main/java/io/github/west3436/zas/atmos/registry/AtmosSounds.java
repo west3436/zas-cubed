@@ -45,6 +45,9 @@ public final class AtmosSounds {
             event("device.portable_scrubber.run");
     public static final DeferredHolder<SoundEvent, SoundEvent> RECHARGER_RUN = event("device.recharger.run");
     public static final DeferredHolder<SoundEvent, SoundEvent> GENERATOR_RUN = event("device.generator.run");
+    public static final DeferredHolder<SoundEvent, SoundEvent> TEG_RUN = event("device.teg.run");
+    public static final DeferredHolder<SoundEvent, SoundEvent> CIRCULATOR_RUN = event("device.circulator.run");
+    public static final DeferredHolder<SoundEvent, SoundEvent> TURBINE_RUN = event("device.turbine.run");
 
     // On, off and event sounds
     public static final DeferredHolder<SoundEvent, SoundEvent> PUMP_ON = event("device.pump.on");
@@ -72,6 +75,10 @@ public final class AtmosSounds {
             event("device.portable_scrubber.off");
     public static final DeferredHolder<SoundEvent, SoundEvent> GENERATOR_ON = event("device.generator.on");
     public static final DeferredHolder<SoundEvent, SoundEvent> GENERATOR_OFF = event("device.generator.off");
+    public static final DeferredHolder<SoundEvent, SoundEvent> TEG_ON = event("device.teg.on");
+    public static final DeferredHolder<SoundEvent, SoundEvent> TEG_OFF = event("device.teg.off");
+    public static final DeferredHolder<SoundEvent, SoundEvent> TURBINE_ON = event("device.turbine.on");
+    public static final DeferredHolder<SoundEvent, SoundEvent> TURBINE_OFF = event("device.turbine.off");
     public static final DeferredHolder<SoundEvent, SoundEvent> CONTROLLER_ON = event("device.controller.on");
     public static final DeferredHolder<SoundEvent, SoundEvent> CONTROLLER_OFF = event("device.controller.off");
     public static final DeferredHolder<SoundEvent, SoundEvent> RECHARGER_ON = event("device.recharger.on");

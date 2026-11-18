@@ -116,6 +116,13 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> HEAT_EXCHANGER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.HEAT_EXCHANGER);
 
+    // Power generators: the TEG and the gas turbine (CONT-157 to CONT-164).
+
+    public static final DeferredItem<BlockItem> TEG = ITEMS.registerSimpleBlockItem(AtmosBlocks.TEG);
+    public static final DeferredItem<BlockItem> CIRCULATOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.CIRCULATOR);
+    public static final DeferredItem<BlockItem> COMPRESSOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.COMPRESSOR);
+    public static final DeferredItem<BlockItem> TURBINE = ITEMS.registerSimpleBlockItem(AtmosBlocks.TURBINE);
+
     // The station blocks (CONT-129 to CONT-131).
 
     public static final DeferredItem<BlockItem> STATION_WALL = ITEMS.registerSimpleBlockItem(AtmosBlocks.STATION_WALL);

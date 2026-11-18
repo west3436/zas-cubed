@@ -1,0 +1,201 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "side": "zas_atmos:block/circulator_side",
+    "top": "zas_atmos:block/circulator_top",
+    "end": "zas_atmos:block/circulator_end",
+    "pipe": "zas_atmos:block/pipe_fitting",
+    "particle": "zas_atmos:block/circulator_side"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        2
+      ],
+      "to": [
+        15,
+        14,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#end"
+        },
+        "south": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#end"
+        },
+        "east": {
+          "uv": [
+            2,
+            0,
+            14,
+            14
+          ],
+          "texture": "#side"
+        },
+        "west": {
+          "uv": [
+            2,
+            0,
+            14,
+            14
+          ],
+          "texture": "#side"
+        },
+        "up": {
+          "uv": [
+            1,
+            2,
+            15,
+            14
+          ],
+          "texture": "#top"
+        },
+        "down": {
+          "uv": [
+            1,
+            2,
+            15,
+            14
+          ],
+          "texture": "#end",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        5,
+        0
+      ],
+      "to": [
+        11,
+        11,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#pipe",
+          "cullface": "north"
+        },
+        "east": {
+          "uv": [
+            0,
+            5,
+            2,
+            11
+          ],
+          "texture": "#pipe"
+        },
+        "west": {
+          "uv": [
+            14,
+            5,
+            16,
+            11
+          ],
+          "texture": "#pipe"
+        },
+        "up": {
+          "uv": [
+            5,
+            0,
+            11,
+            2
+          ],
+          "texture": "#pipe"
+        },
+        "down": {
+          "uv": [
+            5,
+            14,
+            11,
+            16
+          ],
+          "texture": "#pipe"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        5,
+        14
+      ],
+      "to": [
+        11,
+        11,
+        16
+      ],
+      "faces": {
+        "south": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#pipe",
+          "cullface": "south"
+        },
+        "east": {
+          "uv": [
+            14,
+            5,
+            16,
+            11
+          ],
+          "texture": "#pipe"
+        },
+        "west": {
+          "uv": [
+            0,
+            5,
+            2,
+            11
+          ],
+          "texture": "#pipe"
+        },
+        "up": {
+          "uv": [
+            5,
+            14,
+            11,
+            16
+          ],
+          "texture": "#pipe"
+        },
+        "down": {
+          "uv": [
+            5,
+            0,
+            11,
+            2
+          ],
+          "texture": "#pipe"
+        }
+      }
+    }
+  ]
+}

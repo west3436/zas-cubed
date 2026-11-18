@@ -116,6 +116,10 @@ public final class ZasAtmosClient {
         DeviceLoops.add(AtmosBlocks.PORTABLE_PUMP, AtmosSounds.PORTABLE_PUMP_RUN);
         DeviceLoops.add(AtmosBlocks.PORTABLE_SCRUBBER, AtmosSounds.PORTABLE_SCRUBBER_RUN);
         DeviceLoops.add(AtmosBlocks.RECHARGER, AtmosSounds.RECHARGER_RUN);
+        // The TEG core while it makes FE, and its circulators while gas passes (CONT-159). The turbine's
+        // loop plays from its own ticker, its pitch rising with its speed (CONT-164).
+        DeviceLoops.add(AtmosBlocks.TEG, AtmosSounds.TEG_RUN);
+        DeviceLoops.add(AtmosBlocks.CIRCULATOR, AtmosSounds.CIRCULATOR_RUN);
 
         // The fire alarm's sound, one per client (CONT-128).
         FireAlarmSounds.register(NeoForge.EVENT_BUS);
@@ -237,6 +241,8 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.TANK_TRANSFER_VALVE.get(), TransferValveScreen::new);
         event.register(AtmosMenus.ANALYZER.get(), AnalyzerScreen::new);
         event.register(AtmosMenus.AIRLOCK_CONTROLLER.get(), AirlockControllerScreen::new);
+        event.register(AtmosMenus.TEG.get(), TegScreen::new);
+        event.register(AtmosMenus.TURBINE.get(), TurbineScreen::new);
     }
 
     /**

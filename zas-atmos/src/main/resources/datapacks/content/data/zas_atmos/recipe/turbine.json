@@ -1,0 +1,59 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:turbine"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SKS",
+    "IFI",
+    "WBW"
+  ],
+  "key": {
+    "S": {
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    "K": {
+      "item": "zas_atmos:capacitor"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "F": {
+      "item": "zas_atmos:machine_frame"
+    },
+    "W": {
+      "item": "zas_atmos:cable_coil"
+    },
+    "B": {
+      "item": "zas_atmos:circuit_board"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:turbine"
+  }
+}

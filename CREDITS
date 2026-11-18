@@ -509,6 +509,238 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/generator.json
 origin: original
 notes: The generator's block model as its item.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_front_0.png
+origin: original
+notes: The TEG core's front, drawn from scratch: a grey panel with five dark output bars.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_front_1.png
+origin: original
+notes: 1 of its five bars lit, green at the bottom up to red at the top.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_front_2.png
+origin: original
+notes: 2 of its five bars lit, green at the bottom up to red at the top.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_front_3.png
+origin: original
+notes: 3 of its five bars lit, green at the bottom up to red at the top.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_front_4.png
+origin: original
+notes: 4 of its five bars lit, green at the bottom up to red at the top.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_front_5.png
+origin: original
+notes: 5 of its five bars lit, green at the bottom up to red at the top.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_side.png
+origin: original
+notes: Where a circulator meets it: copper fins around a port.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_top.png
+origin: original
+notes: Its top: a cooling grille in a grey frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/teg_back.png
+origin: original
+notes: Its back: a plain panel with a square port.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/circulator_side.png
+origin: original
+notes: The circulator's drum, drawn from scratch: green, a fan behind a grille. Still.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/circulator_side_on.png
+origin: original
+notes: Moving gas: 4 frames of the fan turning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/circulator_side_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/circulator_top.png
+origin: original
+notes: The drum from above, with an arrow for the way the gas goes.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/circulator_end.png
+origin: original
+notes: The drum's ends, around its pipe flanges.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor.png
+origin: original
+notes: The compressor's rotor face, drawn from scratch: curved blades in a blue ring. Still.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin1.png
+origin: original
+notes: Spinning, speed 1 of 3: 4 frames of the blades turning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin1.png.mcmeta
+origin: original
+notes: 4 ticks a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin2.png
+origin: original
+notes: Spinning, speed 2 of 3: 4 frames of the blades turning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin2.png.mcmeta
+origin: original
+notes: 2 ticks a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin3.png
+origin: original
+notes: Spinning, speed 3 of 3: 4 frames of the blades turning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_rotor_spin3.png.mcmeta
+origin: original
+notes: 1 tick a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_side_east.png
+origin: original
+notes: Its casing: a blue band and an arrow for the way the gas goes.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_side_west.png
+origin: original
+notes: Its casing from the other side, the arrow turned to match.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/compressor_top.png
+origin: original
+notes: Its casing from above, with its blue band.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor.png
+origin: original
+notes: The gas turbine's rotor face, drawn from scratch: curved blades in a orange ring. Still.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin1.png
+origin: original
+notes: Spinning, speed 1 of 3: 4 frames of the blades turning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin1.png.mcmeta
+origin: original
+notes: 4 ticks a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin2.png
+origin: original
+notes: Spinning, speed 2 of 3: 4 frames of the blades turning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin2.png.mcmeta
+origin: original
+notes: 2 ticks a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin3.png
+origin: original
+notes: Spinning, speed 3 of 3: 4 frames of the blades turning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_rotor_spin3.png.mcmeta
+origin: original
+notes: 1 tick a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_side_east.png
+origin: original
+notes: Its casing: a orange band and an arrow for the way the gas goes.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_side_west.png
+origin: original
+notes: Its casing from the other side, the arrow turned to match.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/turbine_top.png
+origin: original
+notes: Its casing from above, with its orange band.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/teg_0.json
+origin: original
+notes: The TEG core, a full block, with 0 output bars lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/teg_1.json
+origin: original
+notes: The TEG core, a full block, with 1 output bar lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/teg_2.json
+origin: original
+notes: The TEG core, a full block, with 2 output bars lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/teg_3.json
+origin: original
+notes: The TEG core, a full block, with 3 output bars lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/teg_4.json
+origin: original
+notes: The TEG core, a full block, with 4 output bars lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/teg_5.json
+origin: original
+notes: The TEG core, a full block, with 5 output bars lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator.json
+origin: original
+notes: A drum between two pipe flanges, on the 1/16 grid. Still.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator_on.json
+origin: original
+notes: The circulator moving gas.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/compressor.json
+origin: original
+notes: The compressor, a full block with a rotor face front and back. Still.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/compressor_spin1.json
+origin: original
+notes: The compressor spinning, speed 1 of 3.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/compressor_spin2.json
+origin: original
+notes: The compressor spinning, speed 2 of 3.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/compressor_spin3.json
+origin: original
+notes: The compressor spinning, speed 3 of 3.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/turbine.json
+origin: original
+notes: The gas turbine, a full block with a rotor face front and back. Still.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/turbine_spin1.json
+origin: original
+notes: The gas turbine spinning, speed 1 of 3.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/turbine_spin2.json
+origin: original
+notes: The gas turbine spinning, speed 2 of 3.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/turbine_spin3.json
+origin: original
+notes: The gas turbine spinning, speed 3 of 3.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/teg.json
+origin: original
+notes: The TEG core's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/circulator.json
+origin: original
+notes: The circulator's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/compressor.json
+origin: original
+notes: The compressor's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/turbine.json
+origin: original
+notes: The gas turbine's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/teg.json
+origin: original
+notes: The TEG core's four facings and six outputs, each its own model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/circulator.json
+origin: original
+notes: The circulator's six facings, still and moving.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/compressor.json
+origin: original
+notes: The compressor's four facings and four speeds.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/turbine.json
+origin: original
+notes: The gas turbine's four facings and four speeds.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/softsuit_helmet.png
 origin: vgstation13
 source: icons/obj/clothing/hats.dmi
