@@ -69,6 +69,7 @@ final class Devices {
                         "getMode",
                         "setMode",
                         "getState",
+                        "getHeatingPower",
                         "getNetworkPressure",
                         "getExternalBound",
                         "setExternalBound",
@@ -85,6 +86,7 @@ final class Devices {
                         "getMode",
                         "setMode",
                         "getState",
+                        "getCoolingPower",
                         "getNetworkPressure",
                         "getScrubbed",
                         "setScrubbed",
@@ -157,7 +159,10 @@ final class Devices {
                         "getParts",
                         "getCentral",
                         "hasBreach",
-                        "hasFire"));
+                        "hasFire",
+                        "getTargetTemperature",
+                        "setTargetTemperature",
+                        "getThermostat"));
         surface.put(
                 "zas_central_atmos_controller",
                 List.of(

@@ -13,10 +13,11 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A scrubber: its mode, the gases and gas tags it takes, what it is doing and its network's
- * pressure. The gases and tags are the ones its window offers ({@link ScrubberMenu#GASES}, {@link
- * ScrubberMenu#TAGS}), and its settings go through the scrubber's own hand setter, so a controller's
- * orders win over a computer's as they do over a player's (CONT-074).
+ * A scrubber: its mode, the gases and gas tags it takes, what it is doing, the heat its air
+ * conditioner takes and its network's pressure. The gases and tags are the ones its window offers
+ * ({@link ScrubberMenu#GASES}, {@link ScrubberMenu#TAGS}), and its settings go through the
+ * scrubber's own hand setter, so a controller's orders win over a computer's as they do over a
+ * player's (CONT-074).
  */
 public final class ScrubberPeripheral extends DevicePeripheral<ScrubberBlockEntity> {
     ScrubberPeripheral(ScrubberBlockEntity scrubber) {
@@ -39,6 +40,15 @@ public final class ScrubberPeripheral extends DevicePeripheral<ScrubberBlockEnti
     @LuaFunction(mainThread = true)
     public String getState() throws LuaException {
         return Lua.word(device().status());
+    }
+
+    /**
+     * The heat its air conditioner took at its last step, W: 0 unless its controller's thermostat is
+     * cooling (CONT-167).
+     */
+    @LuaFunction(mainThread = true)
+    public double getCoolingPower() throws LuaException {
+        return device().coolingWatts();
     }
 
     /** Its pipe network's pressure, kPa. */

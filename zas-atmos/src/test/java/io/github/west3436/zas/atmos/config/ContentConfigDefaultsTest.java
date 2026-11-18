@@ -35,6 +35,19 @@ class ContentConfigDefaultsTest {
         DRAWS.forEach((key, fe) -> assertEquals(fe, defaults.get(key), key));
     }
 
+    /**
+     * Pipes burst at 100 atm as before unless a pack changes it, and leak only if a pack turns leaks
+     * on (CONT-005, CONT-168, CONT-169). A thermostat's band is vg's 2 K (CONT-165).
+     */
+    @Test
+    void cont_005_overpressure_defaults() {
+        Map<String, Object> defaults = defaults(AtmosServerConfig.SPEC);
+        assertEquals(10_132.5, defaults.get("pipes.burst_kpa"), "burst");
+        assertEquals(0.0, defaults.get("pipes.leak_kpa"), "leaks off");
+        assertEquals(0.01, defaults.get("pipes.leak_rate"), "leak rate");
+        assertEquals(2.0, defaults.get("controller.thermostat_band_k"), "thermostat band");
+    }
+
     /** The content switch is on unless a pack turns it off (CONT-155). */
     @Test
     void cont_155_the_content_is_on_by_default() {

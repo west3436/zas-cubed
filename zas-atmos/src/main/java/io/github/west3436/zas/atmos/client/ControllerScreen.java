@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
+import io.github.west3436.zas.atmos.controller.Thermostat;
 import io.github.west3436.zas.atmos.controller.Thresholds;
 import java.util.List;
 import java.util.Locale;
@@ -21,9 +22,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * The area air controller's window (CONT-040, CONT-041, CONT-047, CONT-049, CONT-110): its status,
- * power, room and mode above four tabs. Air shows each reading and its rating, Mode the modes and
- * presets, Thresholds the preset's editor, and Parts what it covers and where each came from. A
+ * The area air controller's window (CONT-040, CONT-041, CONT-047, CONT-049, CONT-110, CONT-165): its
+ * status, power, room, mode and thermostat above four tabs. Air shows each reading and its rating, Mode
+ * the modes, presets and thermostat, Thresholds the preset's editor, and Parts what it covers and
+ * where each came from. A
  * controller a central atmospherics controller has claimed names it (CONT-118), and when its window
  * was opened from there, a button goes back to that central controller's window (CONT-124).
  *
@@ -162,6 +164,7 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
         Component preset = text("preset." + s.preset());
         Component mode = text("mode." + ControllerMode.values()[s.mode()].key());
         ui.line(text(s.edited() ? "summary_edited" : "summary", mode, preset), valueX, y, Ui.ROW, Ui.WHITE, Face.BODY);
+        thermostatState(ui, s, x + w - Ui.PAD, y);
         if (s.central() != null) {
             y += Ui.ROW;
             central(ui, s.central(), s.centralLabel(), labelX, valueX, x + w - Ui.PAD, y);
@@ -343,7 +346,13 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
         }
 
         y += modesHeight + Ui.PAD;
-        rowY = ui.section(x, y, w, 14 + MODE_ROW + 3, text("heading.preset")) + 2;
+        int presetsWidth = 2 * Ui.PAD;
+        for (ControllerPreset p : ControllerPreset.SHIPPED) {
+            presetsWidth += ui.buttonWidth(text("preset." + p.name())) + 1;
+        }
+        int sectionHeight = 14 + MODE_ROW + 3;
+        thermostat(ui, s, x + presetsWidth + Ui.PAD, y, w - presetsWidth - Ui.PAD, sectionHeight);
+        rowY = ui.section(x, y, presetsWidth, sectionHeight, text("heading.preset")) + 2;
         int presetX = x + Ui.PAD;
         for (int i = 0; i < ControllerPreset.SHIPPED.size(); i++) {
             String name = ControllerPreset.SHIPPED.get(i).name();
@@ -360,6 +369,51 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
                     () -> press(id));
             presetX += width + 1;
         }
+    }
+
+    /** The thermostat (CONT-165): its switch and its target's stepper, in K on the server. */
+    private void thermostat(Ui ui, ControllerSync s, int x, int y, int w, int h) {
+        int rowY = ui.section(x, y, w, h, text("heading.thermostat")) + 2;
+        boolean on = !Double.isNaN(s.target());
+        int right = x + w - Ui.PAD;
+        DeviceParts.onOff(ui, right, rowY, on, () -> press(ControllerMenu.THERMOSTAT));
+        int stepperRight = right - ui.buttonWidth(DeviceParts.text("off")) - Ui.PAD;
+        ui.stepper(
+                x + Ui.PAD,
+                rowY,
+                stepperRight - x - Ui.PAD,
+                Component.literal(on ? Readout.temperature(s.target()) : "—"),
+                on ? Ui.WHITE : Ui.DIM,
+                DeviceParts.SMALL_STEPS,
+                DeviceParts.KELVIN,
+                on ? i -> press(ControllerMenu.TARGET + i) : null,
+                null,
+                null);
+    }
+
+    /**
+     * What the thermostat is doing, at the right of the header's mode line: an arrow up while it heats,
+     * down while it cools, a dot while it waits, then its target; nothing while it is off.
+     */
+    private void thermostatState(Ui ui, ControllerSync s, int right, int y) {
+        Thermostat.State state = Thermostat.State.of(s.thermostat());
+        if (state == Thermostat.State.OFF || Double.isNaN(s.target())) {
+            return;
+        }
+        String glyph = switch (state) {
+            case HEATING -> "▲";
+            case COOLING -> "▼";
+            default -> "●";
+        };
+        int colour = switch (state) {
+            case HEATING -> Ui.ORANGE;
+            case COOLING -> Ui.BLUE;
+            default -> Ui.LABEL;
+        };
+        Component shown = Component.literal(glyph + " " + Readout.temperature(s.target()));
+        ui.lineRight(shown, right, y, Ui.ROW, colour, Face.BODY);
+        int width = (int) Math.ceil(ui.width(shown, Face.BODY));
+        ui.tooltip(right - width, y, width, Ui.ROW, text("thermostat." + state.key()));
     }
 
     // ---- Thresholds -------------------------------------------------------------------------

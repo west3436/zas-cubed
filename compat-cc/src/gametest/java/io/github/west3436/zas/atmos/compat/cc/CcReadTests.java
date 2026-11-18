@@ -19,6 +19,7 @@ import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
+import io.github.west3436.zas.atmos.controller.Thermostat;
 import io.github.west3436.zas.atmos.controller.ZonePriority;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMath;
@@ -46,6 +47,7 @@ import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
+import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
@@ -514,6 +516,73 @@ public final class CcReadTests {
                 new ControllerMenu(1, player.getInventory(), controller).sync().status(),
                 ControllerStatus.UNPOWERED.ordinal(),
                 "the window's status with no power");
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /**
+     * An area air controller's thermostat, and the heat its vent and its scrubber move for it, read
+     * as their windows show them: heating below the target, cooling above it (CONT-165 to CONT-167).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_165_a_thermostat_and_its_parts_read_as_their_windows_do(GameTestHelper h)
+            throws LuaException {
+        Spot s = new Spot(h, 5721);
+        Devices.clear(s);
+        Player player = player(h);
+        s.room(0);
+        AreaAirControllerBlockEntity controller = Devices.areaAirController(s, 2, 2, 1);
+        AreaAirControllerPeripheral p = s.peripheral(2, 2, 1, AreaAirControllerPeripheral.class);
+        VentBlockEntity vent = s.place(
+                1,
+                0,
+                2,
+                AtmosBlocks.VENT.get().defaultBlockState().setValue(VentBlock.FACING, Direction.UP),
+                VentBlockEntity.class);
+        ScrubberBlockEntity scrubber = s.place(
+                3,
+                0,
+                2,
+                AtmosBlocks.SCRUBBER.get().defaultBlockState().setValue(ScrubberBlock.FACING, Direction.UP),
+                ScrubberBlockEntity.class);
+        VentPeripheral v = s.peripheral(1, 0, 2, VentPeripheral.class);
+        ScrubberPeripheral sp = s.peripheral(3, 0, 2, ScrubberPeripheral.class);
+        VentMenu ventWindow = (VentMenu) vent.createMenu(1, player.getInventory(), player);
+        ScrubberMenu scrubberWindow = (ScrubberMenu) scrubber.createMenu(1, player.getInventory(), player);
+        Runnable step = () -> {
+            controller.buffer().set(controller.buffer().getMaxEnergyStored());
+            controller.step();
+            vent.step();
+            scrubber.step();
+            s.tick();
+        };
+        for (int i = 0; i < 4; i++) {
+            step.run();
+        }
+        h.assertValueEqual(v.getHeatingPower(), 0.0, "heat with the thermostat off");
+        h.assertValueEqual(sp.getCoolingPower(), 0.0, "cooling with the thermostat off");
+
+        p.setTargetTemperature(Optional.of(Spot.T + 50));
+        step.run();
+        step.run();
+        h.assertValueEqual(p.getThermostat(), "heating", "below the target");
+        ControllerSync window = new ControllerMenu(1, player.getInventory(), controller).sync();
+        h.assertValueEqual(p.getThermostat(), Lua.word(Thermostat.State.of(window.thermostat())), "the window's");
+        h.assertValueEqual(p.getTargetTemperature(), window.target(), "the window's target");
+        h.assertTrue(v.getHeatingPower() > 0, "the vent didn't heat");
+        h.assertValueEqual(v.getHeatingPower(), vent.heatWatts(), "the vent's heat");
+        h.assertValueEqual(ventWindow.value(VentMenu.DATA_HEAT), shown(v.getHeatingPower()), "the vent's window");
+        h.assertValueEqual(sp.getCoolingPower(), 0.0, "cooling while heating");
+
+        p.setTargetTemperature(Optional.of(Spot.T - 50));
+        step.run();
+        step.run();
+        h.assertValueEqual(p.getThermostat(), "cooling", "above the target");
+        h.assertTrue(sp.getCoolingPower() > 0, "the scrubber didn't cool");
+        h.assertValueEqual(sp.getCoolingPower(), scrubber.coolingWatts(), "the scrubber's cooling");
+        h.assertValueEqual(
+                scrubberWindow.value(ScrubberMenu.DATA_COOLING), shown(sp.getCoolingPower()), "the scrubber's window");
+        h.assertValueEqual(v.getHeatingPower(), 0.0, "heat while cooling");
         Devices.clear(s);
         h.succeed();
     }

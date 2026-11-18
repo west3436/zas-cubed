@@ -58,8 +58,10 @@ public class VentMenu extends AbstractContainerMenu implements LabelledMenu {
     public static final int DATA_STATUS = 11;
     /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
     public static final int DATA_REDSTONE = 12;
+    /** The heat its heater added at its last step, W, rounded and capped at 32,767 (CONT-166). */
+    public static final int DATA_HEAT = 13;
 
-    public static final int DATA_COUNT = 13;
+    public static final int DATA_COUNT = 14;
 
     private static final double[] STEPS = {-100, -10, 10, 100};
 

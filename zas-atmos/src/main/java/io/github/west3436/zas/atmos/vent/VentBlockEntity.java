@@ -7,12 +7,14 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.controller.ThermostatControl;
 import io.github.west3436.zas.atmos.controller.VentControl;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.heater.ThermoCoil;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
@@ -60,9 +62,13 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Its GUI also shows its network's pressure, which the internal bound is compared with, and
  * its {@link VentStatus}: whether it moved gas at its last atmos tick, or why not.
+ *
+ * <p>It has a heater built in ({@link #coil()}, CONT-166): while it blows, its area air controller's
+ * thermostat may order it to warm the cell in front of its grille, at the heater's power, and pays
+ * the heater's cost for it.
  */
 public class VentBlockEntity extends PipeNodeEntity
-        implements PoweredDevice, VentControl, MenuProvider, Labelled, RedstoneControlled {
+        implements PoweredDevice, VentControl, ThermostatControl, MenuProvider, Labelled, RedstoneControlled {
     /** Who a vent's changes are made by. */
     public static final SourceId VENT = SourceId.of(ZasAtmosMod.MOD_ID, "vent");
 
@@ -72,7 +78,11 @@ public class VentBlockEntity extends PipeNodeEntity
     private static final String CONTROLLED = "Controlled";
     private static final String CONTROLLER = "Controller";
 
+    /** Who a vent's heater adds heat as, in the conservation ledger (CONT-166). */
+    public static final SourceId HEATER = SourceId.of(ZasAtmosMod.MOD_ID, "vent_heater");
+
     private final ZonePort port = new ZonePort(VENT);
+    private final ThermoCoil coil = ThermoCoil.heater(HEATER, this::now);
     private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
     private final RedstoneControl redstone = new RedstoneControl(this);
     private VentSettings settings = VentSettings.OFF;
@@ -101,6 +111,7 @@ public class VentBlockEntity extends PipeNodeEntity
                 case VentMenu.DATA_NETWORK -> (int) Math.min(Short.MAX_VALUE, Math.round(networkPressure()));
                 case VentMenu.DATA_STATUS -> status.ordinal();
                 case VentMenu.DATA_REDSTONE -> redstone.data();
+                case VentMenu.DATA_HEAT -> (int) Math.min(Short.MAX_VALUE, Math.round(coil.watts()));
                 default -> 0;
             };
         }
@@ -128,7 +139,10 @@ public class VentBlockEntity extends PipeNodeEntity
         return (short) (v >> 16);
     }
 
-    /** What the vent draws now: its configured draw unless it is off (CONT-065) or redstone holds it (CONT-172). */
+    /**
+     * What the vent draws now: its configured draw unless it is off (CONT-065) or redstone holds it
+     * (CONT-172). Its heater's orders are paid apart (CONT-166).
+     */
     private int currentDraw() {
         return settings.mode() == VentMode.OFF || !redstone.allows()
                 ? 0
@@ -138,6 +152,26 @@ public class VentBlockEntity extends PipeNodeEntity
     @Override
     public RedstoneControl redstone() {
         return redstone;
+    }
+
+    /** Its heater, which its area air controller's thermostat orders (CONT-166). */
+    @Override
+    public ThermoCoil coil() {
+        return coil;
+    }
+
+    /**
+     * Whether its heater would heat if the vent were powered: it is blowing, redstone doesn't hold it
+     * (CONT-172), and no airlock controller runs it, as an airlock cycles its own chamber (CONT-152).
+     */
+    @Override
+    public boolean thermostatReady() {
+        return settings.mode() == VentMode.BLOW && redstone.allows() && !airlockControlled();
+    }
+
+    /** The heat its heater added at its last step, as a power in W (CONT-166). */
+    public double heatWatts() {
+        return coil.watts();
     }
 
     /** The vent's settings. */
@@ -329,7 +363,7 @@ public class VentBlockEntity extends PipeNodeEntity
 
     @Override
     public boolean readyToStep() {
-        return !port.busy();
+        return !port.busy() && coil.ready();
     }
 
     @Override
@@ -344,10 +378,18 @@ public class VentBlockEntity extends PipeNodeEntity
         }
         if (shown == VentMode.OFF) {
             status = VentStatus.OFF;
+            coil.idle();
             reportStopped();
             return;
         }
         Vec3 point = airPoint();
+        // Its heater warms the air its grille blows into, while it blows, whether or not gas moves
+        // this step: the room's air passes over it (CONT-166).
+        if (shown == VentMode.BLOW) {
+            coil.step(level, point);
+        } else {
+            coil.idle();
+        }
         AtmosphereSample sample = Atmospheres.at(level, point);
         if (!cellWatch().trust(sample)) {
             status = VentStatus.WAITING;

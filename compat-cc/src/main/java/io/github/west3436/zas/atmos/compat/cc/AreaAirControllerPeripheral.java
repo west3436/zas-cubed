@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.CentralClaims;
 import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
+import io.github.west3436.zas.atmos.controller.Thermostat;
 import io.github.west3436.zas.atmos.controller.Thresholds;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,8 +19,8 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * An area air controller: what its window's four tabs show, its mode, its preset and its
- * thresholds. A computer attached to it also gets its zone's events ({@link ZoneEvents},
+ * An area air controller: what its window's four tabs show, its mode, its preset, its thresholds
+ * and its thermostat. A computer attached to it also gets its zone's events ({@link ZoneEvents},
  * COMPAT-022).
  *
  * <p>A reading is named as the controller names it: {@code pressure}, {@code temperature}, a gas's
@@ -81,6 +82,29 @@ public final class AreaAirControllerPeripheral extends DevicePeripheral<AreaAirC
     @LuaFunction(mainThread = true)
     public void setMode(String mode) throws LuaException {
         device().setMode(Lua.named("mode", ControllerMode.class, mode));
+    }
+
+    /** Its thermostat's target temperature, K, or nil while the thermostat is off (CONT-165). */
+    @LuaFunction(mainThread = true)
+    public @Nullable Double getTargetTemperature() throws LuaException {
+        return Lua.orNil(device().target());
+    }
+
+    /** Sets its thermostat's target temperature, 73 to 573 K, or turns the thermostat off with nil. */
+    @LuaFunction(mainThread = true)
+    public void setTargetTemperature(Optional<Double> kelvin) throws LuaException {
+        AreaAirControllerBlockEntity controller = device();
+        if (kelvin.isEmpty()) {
+            controller.setTarget(Double.NaN);
+            return;
+        }
+        controller.setTarget(Lua.inRange("target temperature", "K", kelvin.get(), Thermostat::clampTarget));
+    }
+
+    /** What its thermostat did at its last step: {@code off}, {@code idle}, {@code heating} or {@code cooling}. */
+    @LuaFunction(mainThread = true)
+    public String getThermostat() throws LuaException {
+        return Lua.word(device().thermostat());
     }
 
     /** The preset its thresholds started from: {@code human} or {@code vacuum}. */

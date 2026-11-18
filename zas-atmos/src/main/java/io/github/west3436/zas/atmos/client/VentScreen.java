@@ -73,6 +73,7 @@ final class VentScreen extends TguiScreen<VentMenu> {
                 valueX,
                 row,
                 Ui.ROW);
+        DeviceParts.heat(ui, x + w - Ui.PAD, row, Ui.ROW, menu.value(VentMenu.DATA_HEAT), true);
         row += Ui.ROW;
         DeviceParts.label(ui, "network", labelX, row, Ui.ROW);
         ui.line(

@@ -33,6 +33,8 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * @param pin the last pin's outcome, or "" before one
  * @param breach whether its last reading was a breach (CONT-043)
  * @param fire whether a fire alarm it covers was triggered at its last reading (CONT-044)
+ * @param target the thermostat's target, K, or NaN while it is off (CONT-165)
+ * @param thermostat the {@link Thermostat.State}'s ordinal
  * @param central the central controller it belongs to, or null (CONT-118)
  * @param centralLabel what a player called that central controller, or the empty string
  */
@@ -54,6 +56,8 @@ public record ControllerSync(
         String pin,
         boolean breach,
         boolean fire,
+        double target,
+        int thermostat,
         BlockPos central,
         String centralLabel)
         implements CustomPacketPayload {
@@ -96,6 +100,8 @@ public record ControllerSync(
         buf.writeUtf(pin);
         buf.writeBoolean(breach);
         buf.writeBoolean(fire);
+        buf.writeDouble(target);
+        buf.writeVarInt(thermostat);
         buf.writeBoolean(central != null);
         if (central != null) {
             buf.writeBlockPos(central);
@@ -138,6 +144,8 @@ public record ControllerSync(
         String pin = buf.readUtf();
         boolean breach = buf.readBoolean();
         boolean fire = buf.readBoolean();
+        double target = buf.readDouble();
+        int thermostat = buf.readVarInt();
         BlockPos central = buf.readBoolean() ? buf.readBlockPos() : null;
         String centralLabel = Labels.clean(buf.readUtf());
         return new ControllerSync(
@@ -158,6 +166,8 @@ public record ControllerSync(
                 pin,
                 breach,
                 fire,
+                target,
+                thermostat,
                 central,
                 centralLabel);
     }

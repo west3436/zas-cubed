@@ -81,6 +81,7 @@ final class ScrubberScreen extends TguiScreen<ScrubberMenu> {
                 valueX,
                 row,
                 Ui.ROW);
+        DeviceParts.heat(ui, x + w - Ui.PAD, row, Ui.ROW, menu.value(ScrubberMenu.DATA_COOLING), false);
         row += Ui.ROW;
         DeviceParts.label(ui, "network", labelX, row, Ui.ROW);
         ui.line(
