@@ -1,11 +1,14 @@
 package io.github.west3436.zas.atmos.tank;
 
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
+import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -22,9 +25,27 @@ public class LargeTankBlockEntity extends PipeNodeEntity {
         super(AtmosBlockEntities.LARGE_GAS_TANK.get(), pos, state, PipeVolumes.LARGE_TANK);
     }
 
-    /** Keeps the network built, as a connector port does, and fails by its pressure after it has reacted. */
+    private final Comparators.Output comparator = new Comparators.Output();
+
+    /**
+     * Keeps the network built, as a connector port does, and fails by its pressure after it has
+     * reacted. A tank that holds tells the comparators at either half how full it is (CONT-174).
+     */
     @Override
     protected void atmosTick(ServerLevel level) {
-        CanisterFailure.check(level, worldPosition, network().gas());
+        if (CanisterFailure.check(level, worldPosition, network().gas()) || isRemoved()) {
+            return;
+        }
+        int signal = signal();
+        Block block = getBlockState().getBlock();
+        if (comparator.changes(signal)) {
+            level.updateNeighbourForOutputSignal(worldPosition, block);
+            level.updateNeighbourForOutputSignal(worldPosition.above(), block);
+        }
+    }
+
+    /** What a comparator at either half reads (CONT-174): its pressure over its rating, 15 just short of it. */
+    public int signal() {
+        return Comparators.pressure(network().gas().pressure(), ContainerFailure.CANISTER_RATED_KPA);
     }
 }

@@ -83,6 +83,27 @@ public class GaugeBlockEntity extends AtmosDevice {
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
     }
 
+    /** The reading its dial shows, from its block state. */
+    public GaugeReading reading() {
+        BlockState state = getBlockState();
+        return state.hasProperty(GaugeReading.PROPERTY) ? state.getValue(GaugeReading.PROPERTY) : GaugeReading.PRESSURE;
+    }
+
+    /**
+     * Turns its dial to a reading and reads at once, as a player's use does, for a computer (CONT-178).
+     * Server side; the same reading changes nothing.
+     */
+    public void setReading(GaugeReading next) {
+        BlockState state = getBlockState();
+        if (level instanceof ServerLevel server
+                && !isRemoved()
+                && state.hasProperty(GaugeReading.PROPERTY)
+                && state.getValue(GaugeReading.PROPERTY) != next) {
+            server.setBlock(worldPosition, state.setValue(GaugeReading.PROPERTY, next), Block.UPDATE_ALL);
+            read(server);
+        }
+    }
+
     /** The needle's step, 0 at rest to {@link #STEPS} at the top. */
     public int needle() {
         return needle;

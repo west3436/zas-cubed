@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.heater.ThermoMachineMenu;
 import io.github.west3436.zas.atmos.heater.ThermoStatus;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -20,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
 final class ThermoMachineScreen<M extends ThermoMachineMenu> extends TguiScreen<M> {
     private static final int WIDTH = 176;
     private static final int HEIGHT = heightWithInventory(ThermoMachineMenu.INVENTORY_Y);
-    private static final int SECTION_HEIGHT = 2 + Ui.BUTTON_ROW + Ui.ROW + Ui.BUTTON_ROW + 1 + 18 + 2;
+    private static final int SECTION_HEIGHT = 2 + 2 * Ui.BUTTON_ROW + Ui.ROW + Ui.BUTTON_ROW + 1 + 18 + 2;
 
     ThermoMachineScreen(M menu, Inventory inventory, Component title) {
         super(menu, inventory, title, WIDTH, HEIGHT);
@@ -39,13 +40,18 @@ final class ThermoMachineScreen<M extends ThermoMachineMenu> extends TguiScreen<
                 ? Component.translatable(
                         status.key(), String.format(Locale.ROOT, "%,d", menu.value(ThermoMachineMenu.DATA_WATTS)))
                 : Component.translatable(status.key());
-        DeviceParts.status(ui, word, colour(status), valueX, row, Ui.BUTTON_HEIGHT);
-        DeviceParts.onOff(
+        boolean on = menu.value(ThermoMachineMenu.DATA_ON) != 0;
+        boolean held = on && RedstoneControl.holds(menu.redstone());
+        DeviceParts.status(
                 ui,
-                x + w - Ui.PAD,
+                held ? DeviceParts.held() : word,
+                held ? Ui.AVERAGE : colour(status),
+                valueX,
                 row,
-                menu.value(ThermoMachineMenu.DATA_ON) != 0,
-                () -> press(ThermoMachineMenu.TOGGLE));
+                Ui.BUTTON_HEIGHT);
+        DeviceParts.onOff(ui, x + w - Ui.PAD, row, on, () -> press(ThermoMachineMenu.TOGGLE));
+        row += Ui.BUTTON_ROW;
+        DeviceParts.redstone(ui, x, row, w, menu.redstone(), this::press);
         row += Ui.BUTTON_ROW;
 
         DeviceParts.label(ui, "room", labelX, row, Ui.ROW);

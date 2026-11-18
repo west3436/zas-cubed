@@ -5,6 +5,8 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.pipe.GasHandlers;
@@ -51,12 +53,13 @@ import org.jetbrains.annotations.Nullable;
  * extends {@link InlineDeviceMenu}.
  */
 public abstract class InlineDeviceEntity extends AtmosDevice
-        implements PipeHost, PoweredDevice, MenuProvider, Labelled {
+        implements PipeHost, PoweredDevice, MenuProvider, Labelled, RedstoneControlled {
     private static final String PORTS = "Ports";
     private static final String ON = "On";
 
     private final PipePort[] ports;
     private final DevicePower power;
+    private final RedstoneControl redstone = new RedstoneControl(this);
     private boolean on;
     private boolean unloading;
     private InlineStatus status = InlineStatus.OFF;
@@ -197,9 +200,14 @@ public abstract class InlineDeviceEntity extends AtmosDevice
         }
     }
 
-    /** Whether it is running: on, with power to run on. */
+    /** Whether it is running: on, let run by its redstone setting (CONT-170), with power to run on. */
     public boolean running() {
-        return on && paid();
+        return on && redstone.allows() && paid();
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
     }
 
     /** Whether it has power to run on: paid for, or any power at all when it is set to draw nothing. */
@@ -207,8 +215,9 @@ public abstract class InlineDeviceEntity extends AtmosDevice
         return power.paidFor() || (drawWhenOn() == 0 && power.isPowered());
     }
 
+    /** What it draws now: nothing while it is off or redstone holds it (CONT-172). */
     private int currentDraw() {
-        return on ? drawWhenOn() : 0;
+        return on && redstone.allows() ? drawWhenOn() : 0;
     }
 
     /** What it did at its last atmos tick: off, moving gas, or idle and why. */
@@ -274,6 +283,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice
 
     @Override
     protected final void atmosTick(ServerLevel level) {
+        redstone.read();
         boolean running = running();
         status = running ? work(level) : InlineStatus.OFF;
         if (!isRemoved()) {
@@ -309,6 +319,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice
             case InlineDeviceMenu.DATA_ON -> on ? 1 : 0;
             case InlineDeviceMenu.DATA_POWERED -> power.isPowered() ? 1 : 0;
             case InlineDeviceMenu.DATA_STATUS -> status.ordinal();
+            case InlineDeviceMenu.DATA_REDSTONE -> redstone.data();
             default -> {
                 int port = index - InlineDeviceMenu.DATA_PRESSURE;
                 yield port >= 0 && port < ports.length
@@ -374,6 +385,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice
         tag.put(PORTS, saved);
         tag.putBoolean(ON, on);
         power.save(tag);
+        redstone.save(tag);
     }
 
     @Override
@@ -385,5 +397,6 @@ public abstract class InlineDeviceEntity extends AtmosDevice
         }
         on = tag.getBoolean(ON);
         power.load(tag);
+        redstone.load(tag);
     }
 }

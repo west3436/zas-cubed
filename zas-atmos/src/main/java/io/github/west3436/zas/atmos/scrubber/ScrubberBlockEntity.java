@@ -8,9 +8,13 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.ScrubberControl;
 import io.github.west3436.zas.atmos.controller.ScrubberOrder;
+import io.github.west3436.zas.atmos.controller.ThermostatControl;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.heater.ThermoCoil;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
@@ -55,9 +59,14 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Its GUI also shows its network's pressure, which its stall is read from, and its {@link
  * ScrubberStatus}: whether it took gas at its last atmos tick, or why not.
+ *
+ * <p>It has an air conditioner built in ({@link #coil()}, CONT-167): while it runs, its area air
+ * controller's thermostat may order it to cool the cell in front of its grille, at the air
+ * conditioner's power, and pays the air conditioner's cost for it. The heat it takes leaves the
+ * world, as the air conditioner's does.
  */
 public class ScrubberBlockEntity extends PipeNodeEntity
-        implements PoweredDevice, ScrubberControl, MenuProvider, Labelled {
+        implements PoweredDevice, ScrubberControl, ThermostatControl, MenuProvider, Labelled, RedstoneControlled {
     /** Who a scrubber's changes are made by. */
     public static final SourceId SCRUBBER = SourceId.of(ZasAtmosMod.MOD_ID, "scrubber");
 
@@ -66,8 +75,13 @@ public class ScrubberBlockEntity extends PipeNodeEntity
     private static final String CONTROLLED = "Controlled";
     private static final String CONTROLLER = "Controller";
 
+    /** Who a scrubber's air conditioner takes heat as, in the conservation ledger (CONT-167). */
+    public static final SourceId COOLER = SourceId.of(ZasAtmosMod.MOD_ID, "scrubber_air_conditioner");
+
     private final ZonePort port = new ZonePort(SCRUBBER);
+    private final ThermoCoil coil = ThermoCoil.airConditioner(COOLER, this::now);
     private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
+    private final RedstoneControl redstone = new RedstoneControl(this);
     private ScrubberMode mode = ScrubberMode.OFF;
     private GasSelection selection = GasSelection.DEFAULT;
     private long controlledUntil = Long.MIN_VALUE;
@@ -89,6 +103,8 @@ public class ScrubberBlockEntity extends PipeNodeEntity
                 case ScrubberMenu.DATA_Z_HIGH -> high(controller == null ? 0 : controller.getZ());
                 case ScrubberMenu.DATA_NETWORK -> (int) Math.min(Short.MAX_VALUE, Math.round(networkPressure()));
                 case ScrubberMenu.DATA_STATUS -> status.ordinal();
+                case ScrubberMenu.DATA_REDSTONE -> redstone.data();
+                case ScrubberMenu.DATA_COOLING -> (int) Math.min(Short.MAX_VALUE, Math.round(coil.watts()));
                 default -> 0;
             };
         }
@@ -116,13 +132,39 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         return (short) (v >> 16);
     }
 
-    /** What the scrubber draws now: nothing while off, twice as much in panic (CONT-065). */
+    /**
+     * What the scrubber draws now: nothing while off or held by redstone (CONT-172), twice as much in
+     * panic (CONT-065). Its air conditioner's orders are paid apart (CONT-167).
+     */
     private int currentDraw() {
+        if (!redstone.allows()) {
+            return 0;
+        }
         return switch (mode) {
             case OFF -> 0;
             case PANIC -> AtmosServerConfig.get(AtmosServerConfig.SCRUBBER_PANIC_DRAW);
             default -> AtmosServerConfig.get(AtmosServerConfig.SCRUBBER_DRAW);
         };
+    }
+
+    /** Its air conditioner, which its area air controller's thermostat orders (CONT-167). */
+    @Override
+    public ThermoCoil coil() {
+        return coil;
+    }
+
+    /**
+     * Whether its air conditioner would cool if the scrubber were powered: it is in any mode but off
+     * and redstone doesn't hold it (CONT-172).
+     */
+    @Override
+    public boolean thermostatReady() {
+        return mode != ScrubberMode.OFF && redstone.allows();
+    }
+
+    /** The heat its air conditioner took at its last step, as a power in W (CONT-167). */
+    public double coolingWatts() {
+        return coil.watts();
     }
 
     /** The scrubber's mode. */
@@ -227,19 +269,25 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         return status;
     }
 
-    /** Whether the scrubber is running: on and powered. */
+    /** Whether the scrubber is running: on, let run by its redstone setting (CONT-170), and powered. */
     public boolean running() {
-        return mode != ScrubberMode.OFF && power.isPowered();
+        return mode != ScrubberMode.OFF && redstone.allows() && power.isPowered();
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
     }
 
     @Override
     public boolean readyToStep() {
-        return !port.busy();
+        return !port.busy() && coil.ready();
     }
 
     @Override
     protected void atmosTick(ServerLevel level) {
         cellWatch().step();
+        redstone.read();
         GasStore net = network().gas();
         ScrubberMode shown = running() ? mode : ScrubberMode.OFF;
         BlockState state = getBlockState();
@@ -248,10 +296,14 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         }
         if (shown == ScrubberMode.OFF) {
             status = ScrubberStatus.OFF;
+            coil.idle();
             reportStopped();
             return;
         }
         Vec3 point = airPoint();
+        // Its air conditioner cools the air in front of its grille while it runs, whether or not gas
+        // moves this step: the room's air passes through it (CONT-167).
+        coil.step(level, point);
         AtmosphereSample sample = Atmospheres.at(level, point);
         if (!cellWatch().trust(sample)) {
             status = ScrubberStatus.WAITING;
@@ -286,6 +338,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         tag.putString(MODE, mode.getSerializedName());
         tag.put(SELECTION, selection.save());
         power.save(tag);
+        redstone.save(tag);
         // Shown to /data get block while a controller controls the scrubber; never loaded, since a
         // controller's orders don't outlast a reload and it sends them again.
         if (controlled()) {
@@ -302,6 +355,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         mode = ScrubberMode.byName(tag.getString(MODE));
         selection = GasSelection.load(tag.getCompound(SELECTION));
         power.load(tag);
+        redstone.load(tag);
     }
 
     @Override

@@ -8,6 +8,8 @@ import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
 import io.github.west3436.zas.atmos.heater.ThermoMachineBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
+import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
 import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
 import java.util.function.Function;
@@ -22,13 +24,13 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
- * Starts the CC: Tweaked adapter (COMPAT-020 to COMPAT-022). {@code zas}'s adapter loader calls
+ * Starts the CC: Tweaked adapter (COMPAT-020 to COMPAT-022, COMPAT-023 to COMPAT-028). {@code zas}'s adapter loader calls
  * {@link #init} by name, and only with CC: Tweaked installed in a version its row supports
  * (COMPAT-001, COMPAT-002), so this class may name CC: Tweaked's.
  *
  * <p>{@code init} runs while {@code zas} is being built, perhaps before {@code zas_atmos} and before
  * CC: Tweaked, so it only asks to be told when capabilities are registered. By then every mod is
- * built: if the content is on (CONT-155), each device with a window gets its peripheral, through
+ * built: if the content is on (CONT-155), each device with a window or something to read gets its peripheral, through
  * CC: Tweaked's block capability, and the zone events start being listened for. With the content
  * off there are no devices, and nothing is registered.
  */
@@ -73,6 +75,29 @@ public final class CcCompat {
         device(event, AtmosBlockEntities.TURBINE, TurbinePeripheral::new);
         device(event, AtmosBlockEntities.AREA_AIR_CONTROLLER, AreaAirControllerPeripheral::new);
         device(event, AtmosBlockEntities.AIRLOCK_CONTROLLER, AirlockControllerPeripheral::new);
+        device(event, AtmosBlockEntities.GAUGE, GaugePeripheral::new);
+        device(event, AtmosBlockEntities.AIR_SENSOR, AirSensorPeripheral::new);
+        device(event, AtmosBlockEntities.TANK_HOLDER, TankHolderPeripheral::new);
+        device(event, AtmosBlockEntities.RECHARGER, RechargerPeripheral::new);
+        device(event, AtmosBlockEntities.IGNITER, IgniterPeripheral::new);
+        device(event, AtmosBlockEntities.FIRE_ALARM, FireAlarmPeripheral::new);
+        device(event, AtmosBlockEntities.TANK_TRANSFER_VALVE, TransferValvePeripheral::new);
+        // A firelock is the peripheral on its own, on a door's lower half, and on an airlock fitted with one.
+        device(event, AtmosBlockEntities.FIRELOCK, FirelockPeripheral::new);
+        device(
+                event,
+                AtmosBlockEntities.FIRELOCK_DOOR,
+                door -> door.hasFirelock() ? new FirelockPeripheral<>(door) : null);
+        device(event, AtmosBlockEntities.AIRLOCK, door -> door.hasFirelock() ? new FirelockPeripheral<>(door) : null);
+        // The large tank is two blocks with one block entity, in its lower block: either is the peripheral.
+        event.registerBlock(
+                PeripheralCapability.get(),
+                (level, pos, state, blockEntity, side) -> {
+                    LargeTankBlockEntity tank = LargeTankBlock.entity(level, pos);
+                    return tank == null ? null : new LargeTankPeripheral(tank);
+                },
+                AtmosBlocks.LARGE_GAS_TANK.get());
+        device(event, AtmosBlockEntities.GAS_MINER, GasMinerPeripheral::new);
         // The console is four blocks with one block entity, in its lower left block: any of them is
         // the peripheral, as any of them opens its window.
         event.registerBlock(
@@ -98,7 +123,7 @@ public final class CcCompat {
         return new PortablePeripheral.Thermo(type, machine);
     }
 
-    /** A device's peripheral, the same on every side. */
+    /** A device's peripheral, the same on every side; null where it has none. */
     private static <T extends BlockEntity> void device(
             RegisterCapabilitiesEvent event,
             Supplier<BlockEntityType<T>> type,

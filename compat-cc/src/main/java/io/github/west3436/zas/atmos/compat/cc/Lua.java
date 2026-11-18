@@ -1,7 +1,11 @@
 package io.github.west3436.zas.atmos.compat.cc;
 
 import dan200.computercraft.api.lua.LuaException;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -10,7 +14,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /** What the peripherals share: how a value is checked on its way in and written on its way out. */
@@ -66,6 +72,21 @@ final class Lua {
         throw new LuaException(what + " must be one of: " + String.join(", ", words));
     }
 
+    /** A device's redstone setting as a computer reads it (COMPAT-023): its mode's word. */
+    static String redstoneMode(RedstoneControlled device) {
+        return word(device.redstone().mode());
+    }
+
+    /**
+     * Sets a device's redstone setting from a computer (COMPAT-023). Redstone only ever stops a device,
+     * so this is allowed while a controller orders it, as the window's buttons are.
+     *
+     * @throws LuaException if the word names no mode
+     */
+    static void setRedstoneMode(RedstoneControlled device, String mode) throws LuaException {
+        device.redstone().set(named("redstone mode", RedstoneControl.Mode.class, mode));
+    }
+
     /** A reading that may be missing: {@code nil} for NaN. */
     static @Nullable Double orNil(double value) {
         return Double.isNaN(value) ? null : value;
@@ -87,6 +108,21 @@ final class Lua {
     static Map<String, Double> gases(Map<ResourceLocation, Double> moles) {
         Map<String, Double> table = new LinkedHashMap<>();
         moles.forEach((gas, amount) -> table.put(gas.toString(), amount));
+        return table;
+    }
+
+    /**
+     * A gas tank item as a computer reads it: a table of its {@code name} (the item's id), its
+     * {@code pressure} in kPa, its {@code temperature} in K, and its {@code contents}, the moles of each
+     * gas.
+     */
+    static Map<String, Object> tank(ItemStack tank) {
+        GasMixture gas = GasTankItem.contents(tank);
+        Map<String, Object> table = new LinkedHashMap<>();
+        table.put("name", BuiltInRegistries.ITEM.getKey(tank.getItem()).toString());
+        table.put("pressure", gas.pressure());
+        table.put("temperature", gas.temperature());
+        table.put("contents", gases(gas.moles()));
         return table;
     }
 

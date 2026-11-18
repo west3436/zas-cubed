@@ -10,6 +10,7 @@ import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMenu;
 import io.github.west3436.zas.atmos.filter.FilterMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.miner.GasMinerMenu;
 import io.github.west3436.zas.atmos.mixer.MixerMenu;
 import io.github.west3436.zas.atmos.portable.PortablePumpMenu;
 import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
@@ -17,6 +18,7 @@ import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.teg.TegMenu;
+import io.github.west3436.zas.atmos.ttv.RemoteSignalerMenu;
 import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
 import io.github.west3436.zas.atmos.turbine.TurbineMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
@@ -118,6 +120,14 @@ public final class AtmosMenus {
     /** An airlock controller's cycle, chamber and airlocks (CONT-153). */
     public static final Supplier<MenuType<AirlockControllerMenu>> AIRLOCK_CONTROLLER = MENUS.register(
             "airlock_controller", () -> new MenuType<>(AirlockControllerMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** A gas miner's switch, target, temperature and gas (CONT-180). */
+    public static final Supplier<MenuType<GasMinerMenu>> GAS_MINER =
+            MENUS.register("gas_miner", () -> IMenuTypeExtension.create(GasMinerMenu::new));
+
+    /** A held remote signaler's frequency and code, and its send button (CONT-185). */
+    public static final Supplier<MenuType<RemoteSignalerMenu>> REMOTE_SIGNALER =
+            MENUS.register("remote_signaler", () -> IMenuTypeExtension.create(RemoteSignalerMenu::new));
 
     private AtmosMenus() {}
 

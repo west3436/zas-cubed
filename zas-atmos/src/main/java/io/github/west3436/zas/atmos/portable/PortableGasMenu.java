@@ -18,11 +18,11 @@ public abstract class PortableGasMenu extends PortableMenu {
     /** Where the slots are drawn. */
     public static final int SLOT_X = 8;
 
-    public static final int BATTERY_Y = 43;
-    public static final int TANK_Y = 62;
+    public static final int BATTERY_Y = 54;
+    public static final int TANK_Y = 73;
 
     /** Where the player's inventory starts. */
-    public static final int INVENTORY_Y = 87;
+    public static final int INVENTORY_Y = 98;
 
     /** The {@link PortableStatus}'s ordinal. */
     public static final int DATA_STATUS = PortableMenu.DATA_COUNT;

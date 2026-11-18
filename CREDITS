@@ -1571,7 +1571,7 @@ notes: 10 ticks a frame.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/tank_transfer_valve.json
 origin: original
-notes: The placed TTV's four facings, its timer toward whoever placed it, with 0 to 2 tanks and its valve shut or open: the shut models below and the existing open ones.
+notes: The placed TTV's four facings, its timer toward whoever placed it, with 0 to 2 tanks and its valve shut or open: the shut models below and the existing open ones. As parts, so a fitted signaler's or proximity sensor's box goes over its timer (CONT-184).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve.json
 origin: original
@@ -3888,3 +3888,73 @@ notes: The size's band and pips, as on the storage cell.
 path: compat-ae2/src/main/resources/assets/zas/textures/item/portable_gas_cell_side_64k.png
 origin: original
 notes: The size's band and pips, as on the storage cell.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/remote_signaler.png
+origin: vgstation13
+source: icons/obj/assemblies/new_assemblies.dmi
+state: signaller
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite as it is, in its own 32 x 32 frame (D-70, D-72): at 9 x 19 it doesn't fit 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/proximity_sensor.png
+origin: vgstation13
+source: icons/obj/assemblies/new_assemblies.dmi
+state: prox
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite as it is, in its own 32 x 32 frame, to match the remote signaler beside it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_transfer_valve_trigger.png
+origin: vgstation13
+source: icons/obj/assemblies/new_assemblies.dmi
+state: signaller, prox
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The boxes a TTV shows over its timer: a signaler's face, sides and top in vg's signaller greens with its screen and red button, its aerial, and a proximity sensor's in vg's prox greys with its green eye. Redrawn small in vg's colours.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_signaler.json
+origin: original
+notes: A fitted remote signaler: a box over the TTV's timer, on its north face, with an aerial, on tank_transfer_valve_trigger.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_proximity.json
+origin: original
+notes: A fitted proximity sensor: a box over the TTV's timer, on its north face, on tank_transfer_valve_trigger.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/remote_signaler.json
+origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/proximity_sensor.json
+origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/gas_miner.json
+origin: original
+notes: The gas miner's six facings, its face toward whoever placed it, off and on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/gas_miner.json
+origin: original
+notes: The gas miner, off: a casing cube, its face north, with a band round its four sides (tintindex 0) that code tints by its gas.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/gas_miner_on.json
+origin: original
+notes: As gas_miner.json, its lamps lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/gas_miner.json
+origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gas_miner_side.png
+origin: original
+notes: Light grey casing after the other machines', with corner bolts and two seams.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gas_miner_front.png
+origin: original
+notes: The casing with a dark slatted outlet and two dark lamps.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gas_miner_front_on.png
+origin: original
+notes: As gas_miner_front.png, its lamps green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gas_miner_top.png
+origin: original
+notes: The casing with a round dark intake and a cross over it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gas_miner_band.png
+origin: original
+notes: A greyscale band, transparent elsewhere, that code tints by the miner's gas.

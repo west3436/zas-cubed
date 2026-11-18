@@ -161,6 +161,17 @@ public class RechargerBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full its battery is (CONT-175); 0 with none. */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof RechargerBlockEntity recharger ? recharger.signal() : 0;
+    }
+
+    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new RechargerBlockEntity(pos, state);
     }

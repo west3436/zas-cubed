@@ -124,7 +124,7 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
         pending = null;
         watts = 0;
         room = Double.NaN;
-        if (on()) {
+        if (runs()) {
             AtmosphereSample air = Atmospheres.at(level, point());
             if (air.state() == AtmosphereState.ZONED) {
                 room = air.temperature();
@@ -138,6 +138,7 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
             reportRunning();
         }
         showWorking(level, status.working());
+        updateComparator(level);
     }
 
     @Override

@@ -10,6 +10,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.failure.TankFailure;
@@ -17,6 +18,7 @@ import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
+import io.github.west3436.zas.atmos.scrubber.ScrubberMath;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -111,6 +113,15 @@ public abstract class PortableGasDevice extends PortableDevice {
         return store;
     }
 
+    /**
+     * What a comparator reads (CONT-175): its store's pressure over the most a scrubber fills it to,
+     * as the bar in its window shows it.
+     */
+    @Override
+    public int signal() {
+        return Comparators.pressure(store.pressure(), ScrubberMath.STALL_KPA);
+    }
+
     /** Its held tank's slot. */
     public TankSlot tank() {
         return tank;
@@ -160,13 +171,14 @@ public abstract class PortableGasDevice extends PortableDevice {
         // Read on or off, so a portable switched on already knows its cell is steady.
         AtmosphereSample cell = Atmospheres.at(level, point());
         boolean trusted = watch.trust(cell);
-        if (on()) {
+        if (runs()) {
             status = step(level, cell, trusted, false);
         } else {
             status = PortableStatus.OFF;
             reportStopped();
         }
         showWorking(level, status == PortableStatus.WORKING);
+        updateComparator(level);
     }
 
     /**

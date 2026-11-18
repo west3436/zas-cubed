@@ -5,13 +5,19 @@ import dan200.computercraft.api.filesystem.WritableMount;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 import dan200.computercraft.api.peripheral.IPeripheral;
 import dan200.computercraft.api.peripheral.WorkMonitor;
+import io.github.west3436.zas.atmos.airlock.AirSensorBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
+import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
+import io.github.west3436.zas.atmos.firelock.FirelockBlock;
+import io.github.west3436.zas.atmos.gauge.GaugeBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
+import io.github.west3436.zas.atmos.ttv.TransferValveBlock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,14 +29,18 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
 /** The devices the tests place, and what each is to a computer. */
 final class Devices {
     /** What every device in a pipe line has. */
-    private static final List<String> INLINE = List.of("isOn", "setOn", "getState", "isPowered");
+    private static final List<String> INLINE =
+            List.of("isOn", "setOn", "getState", "isPowered", "getRedstoneMode", "setRedstoneMode");
 
     /** What every portable device has. */
-    private static final List<String> PORTABLE = List.of("isOn", "setOn", "getEnergy", "getEnergyCapacity");
+    private static final List<String> PORTABLE =
+            List.of("isOn", "setOn", "getEnergy", "getEnergyCapacity", "getRedstoneMode", "setRedstoneMode");
 
     /**
      * Every peripheral type and its methods, written out here and not read from the adapter, so a
@@ -59,6 +69,7 @@ final class Devices {
                         "getMode",
                         "setMode",
                         "getState",
+                        "getHeatingPower",
                         "getNetworkPressure",
                         "getExternalBound",
                         "setExternalBound",
@@ -66,19 +77,24 @@ final class Devices {
                         "setInternalBound",
                         "isPowered",
                         "isControlled",
-                        "getController"));
+                        "getController",
+                        "getRedstoneMode",
+                        "setRedstoneMode"));
         surface.put(
                 "zas_scrubber",
                 List.of(
                         "getMode",
                         "setMode",
                         "getState",
+                        "getCoolingPower",
                         "getNetworkPressure",
                         "getScrubbed",
                         "setScrubbed",
                         "isPowered",
                         "isControlled",
-                        "getController"));
+                        "getController",
+                        "getRedstoneMode",
+                        "setRedstoneMode"));
         surface.put(
                 "zas_pressure_pump",
                 with(INLINE, "getInputPressure", "getOutputPressure", "getTargetPressure", "setTargetPressure"));
@@ -116,7 +132,15 @@ final class Devices {
         surface.put("zas_portable_scrubber", gas);
         surface.put("zas_portable_pump", with(gas, "getMode", "setMode", "getTargetPressure", "setTargetPressure"));
         surface.put(
-                "zas_generator", List.of("getFuel", "getBurnTime", "getBurnTotal", "getEnergy", "getEnergyCapacity"));
+                "zas_generator",
+                List.of(
+                        "getFuel",
+                        "getBurnTime",
+                        "getBurnTotal",
+                        "getEnergy",
+                        "getEnergyCapacity",
+                        "getRedstoneMode",
+                        "setRedstoneMode"));
         surface.put(
                 "zas_area_air_controller",
                 List.of(
@@ -135,7 +159,10 @@ final class Devices {
                         "getParts",
                         "getCentral",
                         "hasBreach",
-                        "hasFire"));
+                        "hasFire",
+                        "getTargetTemperature",
+                        "setTargetTemperature",
+                        "getThermostat"));
         surface.put(
                 "zas_central_atmos_controller",
                 List.of(
@@ -186,7 +213,123 @@ final class Devices {
                         "getPower",
                         "getEnergy",
                         "getEnergyCapacity"));
+        surface.put(
+                "zas_gas_miner",
+                List.of(
+                        "isOn",
+                        "setOn",
+                        "getState",
+                        "getGas",
+                        "setGas",
+                        "getGases",
+                        "getTargetPressure",
+                        "setTargetPressure",
+                        "getTemperature",
+                        "setTemperature",
+                        "getRoomPressure"));
         return surface;
+    }
+
+    /**
+     * Every peripheral type of a device with no window but something to read or set (COMPAT-024 to
+     * COMPAT-028), and its methods, as {@link #SURFACE} has the others'. Each is placed by {@link
+     * #placeReader}.
+     */
+    static final Map<String, List<String>> READERS = readers();
+
+    private static Map<String, List<String>> readers() {
+        Map<String, List<String>> readers = new LinkedHashMap<>();
+        readers.put(
+                "zas_gauge",
+                List.of(
+                        "getPressure",
+                        "getTemperature",
+                        "getContents",
+                        "getReading",
+                        "setReading",
+                        "getValue",
+                        "getSignal"));
+        readers.put(
+                "zas_air_sensor",
+                List.of(
+                        "getPressure",
+                        "getTemperature",
+                        "getGases",
+                        "getStatus",
+                        "getController",
+                        "getReading",
+                        "setReading",
+                        "getValue",
+                        "getSignal"));
+        readers.put("zas_large_gas_tank", List.of("getPressure", "getTemperature", "getAmount", "getContents"));
+        readers.put("zas_tank_holder", List.of("getCount", "getCapacity", "getTanks"));
+        readers.put("zas_recharger", List.of("getState", "hasBattery", "getEnergy", "getEnergyCapacity", "isPowered"));
+        readers.put("zas_igniter", List.of("hasSignal", "isSparking", "isPowered"));
+        readers.put("zas_fire_alarm", List.of("getState", "isTriggered", "isPowered"));
+        readers.put("zas_firelock", List.of("isOpen", "isAlarmed", "isClosedByAlarm", "getLockdown"));
+        readers.put("zas_tank_transfer_valve", List.of("isValveOpen", "getTimer", "getTanks"));
+        return readers;
+    }
+
+    /**
+     * Places a device of {@link #READERS} at a point, with what it needs: the gauge on a canister to
+     * its north, the air sensor and the fire alarm on stone to their north, the large tank and the
+     * firelock with their upper halves above, the firelock on stone below. Nothing it needs is east,
+     * west or south of the point. Returns its block entity.
+     */
+    static BlockEntity placeReader(Spot s, String type, int x, int y, int z) {
+        return switch (type) {
+            case "zas_gauge" -> {
+                s.place(x, y, z - 1, AtmosBlocks.CANISTER.get().defaultBlockState(), BlockEntity.class);
+                yield s.place(x, y, z, facingSouth(AtmosBlocks.GAUGE.get(), GaugeBlock.FACING), BlockEntity.class);
+            }
+            case "zas_air_sensor" -> {
+                s.set(x, y, z - 1, Spot.STONE);
+                yield s.place(
+                        x, y, z, facingSouth(AtmosBlocks.AIR_SENSOR.get(), AirSensorBlock.FACING), BlockEntity.class);
+            }
+            case "zas_fire_alarm" -> {
+                s.set(x, y, z - 1, Spot.STONE);
+                yield s.place(
+                        x, y, z, facingSouth(AtmosBlocks.FIRE_ALARM.get(), FireAlarmBlock.FACING), BlockEntity.class);
+            }
+            case "zas_large_gas_tank" -> {
+                BlockState lower = AtmosBlocks.LARGE_GAS_TANK.get().defaultBlockState();
+                s.set(x, y + 1, z, lower.setValue(LargeTankBlock.HALF, DoubleBlockHalf.UPPER));
+                yield s.place(x, y, z, lower, BlockEntity.class);
+            }
+            case "zas_firelock" -> {
+                BlockState lower = AtmosBlocks.FIRELOCK
+                        .get()
+                        .defaultBlockState()
+                        .setValue(FirelockBlock.FACING, Direction.EAST)
+                        .setValue(FirelockBlock.OPEN, true);
+                s.set(x, y - 1, z, Spot.STONE);
+                s.set(x, y, z, lower);
+                s.set(x, y + 1, z, lower.setValue(FirelockBlock.HALF, DoubleBlockHalf.UPPER));
+                yield s.place(x, y, z, lower, BlockEntity.class);
+            }
+            case "zas_tank_holder" ->
+                s.place(x, y, z, AtmosBlocks.TANK_HOLDER.get().defaultBlockState(), BlockEntity.class);
+            case "zas_recharger" ->
+                s.place(x, y, z, AtmosBlocks.RECHARGER.get().defaultBlockState(), BlockEntity.class);
+            case "zas_igniter" -> s.place(x, y, z, AtmosBlocks.IGNITER.get().defaultBlockState(), BlockEntity.class);
+            case "zas_tank_transfer_valve" ->
+                s.place(
+                        x,
+                        y,
+                        z,
+                        AtmosBlocks.TANK_TRANSFER_VALVE
+                                .get()
+                                .defaultBlockState()
+                                .setValue(TransferValveBlock.FACING, Direction.EAST),
+                        BlockEntity.class);
+            default -> throw new GameTestAssertException("no reader " + type);
+        };
+    }
+
+    private static BlockState facingSouth(Block block, DirectionProperty facing) {
+        return block.defaultBlockState().setValue(facing, Direction.SOUTH);
     }
 
     private static List<String> with(List<String> base, String... more) {
@@ -226,6 +369,7 @@ final class Devices {
             case "zas_generator" -> AtmosBlocks.GENERATOR.get();
             case "zas_teg" -> AtmosBlocks.TEG.get();
             case "zas_turbine" -> AtmosBlocks.TURBINE.get();
+            case "zas_gas_miner" -> AtmosBlocks.GAS_MINER.get();
             default -> throw new GameTestAssertException("no block for " + type);
         };
     }

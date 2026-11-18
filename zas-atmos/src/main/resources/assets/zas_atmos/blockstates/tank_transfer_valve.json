@@ -1,94 +1,340 @@
 {
-  "variants": {
-    "facing=north,open=false,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve"
+  "multipart": [
+    {
+      "when": {
+        "facing": "north",
+        "open": "false",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve"
+      }
     },
-    "facing=north,open=false,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one"
+    {
+      "when": {
+        "facing": "north",
+        "open": "false",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one"
+      }
     },
-    "facing=north,open=false,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two"
+    {
+      "when": {
+        "facing": "north",
+        "open": "false",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two"
+      }
     },
-    "facing=north,open=true,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve_open"
+    {
+      "when": {
+        "facing": "north",
+        "open": "true",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_open"
+      }
     },
-    "facing=north,open=true,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one_open"
+    {
+      "when": {
+        "facing": "north",
+        "open": "true",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one_open"
+      }
     },
-    "facing=north,open=true,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two_open"
+    {
+      "when": {
+        "facing": "north",
+        "open": "true",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two_open"
+      }
     },
-    "facing=east,open=false,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve",
-      "y": 90
+    {
+      "when": {
+        "facing": "east",
+        "open": "false",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve",
+        "y": 90
+      }
     },
-    "facing=east,open=false,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one",
-      "y": 90
+    {
+      "when": {
+        "facing": "east",
+        "open": "false",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one",
+        "y": 90
+      }
     },
-    "facing=east,open=false,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two",
-      "y": 90
+    {
+      "when": {
+        "facing": "east",
+        "open": "false",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two",
+        "y": 90
+      }
     },
-    "facing=east,open=true,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve_open",
-      "y": 90
+    {
+      "when": {
+        "facing": "east",
+        "open": "true",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_open",
+        "y": 90
+      }
     },
-    "facing=east,open=true,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one_open",
-      "y": 90
+    {
+      "when": {
+        "facing": "east",
+        "open": "true",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one_open",
+        "y": 90
+      }
     },
-    "facing=east,open=true,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two_open",
-      "y": 90
+    {
+      "when": {
+        "facing": "east",
+        "open": "true",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two_open",
+        "y": 90
+      }
     },
-    "facing=south,open=false,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve",
-      "y": 180
+    {
+      "when": {
+        "facing": "south",
+        "open": "false",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve",
+        "y": 180
+      }
     },
-    "facing=south,open=false,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one",
-      "y": 180
+    {
+      "when": {
+        "facing": "south",
+        "open": "false",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one",
+        "y": 180
+      }
     },
-    "facing=south,open=false,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two",
-      "y": 180
+    {
+      "when": {
+        "facing": "south",
+        "open": "false",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two",
+        "y": 180
+      }
     },
-    "facing=south,open=true,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve_open",
-      "y": 180
+    {
+      "when": {
+        "facing": "south",
+        "open": "true",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_open",
+        "y": 180
+      }
     },
-    "facing=south,open=true,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one_open",
-      "y": 180
+    {
+      "when": {
+        "facing": "south",
+        "open": "true",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one_open",
+        "y": 180
+      }
     },
-    "facing=south,open=true,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two_open",
-      "y": 180
+    {
+      "when": {
+        "facing": "south",
+        "open": "true",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two_open",
+        "y": 180
+      }
     },
-    "facing=west,open=false,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve",
-      "y": 270
+    {
+      "when": {
+        "facing": "west",
+        "open": "false",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve",
+        "y": 270
+      }
     },
-    "facing=west,open=false,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one",
-      "y": 270
+    {
+      "when": {
+        "facing": "west",
+        "open": "false",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one",
+        "y": 270
+      }
     },
-    "facing=west,open=false,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two",
-      "y": 270
+    {
+      "when": {
+        "facing": "west",
+        "open": "false",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two",
+        "y": 270
+      }
     },
-    "facing=west,open=true,tanks=0": {
-      "model": "zas_atmos:block/tank_transfer_valve_open",
-      "y": 270
+    {
+      "when": {
+        "facing": "west",
+        "open": "true",
+        "tanks": "0"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_open",
+        "y": 270
+      }
     },
-    "facing=west,open=true,tanks=1": {
-      "model": "zas_atmos:block/tank_transfer_valve_one_open",
-      "y": 270
+    {
+      "when": {
+        "facing": "west",
+        "open": "true",
+        "tanks": "1"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_one_open",
+        "y": 270
+      }
     },
-    "facing=west,open=true,tanks=2": {
-      "model": "zas_atmos:block/tank_transfer_valve_two_open",
-      "y": 270
+    {
+      "when": {
+        "facing": "west",
+        "open": "true",
+        "tanks": "2"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_two_open",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "trigger": "signaler"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_signaler"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "trigger": "proximity"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_proximity"
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "trigger": "signaler"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_signaler",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "trigger": "proximity"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_proximity",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "trigger": "signaler"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_signaler",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "trigger": "proximity"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_proximity",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "trigger": "signaler"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_signaler",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "trigger": "proximity"
+      },
+      "apply": {
+        "model": "zas_atmos:block/tank_transfer_valve_proximity",
+        "y": 270
+      }
     }
-  }
+  ]
 }

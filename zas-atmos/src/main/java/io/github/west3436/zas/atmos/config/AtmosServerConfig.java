@@ -1,7 +1,10 @@
 package io.github.west3436.zas.atmos.config;
 
 import io.github.west3436.zas.api.gas.GasPurity;
+import io.github.west3436.zas.atmos.controller.Thermostat;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
+import io.github.west3436.zas.atmos.pipe.PipeBurst;
+import io.github.west3436.zas.atmos.pipe.PipeLeak;
 import io.github.west3436.zas.atmos.radiator.RadiatorMath;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
@@ -146,6 +149,18 @@ public final class AtmosServerConfig {
 
     public static final ModConfigSpec.DoubleValue BREACH_DROP_KPA;
 
+    /** A thermostat's dead band, in K (CONT-165). */
+    public static final ModConfigSpec.DoubleValue THERMOSTAT_BAND;
+
+    /** A pipe network's burst pressure over a segment's cell, in kPa; 0 turns bursting off (CONT-005, CONT-108). */
+    public static final ModConfigSpec.DoubleValue PIPE_BURST_KPA;
+
+    /** A pipe network's leak pressure over a segment's cell, in kPa; 0 turns leaks off (CONT-005, CONT-168). */
+    public static final ModConfigSpec.DoubleValue PIPE_LEAK_KPA;
+
+    /** The share per second of what would even a leaking segment out with its cell that its leak lets out (CONT-168). */
+    public static final ModConfigSpec.DoubleValue PIPE_LEAK_RATE;
+
     /** The most power a tank's or canister's explosion can have (CONT-109). TNT is 4. */
     public static final ModConfigSpec.DoubleValue EXPLOSION_POWER_CAP;
 
@@ -160,6 +175,24 @@ public final class AtmosServerConfig {
 
     /** How pure a pipe's gas must be to leave for another mod's fluid pipe or tank (COMPAT-142). */
     public static final ModConfigSpec.DoubleValue FLUID_MIN_PURITY;
+
+    /** The most a gas miner adds, in mol/s (CONT-181). */
+    public static final ModConfigSpec.IntValue GAS_MINER_RATE;
+
+    /** The highest target a gas miner's window or a computer sets, in kPa (CONT-180). */
+    public static final ModConfigSpec.DoubleValue GAS_MINER_MAX_TARGET;
+
+    /** How long a gas miner whose gas went to the open air waits before it tries again, in s (CONT-181). */
+    public static final ModConfigSpec.IntValue GAS_MINER_OPEN_AIR_WAIT;
+
+    /** How far a remote signaler's signal reaches, in blocks; 0 is the whole dimension (CONT-186). */
+    public static final ModConfigSpec.IntValue SIGNALER_RANGE;
+
+    /** How long an armed proximity sensor waits before it watches, in s (CONT-187). */
+    public static final ModConfigSpec.IntValue PROXIMITY_ARMING_DELAY;
+
+    /** The widest range a proximity sensor's window sets, in blocks (CONT-187). */
+    public static final ModConfigSpec.IntValue PROXIMITY_MAX_RANGE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -284,6 +317,27 @@ public final class AtmosServerConfig {
                         "A fall in its zone's pressure, in kPa within one atmos tick, that sends a controller to danger 2 at once, as a",
                         "breach does (CONT-043). Only for presets with a pressure min2 above 0, and only while the pressure is below min1. 0 turns it off.")
                 .defineInRange("breach_drop_kpa", 10.0, 0.0, 1_000.0);
+        THERMOSTAT_BAND = builder.comment(
+                        "How far, in K, its zone may drift from a controller's target temperature before its vents start",
+                        "heating or its scrubbers start cooling (CONT-165). Each stops at the target.")
+                .defineInRange("thermostat_band_k", Thermostat.DEFAULT_BAND, 0.0, 100.0);
+        builder.pop();
+
+        builder.comment("Pipe overpressure (CONT-005, CONT-108, CONT-168).").push("pipes");
+        PIPE_BURST_KPA = builder.comment(
+                        "A network more than this over a segment's cell, in kPa, bursts one such segment: it is destroyed",
+                        "and the network's gas goes into its cell (CONT-108). 10,132.5 is 100 atm. 0 turns bursting off.")
+                .defineInRange("burst_kpa", PipeBurst.THRESHOLD_KPA, 0.0, 1_000_000.0);
+        PIPE_LEAK_KPA = builder.comment(
+                        "A network more than this over a segment's cell, in kPa, and not bursting, leaks there: one such",
+                        "segment, chosen at random, lets gas into its cell until the network is back under (CONT-168).",
+                        "0 turns leaks off. 7,599 is 75 atm.")
+                .defineInRange("leak_kpa", 0.0, 0.0, 1_000_000.0);
+        PIPE_LEAK_RATE = builder.comment(
+                        "The share per second of what would even the leaking segment's network out with its cell that a",
+                        "leak lets out, so it leaks faster the higher the pressure difference (CONT-168). An open pipe end",
+                        "is 0.163.")
+                .defineInRange("leak_rate", PipeLeak.DEFAULT_RATE, 0.0, 1.0);
         builder.pop();
 
         builder.comment("The central atmospherics controller (CONT-116, CONT-122).")
@@ -329,6 +383,30 @@ public final class AtmosServerConfig {
                         "share. At 0.99 a pipe of air gives nothing and a pipe of oxygen gives all of it. 0 turns",
                         "the rule off: each gas then leaves on its own, as a filter would take it.")
                 .defineInRange("min_purity", GasPurity.DEFAULT_MIN_SHARE, 0.0, 1.0);
+        builder.pop();
+        builder.comment("The creative gas miner (CONT-180, CONT-181).").push("gas_miner");
+        GAS_MINER_RATE = builder.comment(
+                        "The most gas a miner adds to the room in front of it, in mol/s. It adds less as the",
+                        "room nears its target.")
+                .defineInRange("rate", 1_000, 1, 100_000);
+        GAS_MINER_MAX_TARGET = builder.comment("The highest target pressure a miner can be set to, in kPa")
+                .defineInRange("max_target", 10_000.0, 1.0, 30_000.0);
+        GAS_MINER_OPEN_AIR_WAIT = builder.comment(
+                        "How long a miner whose gas went to the open air waits before it tries again, in seconds")
+                .defineInRange("open_air_wait", 10, 1, 600);
+        builder.pop();
+
+        builder.comment("A tank transfer valve's remote signaler and proximity sensor (CONT-186, CONT-187).")
+                .push("ttv_triggers");
+        SIGNALER_RANGE = builder.comment(
+                        "How far a remote signaler's signal reaches, in blocks, within its dimension and its",
+                        "loaded chunks. 0 is the whole dimension.")
+                .defineInRange("signaler_range", 128, 0, 30_000_000);
+        PROXIMITY_ARMING_DELAY = builder.comment(
+                        "How long a primed TTV with a proximity sensor waits before it watches, in seconds")
+                .defineInRange("proximity_arming_delay", 5, 0, 60);
+        PROXIMITY_MAX_RANGE = builder.comment("The widest range a proximity sensor can be set to, in blocks")
+                .defineInRange("proximity_max_range", 5, 1, 16);
         builder.pop();
         SPEC = builder.build();
     }

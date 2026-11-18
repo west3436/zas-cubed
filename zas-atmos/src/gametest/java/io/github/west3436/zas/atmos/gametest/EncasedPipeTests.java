@@ -10,6 +10,7 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.pipe.EncasedPipeBlock;
 import io.github.west3436.zas.atmos.pipe.FloorGrilleBlock;
@@ -746,6 +747,39 @@ public final class EncasedPipeTests {
         same(a, 1, west, all, "the burst");
         same(a, 7, east, 0, "the burst");
 
+        a.clear(-1, -1, 9, 5);
+        h.succeed();
+    }
+
+    /**
+     * A pipe in a wall leaks as a pipe does (CONT-168), into the room its gas would reach, as it bursts:
+     * the wall and the pipe stay, the room on that side gets what the pipe lost, and the other none.
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_pipe_leaks")
+    public static void cont_168_a_pipe_in_a_wall_leaks_into_the_room_beside_it(GameTestHelper h) {
+        Area a = new Area(h, 5705);
+        double leakWas = AtmosServerConfig.PIPE_LEAK_KPA.get();
+        AtmosServerConfig.PIPE_LEAK_KPA.set(5000.0);
+        try {
+            rooms(a, 400);
+            Room west = Room.of(a, 1);
+            Room east = Room.of(a, 7);
+            BlockPos pos = a.abs(WALL, 2, 2);
+            a.place(WALL, 2, 2, inWall());
+            PipeNetwork net = a.<PipeBlockEntity>entity(WALL, 2, 2).network();
+            double room = Atmospheres.at(a.level, Vec3.atCenterOf(pos)).pressure();
+            PipeBurstTests.fillTo(net, room + 6000);
+            double all = net.gas().moles(CO2);
+            a.step();
+            a.tick();
+            double lost = all - net.gas().moles(CO2);
+            h.assertTrue(lost > 0, "the pipe in the wall didn't leak");
+            h.assertTrue(a.get(WALL, 2, 2).is(AtmosBlocks.STATION_WALL_PIPE.get()), "the pipe went");
+            same(a, 1, west, lost, "the leak");
+            same(a, 7, east, 0, "the leak");
+        } finally {
+            AtmosServerConfig.PIPE_LEAK_KPA.set(leakWas);
+        }
         a.clear(-1, -1, 9, 5);
         h.succeed();
     }

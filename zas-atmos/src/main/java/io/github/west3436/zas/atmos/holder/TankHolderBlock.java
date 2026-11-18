@@ -153,6 +153,17 @@ public class TankHolderBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full it is (CONT-175): its tanks over its places. */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof TankHolderBlockEntity holder ? holder.signal() : 0;
+    }
+
+    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TankHolderBlockEntity(pos, state);
     }

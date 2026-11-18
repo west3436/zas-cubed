@@ -15,7 +15,8 @@
                 "minecraft:custom_name",
                 "zas_atmos:ttv_tanks",
                 "zas_atmos:ttv_open",
-                "zas_atmos:ttv_timer"
+                "zas_atmos:ttv_timer",
+                "zas_atmos:ttv_trigger"
               ]
             }
           ]

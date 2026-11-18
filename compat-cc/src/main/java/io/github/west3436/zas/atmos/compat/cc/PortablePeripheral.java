@@ -40,6 +40,17 @@ public abstract class PortablePeripheral<T extends PortableDevice> extends Devic
         return device().capacity();
     }
 
+    /** Its redstone setting (COMPAT-023): {@code ignored}, {@code high} or {@code low}. */
+    @LuaFunction(mainThread = true)
+    public final String getRedstoneMode() throws LuaException {
+        return Lua.redstoneMode(device());
+    }
+
+    @LuaFunction(mainThread = true)
+    public final void setRedstoneMode(String mode) throws LuaException {
+        Lua.setRedstoneMode(device(), mode);
+    }
+
     /** A space heater or an air conditioner: a portable with a setpoint for its room's temperature. */
     public static final class Thermo extends PortablePeripheral<ThermoMachineBlockEntity> {
         Thermo(String type, ThermoMachineBlockEntity machine) {

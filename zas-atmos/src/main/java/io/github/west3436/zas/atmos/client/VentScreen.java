@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ import net.minecraft.world.entity.player.Inventory;
  */
 final class VentScreen extends TguiScreen<VentMenu> {
     private static final int WIDTH = 216;
-    private static final int TOP_HEIGHT = 2 + Ui.BUTTON_ROW + 2 * Ui.ROW + 2;
+    private static final int TOP_HEIGHT = 2 + 2 * Ui.BUTTON_ROW + 2 * Ui.ROW + 2;
     private static final int BOUNDS_HEIGHT = 14 + 1 + 2 * Ui.BUTTON_ROW + 1;
     private static final int HEIGHT = Ui.TITLE_HEIGHT + 2 * Ui.PAD + TOP_HEIGHT + Ui.PAD + BOUNDS_HEIGHT;
     private static final List<Component> MODES = modes();
@@ -64,7 +65,15 @@ final class VentScreen extends TguiScreen<VentMenu> {
         ui.choice(valueX, row, MODES, menu.mode().ordinal(), -1, free ? i -> press(VentMenu.SET_MODE + i) : null);
         row += Ui.BUTTON_ROW;
         DeviceParts.label(ui, "state", labelX, row, Ui.ROW);
-        DeviceParts.status(ui, Component.translatable(menu.status().key()), statusColour(), valueX, row, Ui.ROW);
+        boolean held = menu.mode() != VentMode.OFF && RedstoneControl.holds(menu.redstone());
+        DeviceParts.status(
+                ui,
+                held ? DeviceParts.held() : Component.translatable(menu.status().key()),
+                held ? Ui.AVERAGE : statusColour(),
+                valueX,
+                row,
+                Ui.ROW);
+        DeviceParts.heat(ui, x + w - Ui.PAD, row, Ui.ROW, menu.value(VentMenu.DATA_HEAT), true);
         row += Ui.ROW;
         DeviceParts.label(ui, "network", labelX, row, Ui.ROW);
         ui.line(
@@ -74,6 +83,8 @@ final class VentScreen extends TguiScreen<VentMenu> {
                 Ui.ROW,
                 Ui.WHITE,
                 Face.BODY);
+        row += Ui.ROW;
+        DeviceParts.redstone(ui, x, row, w, menu.redstone(), this::press);
 
         y += TOP_HEIGHT + Ui.PAD;
         row = ui.section(x, y, w, BOUNDS_HEIGHT, DeviceParts.text("bounds")) + 1;

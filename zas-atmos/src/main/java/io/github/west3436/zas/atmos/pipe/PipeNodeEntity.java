@@ -148,11 +148,13 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
     protected void followHandlers(ServerLevel level, int faces) {}
 
     /**
-     * A member's turn in its network's atmos tick: the first to step runs it for them all. After the
-     * reaction, its radiator pipe exchanges heat with the gas around it (HEAT-020, HEAT-021).
+     * A member's turn in its network's atmos tick: the first to step runs it for them all. A network
+     * that doesn't burst may leak (CONT-168). After the reaction, its radiator pipe exchanges heat with
+     * the gas around it (HEAT-020, HEAT-021).
      */
     static void atmosTurn(ServerLevel level, PipeNetwork net, PipeNode node) {
         if (net.startsAtmosTick(node) && !PipeBurst.check(level, net)) {
+            PipeLeak.step(level, net);
             ContainerReactions.react(net.gas());
             RadiatorExchange.step(level, net);
         }
