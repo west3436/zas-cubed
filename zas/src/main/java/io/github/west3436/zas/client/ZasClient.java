@@ -76,5 +76,9 @@ public final class ZasClient {
             AirflowSounds.tick();
         });
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> HeldFlows.CLIENT.clear());
+
+        // Flung bodies tumble (CLIENT-027).
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> ClientTumbles.tick());
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientTumbles.clear());
     }
 }

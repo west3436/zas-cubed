@@ -8,9 +8,6 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * The client config, {@code config/zas-client.toml}: the client tier of OPS-001, for visuals and
  * display units. The simulation always works in kPa and K (A-04); these settings change only how
  * values are shown on this client. A dedicated server registers it but never loads it.
- *
- * <p>For now it holds the display units; visual settings join it as gas overlays and the HUD land
- * in R1.
  */
 public final class ZasClientConfig {
     public static final ModConfigSpec SPEC;
@@ -20,6 +17,9 @@ public final class ZasClientConfig {
 
     /** The unit temperatures are shown in. */
     public static final ModConfigSpec.EnumValue<TemperatureUnit> TEMPERATURE_UNIT;
+
+    /** Whether mobs and players a breach flings off their feet tumble (CLIENT-029). */
+    public static final ModConfigSpec.BooleanValue TUMBLE;
 
     /** A display unit for pressure. */
     public enum PressureUnit {
@@ -80,6 +80,10 @@ public final class ZasClientConfig {
         TEMPERATURE_UNIT = builder.comment("The unit temperatures are shown in: KELVIN, CELSIUS or FAHRENHEIT.")
                 .defineEnum("temperature", TemperatureUnit.CELSIUS);
         builder.pop();
+        builder.push("effects");
+        TUMBLE = builder.comment("Mobs and players a breach flings off their feet tumble through the air.")
+                .define("tumble", true);
+        builder.pop();
         SPEC = builder.build();
     }
 
@@ -93,6 +97,11 @@ public final class ZasClientConfig {
     /** The configured pressure unit; kPa before the config loads, and on a dedicated server. */
     public static PressureUnit pressureUnit() {
         return SPEC.isLoaded() ? PRESSURE_UNIT.get() : PressureUnit.KPA;
+    }
+
+    /** Whether flung bodies tumble (CLIENT-029); on before the config loads. */
+    public static boolean tumble() {
+        return !SPEC.isLoaded() || TUMBLE.get();
     }
 
     /** The configured temperature unit; °C before the config loads, and on a dedicated server. */

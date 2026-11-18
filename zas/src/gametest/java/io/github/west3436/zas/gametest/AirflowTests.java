@@ -9,6 +9,7 @@ import io.github.west3436.zas.airflow.AirflowImpulsePayload;
 import io.github.west3436.zas.airflow.AirflowReceiver;
 import io.github.west3436.zas.airflow.AirflowSyncPayload;
 import io.github.west3436.zas.airflow.HeldFlows;
+import io.github.west3436.zas.airflow.TumblePayload;
 import io.github.west3436.zas.airflow.VisibleFlow;
 import io.github.west3436.zas.airflow.VisibleFlows;
 import io.github.west3436.zas.airflow.VisibleOpening;
@@ -27,8 +28,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -1177,6 +1180,84 @@ public final class AirflowTests {
             }
             s.playerAt(stopped, wall + 3 - 2 * 0.8);
             near(h, stopped.getHealth(), stopped.getMaxHealth(), "the player that stopped in the open");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A mob or player the flow carries off the ground is flung once it has been in the air for a
+     * few game ticks, and its trackers are told once (CLIENT-027). One on the floor isn't, nor is a
+     * creative player. It stays flung out of the flow while it flies, and comes down when it
+     * lands, or when it hangs nearly still in the air.
+     */
+    @GameTest(template = "empty")
+    public static void client_027_a_body_flung_off_the_ground_tumbles_until_it_lands(GameTestHelper h) {
+        try (Site s = new Site(h, 134)) {
+            s.breach();
+            ServerLevel level = s.r.level;
+            List<TumblePayload> sent = new ArrayList<>();
+            Map<Integer, Entity> to = new HashMap<>();
+            Airflow.tumbleHookForTest((Entity e, TumblePayload p) -> {
+                sent.add(p);
+                to.put(p.entityId(), e);
+            });
+            Pig flying = s.spawn(EntityType.PIG, HOLE_X + 3);
+            Pig floored = s.spawn(EntityType.PIG, HOLE_X + 3);
+            Pig landing = s.spawn(EntityType.PIG, HOLE_X + 4);
+            FakePlayer survival = s.player(HOLE_X + 3);
+            FakePlayer creative = s.player(HOLE_X + 3);
+            h.assertTrue(creative.setGameMode(GameType.CREATIVE), "the player didn't go creative");
+            Runnable tick = () -> {
+                floored.setOnGround(true);
+                Airflow.crawlForTest(level, survival);
+                Airflow.crawlForTest(level, creative);
+                Airflow.step(level);
+            };
+
+            for (int i = 0; i < Airflow.LIFT_TICKS - 1; i++) {
+                tick.run();
+            }
+            h.assertTrue(vx(flying) < -0.01, "the flow doesn't carry the pig: " + vx(flying));
+            h.assertFalse(Airflow.flung(level, flying), "flung before it had been in the air for long");
+            h.assertTrue(sent.isEmpty(), "told too soon: " + sent);
+            tick.run();
+            h.assertTrue(Airflow.flung(level, flying), "the pig in the air isn't flung");
+            h.assertTrue(Airflow.flung(level, landing), "the second pig in the air isn't flung");
+            h.assertTrue(Airflow.flung(level, survival), "the survival player isn't flung");
+            h.assertFalse(Airflow.flung(level, floored), "the pig on the floor is flung");
+            h.assertFalse(Airflow.flung(level, creative), "the creative player is flung");
+            h.assertValueEqual(
+                    new HashSet<>(sent),
+                    Set.of(
+                            new TumblePayload(flying.getId(), true),
+                            new TumblePayload(landing.getId(), true),
+                            new TumblePayload(survival.getId(), true)),
+                    "the starts sent");
+            h.assertTrue(to.get(flying.getId()) == flying, "sent to the wrong entity's trackers");
+            for (int i = 0; i < 5; i++) {
+                tick.run();
+            }
+            h.assertValueEqual(sent.size(), 3, "starts sent again");
+
+            landing.setOnGround(true);
+            tick.run();
+            h.assertFalse(Airflow.flung(level, landing), "the pig that landed is still flung");
+            h.assertValueEqual(sent.get(3), new TumblePayload(landing.getId(), false), "the landing sent");
+
+            // Out of the flow, still flying, then hanging still.
+            Vec3 away = s.r.point(0, Y, Z).add(HOLE_X + 26, 0, 0);
+            flying.moveTo(away.x, away.y, away.z);
+            flying.setDeltaMovement(Vec3.ZERO);
+            for (int i = 0; i < Airflow.HANG_TICKS * 2; i++) {
+                flying.setPos(flying.getX() + 0.2, flying.getY(), flying.getZ());
+                tick.run();
+            }
+            h.assertTrue(Airflow.flung(level, flying), "the pig flying out of the flow came down");
+            for (int i = 0; i < Airflow.HANG_TICKS; i++) {
+                tick.run();
+            }
+            h.assertFalse(Airflow.flung(level, flying), "the pig hanging still is still flung");
+            h.assertValueEqual(sent.get(sent.size() - 1), new TumblePayload(flying.getId(), false), "the end sent");
         }
         h.succeed();
     }

@@ -84,6 +84,10 @@ public final class AirflowReceiver {
         context.enqueueWork(() -> Airflow.applyImpulse(context.player(), payload));
     }
 
+    static void handleTumble(TumblePayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> FlungBodies.CLIENT.accept(payload));
+    }
+
     static void handleEffects(AirflowEffectsPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> HeldFlows.CLIENT.accept(
                 payload.flows(), context.player().level().dimension().location()));
