@@ -131,6 +131,15 @@ jobs:
             task: ":compat-nuclearcraft:runAdapterGameTestServer"
           - adapter: nuclearcraft (older than supported)
             task: ":compat-nuclearcraft:runAdapterGameTestServer -Pnuclearcraft.version=unsupported"
+          # COMPAT-090 to COMPAT-093: the Modern Industrialization adapter, with
+          # the first build whose gas fluids carry c: tags and the newest.
+          # COMPAT-091: with the last build before it, the adapter stays off.
+          - adapter: mi (oldest supported)
+            task: ":compat-mi:runAdapterGameTestServer -Pmi.version=floor"
+          - adapter: mi (newest)
+            task: ":compat-mi:runAdapterGameTestServer"
+          - adapter: mi (older than supported)
+            task: ":compat-mi:runAdapterGameTestServer -Pmi.version=unsupported"
           # COMPAT-080 to COMPAT-083: the Create Aeronautics adapter, with its
           # first build on Sable 2 and the newest, each with its Sable and
           # Create. COMPAT-002: with the last build on Sable 1.2, the adapter
@@ -201,6 +210,10 @@ jobs:
           # are left out.
           - adapter: nuclearcraft (content off)
             task: ":compat-nuclearcraft:runAdapterGameTestServer -Pcontent=off"
+          # The Modern Industrialization adapter's gases need none of the
+          # content; its fluid tests, which use ZAS³'s pipes, are left out.
+          - adapter: mi (content off)
+            task: ":compat-mi:runAdapterGameTestServer -Pcontent=off"
           # The Aeronautics adapter needs none of the content: it reads ambients
           # and Sable's pressure, so every test runs.
           - adapter: aeronautics (content off)

@@ -53,6 +53,9 @@ include 'compat-pneumaticcraft'
 // The NuclearCraft: Neoteric adapter (COMPAT-150 to COMPAT-155), bundled into the zas jar likewise.
 include 'compat-nuclearcraft'
 
+// The Modern Industrialization adapter (COMPAT-090 to COMPAT-093), bundled into the zas jar likewise.
+include 'compat-mi'
+
 // The Create Aeronautics adapter (COMPAT-080 to COMPAT-083), bundled into the zas jar like
 // compat-mekanism.
 include 'compat-aeronautics'

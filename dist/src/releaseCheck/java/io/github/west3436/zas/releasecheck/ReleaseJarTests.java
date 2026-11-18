@@ -79,7 +79,10 @@ public final class ReleaseJarTests {
     /** The NuclearCraft adapter's package. */
     private static final String NUCLEARCRAFT_ADAPTER = "io.github.west3436.zas.compat.nuclearcraft";
 
-    /** The pack of the gases the Mekanism and NuclearCraft adapters both offer. */
+    /** The Modern Industrialization adapter's package. */
+    private static final String MI_ADAPTER = "io.github.west3436.zas.compat.mi";
+
+    /** The pack of the gases the Mekanism, NuclearCraft and Modern Industrialization adapters offer. */
     private static final String SHARED_GASES_PACK = "mod/zas:datapacks/shared_gases";
 
     /** The Create Aeronautics adapter's package. */
@@ -505,6 +508,53 @@ public final class ReleaseJarTests {
         h.assertFalse(
                 GasTags.contains(GasTags.TOXIC, ResourceLocation.fromNamespaceAndPath("zas", "ammonia")),
                 "the adapter's gas tags loaded");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the Modern Industrialization adapter, and on a server without Modern
+     * Industrialization none of it loads (COMPAT-091, NFR-022): {@code zas} left the adapter off, so
+     * its entry class was never asked for, and its data packs and its gases aren't there. The
+     * content's mapping of {@code #c:high_pressure_steam} ships and loads, as its other mappings do;
+     * no fluid of the vanilla game is in the tag.
+     */
+    @GameTest(template = "empty")
+    public static void compat_091_nothing_of_the_mi_adapter_loads_without_modern_industrialization(GameTestHelper h) {
+        h.assertFalse(
+                ModList.get().isLoaded("modern_industrialization"),
+                "Modern Industrialization is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            MI_ADAPTER.replace('.', '/') + "/ModernIndustrializationCompat.class",
+            "datapacks/modern_industrialization/pack.mcmeta",
+            "datapacks/modern_industrialization/data/zas/zas/gas/argon.json",
+            "datapacks/modern_industrialization/data/c/zas/fluid_gas/ethylene.json",
+            "datapacks/content/data/c/zas/fluid_gas/high_pressure_steam.json"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+
+        // zas went through its row and found no Modern Industrialization, so it never loaded the
+        // entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("modern_industrialization"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for Modern Industrialization");
+        h.assertValueEqual(
+                status.row().entryClass(), MI_ADAPTER + ".ModernIndustrializationCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Modern Industrialization adapter's state");
+        h.assertFalse(Adapters.isActive("modern_industrialization"), "the Modern Industrialization adapter is on");
+
+        // What the adapter would have added.
+        MinecraftServer server = h.getLevel().getServer();
+        for (String pack : new String[] {"mod/zas:datapacks/modern_industrialization", SHARED_GASES_PACK}) {
+            h.assertFalse(server.getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        }
+        h.assertFalse(
+                GasProperties.isDefined(ResourceLocation.fromNamespaceAndPath("zas", "helium")),
+                "the adapter's gases are defined");
         h.succeed();
     }
 

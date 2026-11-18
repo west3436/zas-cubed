@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.helium_3",
+  "formula": "³He",
+  "molar_mass": 0.003016,
+  "molar_heat_capacity": 12.47,
+  "sources": {
+    "molar_mass": "3.0160293 g/mol, the atomic mass of helium-3: Wang et al., The AME 2020 atomic mass evaluation (II), Chinese Physics C 45 (2021) 030003, https://doi.org/10.1088/1674-1137/abddaf",
+    "molar_heat_capacity": "C_v = 3/2 R, a monatomic ideal gas. No NIST-JANAF table for helium-3 was found; helium-4's table gives the same value, 20.786 − 8.314 J/(mol·K). R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}
