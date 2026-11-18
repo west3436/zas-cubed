@@ -1,5 +1,5 @@
 {
   "gas": "zas:water_vapor",
   "temperature": "fluid",
-  "min_temperature": 373.15
+  "min_temperature": 383
 }

@@ -1,0 +1,152 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Modern Industrialization adapter (COMPAT-090 to COMPAT-093): its gas fluids moving through
+// ZAS³'s pipes as gas. It is data only, offered by one entry class: Modern Industrialization tags
+// its fluids `#c:oxygen`, `#c:steam` and so on, and the content's fluid bridge (COMPAT-140) maps
+// those tags to gases. The adapter adds the gases ZAS³ doesn't have and the tags the content
+// doesn't map. Its classes and data ship inside the zas jar (zas/build.gradle's `bundled`), and
+// zas starts it only when Modern Industrialization is installed in a version its row supports
+// (COMPAT-001, COMPAT-002). It names nothing of Modern Industrialization's, so it compiles against
+// the public API alone. Modern Industrialization is never in a jar of ours: it is added to this
+// project's own runs.
+
+// What a run of the GameTests loads: the newest Modern Industrialization by default, the oldest
+// supported one with -Pmi.version=floor, or the last one before it with -Pmi.version=unsupported.
+// From 2.3.0 it needs GuideME beside it; before that, Cloth Config. The versions are in
+// gradle.properties.
+def modrinth = { slug, version -> "maven.modrinth:${slug}:${version}" }
+def table = [
+    newest     : [mi: mi_version, needs: [modrinth('guideme', guideme_version)], supported: true],
+    floor      : [mi: mi_floor_version, needs: [modrinth('cloth-config', cloth_config_version)], supported: true],
+    unsupported: [mi: mi_unsupported_version, needs: [modrinth('cloth-config', cloth_config_version)], supported: false],
+]
+def runName = providers.gradleProperty('mi.version').getOrElse('newest')
+def chosen = table[runName]
+if (chosen == null) {
+    throw new GradleException("-Pmi.version is one of ${table.keySet().join(', ')}, not '${runName}'")
+}
+// The tests of a Modern Industrialization the adapter supports, or the one that checks it stays
+// off. The tests that build with the content mod's pipes are in a namespace of their own, which
+// -Pcontent=off leaves out (CONT-155).
+def namespaces = !chosen.supported ? ['zas_mi_off']
+        : contentOff ? ['zas_mi'] : ['zas_mi', 'zas_mi_content']
+
+// Modern Industrialization, GuideME and Cloth Config, from Modrinth's maven.
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with Modern Industrialization loaded (COMPAT-004). They
+    // stay out of every jar but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_mi', 'zas_mi_content', 'zas_mi_off'].each { ns ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${ns}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+dependencies {
+    implementation project(':zas-api')
+
+    // GameTests (only) ask the framework and the content what they did. They reach Modern
+    // Industrialization's blocks and fluids by id, so nothing of it is compiled against.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+    gametestCompileOnly project(':zas-atmos')
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+neoForge {
+    // Unit tests of the adapter's data. Minecraft's classes are on the test classpath, but the game
+    // is never bootstrapped and Modern Industrialization isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Modern Industrialization, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespaces.join(',')
+            // The Modern Industrialization the run asked for, which the tests check is the one that
+            // loaded.
+            systemProperty 'zas.mi.version', chosen.mi
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly(modrinth('modern-industrialization', chosen.mi)) { transitive = false }
+    chosen.needs.each { gametestRunRuntimeOnly(it) { transitive = false } }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // The shipped data packs, which tests read as files: the adapter's, the shared gases in zas's,
+    // the content's mappings, and the NuclearCraft adapter's, whose noble gases this one ships too.
+    systemProperty 'zas.mi.resources', file('src/main/resources').absolutePath
+    def zasResources = project(':zas').file('src/main/resources')
+    inputs.dir(zasResources).withPropertyName('zasResources')
+    systemProperty 'zas.resources', zasResources.absolutePath
+    def atmosResources = project(':zas-atmos').file('src/main/resources')
+    inputs.dir(atmosResources).withPropertyName('atmosResources')
+    systemProperty 'zas.atmos.resources', atmosResources.absolutePath
+    def ncResources = project(':compat-nuclearcraft').file('src/main/resources')
+    inputs.dir(ncResources).withPropertyName('nuclearcraftResources')
+    systemProperty 'zas.nuclearcraft.resources', ncResources.absolutePath
+    testLogging.exceptionFormat = 'full'
+}

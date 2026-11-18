@@ -53,9 +53,11 @@
   "gas.zas.sulfur_trioxide": "Sulfur Trioxide",
   "pack.zas.nuclearcraft": "ZAS³ NuclearCraft",
   "pack.zas.nuclearcraft.description": "Gases and the HEV suit",
+  "pack.zas.modern_industrialization": "ZAS³ Modern Industrialization",
+  "pack.zas.modern_industrialization.description": "Gases",
 
   "pack.zas.shared_gases": "ZAS³ Shared Gases",
-  "pack.zas.shared_gases.description": "Gases Mekanism and NuclearCraft both have",
+  "pack.zas.shared_gases.description": "Gases several mods have",
 
   "zas.ae2.gases": "Gases",
   "zas.ae2.gas_storage": "Gas storage",
