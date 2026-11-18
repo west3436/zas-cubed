@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.firealarm;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -20,6 +21,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -117,13 +119,18 @@ public class FireAlarmBlock extends HorizontalDirectionalBlock implements Entity
         if (!level.isClientSide || type != AtmosBlockEntities.FIRE_ALARM.get()) {
             return null;
         }
-        return (l, p, s, be) -> report(s, p, FireAlarmVoice.LOCAL);
+        return (l, p, s, be) -> report(l, s, p, FireAlarmVoice.LOCAL);
     }
 
-    /** Tells a voice about an alarm at a position, if its state says it is alarming. */
-    public static void report(BlockState state, BlockPos pos, FireAlarmVoice voice) {
+    /**
+     * Tells a voice about an alarm at a position, if its state says it is alarming, where the world
+     * shows it: on a Sable ship, at the alarm on board rather than in the ship's plot (API-068), and
+     * again each tick as the ship moves.
+     */
+    public static void report(Level level, BlockState state, BlockPos pos, FireAlarmVoice voice) {
         if (state.getValue(STATUS) == FireAlarmStatus.ALARM) {
-            voice.report(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            Vec3 at = Relocations.shownAt(level, Vec3.atCenterOf(pos));
+            voice.report(at.x, at.y, at.z);
         }
     }
 }

@@ -14,8 +14,11 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.config.AirflowConfig;
 import io.github.west3436.zas.engine.flow.FlowField;
+import io.github.west3436.zas.hotspot.GasFireScan;
+import io.github.west3436.zas.hotspot.HotspotBlocks;
 import io.github.west3436.zas.provider.Frame;
 import io.github.west3436.zas.provider.Frames;
+import io.github.west3436.zas.sound.FireLoopGroups;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -158,6 +162,82 @@ public final class SableShownTests {
         h.assertTrue(flow != null, "the flow doesn't carry the player");
         double towards = flow.normalize().dot(hole.subtract(cabin).normalize());
         h.assertTrue(towards > 0.5, "the flow carries the player " + flow + ", the hole is at " + hole);
+        h.succeed();
+    }
+
+    /**
+     * A gas fire in a flying, turned ship's cabin: a listener in the cabin, where the world shows
+     * it, finds the fire in the ship's plot and its loop plays at the fire where the ship shows it.
+     * Between looks the loop is placed again as the ship flies and turns, and keeps its source at the
+     * next look, so it plays on rather than starting again. A fire on the ground nearby plays where it
+     * is. Before, the scan looked only around the listener in the world, so the cabin was silent.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void fire_036_a_gas_fire_in_a_flying_cabin_is_heard_where_the_ship_shows_it(GameTestHelper h) {
+        Deck d = new Deck(h, h.getLevel(), 8);
+        d.box();
+        ServerSubLevel sub = d.assemble();
+        fly(d, sub);
+        BlockPos burning = Deck.onBoard(sub, 2, 1, 2);
+        d.level.setBlock(burning, HotspotBlocks.GAS_FIRE.get().defaultBlockState(), Block.UPDATE_CLIENTS);
+        Vec3 fire = shown(sub, Vec3.atCenterOf(burning));
+        Vec3 ear = shown(sub, Vec3.atCenterOf(Deck.onBoard(sub, 2, 3, 3)));
+
+        List<int[]> inTheWorld = new ArrayList<>();
+        GasFireScan.forEach(
+                d.level, ear.x, ear.y, ear.z, FireLoopGroups.RANGE, (x, y, z) -> inTheWorld.add(new int[] {x, y, z}));
+        h.assertTrue(inTheWorld.isEmpty(), "the world around the cabin has a gas fire of its own");
+
+        Frame.Lookup frames = Frames.lookup(d.level);
+        FireLoopGroups groups = new FireLoopGroups();
+        GasFireScan.around(d.level, ear.x, ear.y, ear.z, FireLoopGroups.RANGE, groups::add);
+        List<FireLoopGroups.Group> chosen = groups.choose(ear.x, ear.y, ear.z, frames);
+        h.assertValueEqual(chosen.size(), 1, "loops in the cabin");
+        FireLoopGroups.Group loop = chosen.get(0);
+        double off = fire.distanceTo(new Vec3(loop.x(), loop.y(), loop.z()));
+        h.assertTrue(off < 1.5, "the fire loop plays " + off + " blocks from the fire on board");
+
+        // The ship flies on and turns again: between looks the loop follows it.
+        fly(d, sub);
+        Vec3 moved = shown(sub, Vec3.atCenterOf(burning));
+        h.assertTrue(moved.distanceTo(fire) > 10, "the fire didn't move with the ship: " + fire + " " + moved);
+        List<FireLoopGroups.Group> followed = groups.follow(frames);
+        h.assertValueEqual(followed.size(), 1, "loops following the ship");
+        off = moved.distanceTo(new Vec3(
+                followed.get(0).x(), followed.get(0).y(), followed.get(0).z()));
+        h.assertTrue(off < 1.5, "the loop follows the ship to " + off + " blocks from the fire");
+
+        // At the next look, from the cabin where it is now, it is the same loop.
+        Vec3 earNow = shown(sub, Vec3.atCenterOf(Deck.onBoard(sub, 2, 3, 3)));
+        GasFireScan.around(d.level, earNow.x, earNow.y, earNow.z, FireLoopGroups.RANGE, groups::add);
+        List<FireLoopGroups.Group> next = groups.choose(earNow.x, earNow.y, earNow.z, frames);
+        h.assertValueEqual(next.size(), 1, "loops in the cabin at the next look");
+        h.assertValueEqual(next.get(0).source(), loop.source(), "the loop's source at the next look");
+        off = moved.distanceTo(
+                new Vec3(next.get(0).x(), next.get(0).y(), next.get(0).z()));
+        h.assertTrue(off < 1.5, "the loop plays " + off + " blocks from the fire at the next look");
+
+        // A fire on the ground, by where the ship was built, plays where it is.
+        BlockPos ground = d.abs(2, 6, 2);
+        d.level.setBlock(ground, HotspotBlocks.GAS_FIRE.get().defaultBlockState(), Block.UPDATE_CLIENTS);
+        try {
+            Vec3 by = Vec3.atCenterOf(ground).add(0, 0, 2);
+            GasFireScan.around(d.level, by.x, by.y, by.z, FireLoopGroups.RANGE, groups::add);
+            List<FireLoopGroups.Group> onTheGround = groups.choose(by.x, by.y, by.z, frames);
+            h.assertValueEqual(onTheGround.size(), 1, "loops by the fire on the ground");
+            h.assertTrue(
+                    Vec3.atCenterOf(ground)
+                                    .distanceTo(new Vec3(
+                                            onTheGround.get(0).x(),
+                                            onTheGround.get(0).y(),
+                                            onTheGround.get(0).z()))
+                            < 1e-6,
+                    "the fire on the ground plays where it is");
+            h.assertTrue(groups.follow(frames).isEmpty(), "a fire on the ground follows a ship");
+        } finally {
+            d.level.setBlock(ground, Deck.AIR, Block.UPDATE_CLIENTS);
+            d.level.setBlock(burning, Deck.AIR, Block.UPDATE_CLIENTS);
+        }
         h.succeed();
     }
 

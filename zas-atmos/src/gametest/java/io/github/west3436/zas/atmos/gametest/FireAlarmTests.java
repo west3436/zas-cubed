@@ -18,13 +18,18 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.heat.HeatSettings;
+import io.github.west3436.zas.provider.Frame;
+import io.github.west3436.zas.provider.Frames;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -249,12 +254,12 @@ public final class FireAlarmTests {
             FireAlarmVoice voice = new FireAlarmVoice();
             voice.tick(middle.x, middle.y, middle.z); // puts the listener there
             s.cycles(2, alarm);
-            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            FireAlarmBlock.report(s.level, alarm.getBlockState(), at, voice);
             h.assertTrue(voice.tick(middle.x, middle.y, middle.z) == null, "a normal alarm made a sound");
 
             heatTo(s, 480);
             s.cycles(2, alarm);
-            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            FireAlarmBlock.report(s.level, alarm.getBlockState(), at, voice);
             h.assertValueEqual(
                     voice.tick(middle.x, middle.y, middle.z),
                     new FireAlarmVoice.Request(middle.x, middle.y, middle.z, 1f),
@@ -262,13 +267,89 @@ public final class FireAlarmTests {
 
             heatTo(s, 293.15);
             s.cycles(2, alarm);
-            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            FireAlarmBlock.report(s.level, alarm.getBlockState(), at, voice);
             h.assertValueEqual(
                     voice.tick(middle.x, middle.y, middle.z),
                     new FireAlarmVoice.Request(middle.x, middle.y, middle.z, 0f),
                     "the alarm resetting");
-            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            FireAlarmBlock.report(s.level, alarm.getBlockState(), at, voice);
             h.assertTrue(voice.tick(middle.x, middle.y, middle.z) == null, "still asking after the reset");
         });
+    }
+
+    /**
+     * An alarm on blocks another mod shows somewhere else, as on a Sable ship, sounds where the world
+     * shows it, not where its block is kept, so a listener on board hears it, and it follows the frame
+     * as it moves. Before, it was measured from its plot, out of every listener's range (CONT-128,
+     * API-068).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_128_an_alarm_on_a_ship_sounds_where_the_ship_shows_it(GameTestHelper h) {
+        Site s = new Site(h, 813);
+        BlockPos at = s.abs(8, 2, 1);
+        BlockState alarming = AtmosBlocks.FIRE_ALARM
+                .get()
+                .defaultBlockState()
+                .setValue(FireAlarmBlock.FACING, Direction.SOUTH)
+                .setValue(FireAlarmBlock.STATUS, FireAlarmStatus.ALARM);
+        // Shown 100 blocks east and 5 up, turned a quarter; then the ship flies 3 more east.
+        double[] east = {100};
+        Frame ship = new Frame() {
+            @Override
+            public double[] toShown(double x, double y, double z) {
+                return new double[] {at.getX() + east[0] - (z - at.getZ()), y + 5, at.getZ() + (x - at.getX())};
+            }
+
+            @Override
+            public double[] toLevel(double x, double y, double z) {
+                return new double[] {at.getX() + (z - at.getZ()), y - 5, at.getZ() - (x - at.getX() - east[0])};
+            }
+
+            @Override
+            public double[] turnToShown(double x, double y, double z) {
+                return new double[] {-z, y, x};
+            }
+
+            @Override
+            public double[] turnToLevel(double x, double y, double z) {
+                return new double[] {z, y, -x};
+            }
+
+            @Override
+            public double[] shownVelocity(double x, double y, double z) {
+                return new double[3];
+            }
+        };
+        Frames.Source source = new Frames.Source() {
+            @Override
+            public Frame at(Level level, int blockX, int blockZ) {
+                return level == s.level && blockX == at.getX() && blockZ == at.getZ() ? ship : null;
+            }
+
+            @Override
+            public List<Frame> near(Level level, AABB shown) {
+                return List.of();
+            }
+        };
+        Frames.add(source);
+        try {
+            FireAlarmVoice voice = new FireAlarmVoice();
+            for (int flight = 0; flight < 2; flight++) {
+                double[] p = ship.toShown(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
+                Vec3 shown = new Vec3(p[0], p[1], p[2]);
+                Vec3 onBoard = shown.add(0, 0, 3);
+                voice.tick(onBoard.x, onBoard.y, onBoard.z); // puts the listener in the cabin
+                FireAlarmBlock.report(s.level, alarming, at, voice);
+                FireAlarmVoice.Request r = voice.tick(onBoard.x, onBoard.y, onBoard.z);
+                h.assertTrue(r != null, "a listener 3 blocks from the alarm on board hears nothing");
+                h.assertTrue(
+                        new Vec3(r.x(), r.y(), r.z()).distanceTo(shown) < 1e-6,
+                        "the alarm sounds at " + r + ", it shows at " + shown);
+                east[0] += 3;
+            }
+        } finally {
+            Frames.removeForTest(source);
+        }
+        h.succeed();
     }
 }
