@@ -4,6 +4,9 @@ import io.github.west3436.zas.api.event.BlocksMovedEvent;
 import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.api.relocation.Destination;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
+import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +22,8 @@ import net.neoforged.bus.api.IEventBus;
 /**
  * Devices a mover has moved with their blocks (CONT-156, API-067): each link to a block that moved
  * with it follows that block; a link to one that stayed is kept within a dimension and dropped across
- * dimensions. An area air controller gives up its old position's pins, which its zone carried along,
+ * dimensions. A turbine controller and its turbine and compressor, which keep each other's places,
+ * do the same (CONT-190). An area air controller gives up its old position's pins, which its zone carried along,
  * and pins again from where it is; it keeps its central controller as the links do, and a central
  * controller keeps the area air controllers it had in the same way. Pipes, devices and portable
  * devices keep their gas while they are moved ({@link
@@ -48,6 +52,12 @@ public final class MovedDevices {
             BlockPos was = unmap(d, now);
             if (be instanceof AirlockControllerBlockEntity airlock) {
                 airlock.rebase(rebase);
+            } else if (be instanceof TurbineControllerBlockEntity turbineController) {
+                turbineController.rebase(rebase);
+            } else if (be instanceof TurbineBlockEntity turbine) {
+                turbine.rebase(rebase);
+            } else if (be instanceof CompressorBlockEntity compressor) {
+                compressor.rebase(rebase);
             } else if (be instanceof AreaAirControllerBlockEntity controller) {
                 controller.rebase(rebase);
                 ZonePins.unpin(from, AreaAirControllerBlockEntity.owner(was));

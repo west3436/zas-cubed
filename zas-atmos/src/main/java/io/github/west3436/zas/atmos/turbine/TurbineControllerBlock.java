@@ -23,11 +23,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A gas turbine controller (CONT-163, CONT-164): a full block, its screen facing the player who
+ * A gas turbine controller (CONT-163, CONT-190): a full block, its screen facing the player who
  * places it, set anywhere in reach of the engine's parts and of cables, outside the chamber. The
  * multitool selects it and then links a turbine, a compressor and an igniter to it ({@link
  * MultitoolItem}). It holds the engine's FE and offers it on every face, and its window drives the
- * engine. Its screen lights while the turbine runs ({@link #RUNNING}).
+ * engine. Its screen lights while the turbine runs ({@link #RUNNING}). Its redstone setting reads
+ * the signal here (CONT-170), and a comparator here reads its store (CONT-175).
  */
 public class TurbineControllerBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<TurbineControllerBlock> CODEC = simpleCodec(TurbineControllerBlock::new);
@@ -53,7 +54,8 @@ public class TurbineControllerBlock extends HorizontalDirectionalBlock implement
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        return defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
     /** Opens its window. The multitool selects it before this is asked. */
@@ -64,6 +66,17 @@ public class TurbineControllerBlock extends HorizontalDirectionalBlock implement
             sp.openMenu(be, be::writeMenu);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full its FE store is (CONT-175). */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof TurbineControllerBlockEntity c ? c.signal() : 0;
     }
 
     @Override

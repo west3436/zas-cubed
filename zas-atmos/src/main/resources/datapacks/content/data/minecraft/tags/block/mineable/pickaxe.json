@@ -35,6 +35,7 @@
     "zas_atmos:circulator",
     "zas_atmos:compressor",
     "zas_atmos:turbine",
+    "zas_atmos:turbine_controller",
     "zas_atmos:tank_holder",
     "zas_atmos:airlock",
     "zas_atmos:large_airlock",

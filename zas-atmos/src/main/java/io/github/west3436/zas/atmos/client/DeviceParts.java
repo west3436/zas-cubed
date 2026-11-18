@@ -30,6 +30,9 @@ final class DeviceParts {
     /** What a stepper's buttons add, whatever unit its value shows in (CLIENT-006). */
     static final String KELVIN = "K";
 
+    /** A rate in moles a second, as a stepper's unit. */
+    static final String MOL_PER_SECOND = "mol/s";
+
     static final String[] BIG_STEPS = {"−100", "−10", "+10", "+100"};
     static final String[] SMALL_STEPS = {"−10", "−1", "+1", "+10"};
 

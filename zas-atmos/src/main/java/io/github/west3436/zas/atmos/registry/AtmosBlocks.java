@@ -276,7 +276,7 @@ public final class AtmosBlocks {
     public static final DeferredBlock<TurbineBlock> TURBINE =
             BLOCKS.registerBlock("turbine", TurbineBlock::new, metal());
 
-    /** The gas turbine's controller, which drives it and holds its FE (CONT-163, CONT-164). */
+    /** The gas turbine's controller, which drives it and holds its FE (CONT-163, CONT-190). */
     public static final DeferredBlock<TurbineControllerBlock> TURBINE_CONTROLLER =
             BLOCKS.registerBlock("turbine_controller", TurbineControllerBlock::new, metal());
 

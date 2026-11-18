@@ -7,7 +7,7 @@ import java.util.Locale;
  * (CONT-163).
  */
 public enum TurbineStatus {
-    /** Switched off: the turbine lets nothing out and the compressor releases nothing; the shaft runs down. */
+    /** Switched off, or held by its controller's redstone setting: the turbine lets nothing out and the compressor releases nothing; the shaft runs down. */
     OFF,
     /** No turbine is linked, or it isn't loaded. */
     UNLINKED,

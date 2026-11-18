@@ -7,7 +7,10 @@ import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.power.EnergyStore;
@@ -15,7 +18,6 @@ import io.github.west3436.zas.atmos.power.WorkToFe;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
 import net.minecraft.core.BlockPos;
@@ -37,7 +39,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A gas turbine controller's block entity (CONT-163, CONT-164): it drives one engine, a turbine and its
+ * A gas turbine controller's block entity (CONT-163, CONT-190): it drives one engine, a turbine and its
  * compressor, and optionally an igniter, all linked with the multitool.
  *
  * <ul>
@@ -54,10 +56,15 @@ import org.jetbrains.annotations.Nullable;
  *       another controller takes it from this one. A mover rebases them ({@link #rebase}).
  * </ul>
  *
+ * <p><b>Redstone</b> (CONT-170): its redstone setting reads the signal at the controller. Held, the
+ * engine is as if switched off ({@link #runs}): its turbine lets nothing out, its compressor releases
+ * nothing, it sparks nothing by itself, and the shaft runs down. A comparator at the controller reads
+ * its FE store's fill ({@link #signal()}, CONT-175); the turbine and compressor have neither.
+ *
  * <p>For a redstone or computer reading: {@link #on()}, {@link #status()}, the turbine's rpm and
  * {@link #energy()}.
  */
-public class TurbineControllerBlockEntity extends AtmosDevice implements MenuProvider {
+public class TurbineControllerBlockEntity extends AtmosDevice implements MenuProvider, RedstoneControlled {
     /** Atmos ticks between auto sparks. */
     public static final int AUTO_SPARK_STEPS = 2;
 
@@ -73,19 +80,23 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
 
     /** Its links, by what is linked. */
     public enum Part {
-        TURBINE("Turbine"),
-        COMPRESSOR("Compressor"),
-        IGNITER("Igniter");
+        TURBINE("Turbine", "gui.zas_atmos.turbine_controller.turbine"),
+        COMPRESSOR("Compressor", "gui.zas_atmos.turbine_controller.compressor"),
+        IGNITER("Igniter", "gui.zas_atmos.turbine_controller.igniter");
 
+        /** The key its link is saved under. */
         final String tag;
 
-        Part(String tag) {
+        private final String key;
+
+        Part(String tag, String key) {
             this.tag = tag;
+            this.key = key;
         }
 
         /** Its word in the window. */
         public String key() {
-            return "gui.zas_atmos.turbine_controller." + tag.toLowerCase(Locale.ROOT);
+            return key;
         }
     }
 
@@ -98,6 +109,7 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
 
     private final EnergyStore energy = new EnergyStore(
             () -> AtmosServerConfig.get(AtmosServerConfig.TURBINE_BUFFER), false, true, this::setChanged);
+    private final RedstoneControl redstone = new RedstoneControl(this);
 
     private final BlockPos[] links = new BlockPos[Part.values().length];
 
@@ -150,7 +162,8 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
         if (level == null || at == null) {
             return null;
         }
-        BlockEntity be = level instanceof ServerLevel server ? LoadedBlocks.entity(server, at) : level.getBlockEntity(at);
+        BlockEntity be =
+                level instanceof ServerLevel server ? LoadedBlocks.entity(server, at) : level.getBlockEntity(at);
         if (be instanceof TurbineControllerBlockEntity c
                 && !c.isRemoved()
                 && (part.equals(c.links[Part.TURBINE.ordinal()]) || part.equals(c.links[Part.COMPRESSOR.ordinal()]))) {
@@ -163,7 +176,8 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
         if (pos == null || level == null) {
             return null;
         }
-        BlockEntity be = level instanceof ServerLevel server ? LoadedBlocks.entity(server, pos) : level.getBlockEntity(pos);
+        BlockEntity be =
+                level instanceof ServerLevel server ? LoadedBlocks.entity(server, pos) : level.getBlockEntity(pos);
         return be == null || be.isRemoved() ? null : be;
     }
 
@@ -208,7 +222,7 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
     }
 
     /** What part a block would be, or null. */
-    static @Nullable Part partAt(Level level, BlockPos pos) {
+    public static @Nullable Part partAt(Level level, BlockPos pos) {
         Block block = level.getBlockState(pos).getBlock();
         if (block instanceof TurbineBlock) {
             return Part.TURBINE;
@@ -272,8 +286,9 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
     @Override
     protected void atmosTick(ServerLevel level) {
         TurbineBlockEntity t = turbine();
+        boolean allowed = redstone.read();
         TurbineStatus next;
-        if (!on) {
+        if (!on || !allowed) {
             next = TurbineStatus.OFF;
         } else if (t == null) {
             next = TurbineStatus.UNLINKED;
@@ -286,20 +301,24 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
         status = next;
         boolean running = t != null && t.status() == TurbineStatus.RUNNING;
         BlockState state = getBlockState();
-        if (state.hasProperty(TurbineControllerBlock.RUNNING) && state.getValue(TurbineControllerBlock.RUNNING) != running) {
-            level.setBlock(worldPosition, state.setValue(TurbineControllerBlock.RUNNING, running), Block.UPDATE_CLIENTS);
+        if (state.hasProperty(TurbineControllerBlock.RUNNING)
+                && state.getValue(TurbineControllerBlock.RUNNING) != running) {
+            level.setBlock(
+                    worldPosition, state.setValue(TurbineControllerBlock.RUNNING, running), Block.UPDATE_CLIENTS);
         }
         if (sparkWait > 0) {
             sparkWait--;
         }
-        if (on && auto && t != null && sparkWait == 0 && wantsSpark(level, t) && ignite()) {
+        if (on && allowed && auto && t != null && sparkWait == 0 && wantsSpark(level, t) && ignite()) {
             sparkWait = AUTO_SPARK_STEPS;
         }
     }
 
     /** Whether its chamber isn't burning but would if sparked. */
     private boolean wantsSpark(ServerLevel level, TurbineBlockEntity t) {
-        if (fuel == null || !Double.isFinite(ratio()) || (t.status() != TurbineStatus.IDLE && t.status() != TurbineStatus.RUNNING)) {
+        if (fuel == null
+                || !Double.isFinite(ratio())
+                || (t.status() != TurbineStatus.IDLE && t.status() != TurbineStatus.RUNNING)) {
             return false;
         }
         AtmosphereSample chamber = Atmospheres.at(level, t.chamberPoint());
@@ -324,8 +343,8 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
         return true;
     }
 
-    /** One game tick: offers its FE to the blocks beside it. */
-    void serverTick() {
+    /** One game tick: offers its FE to the blocks beside it. Its block's ticker calls it. */
+    public void serverTick() {
         if (level instanceof ServerLevel server && energy.getEnergyStored() > 0) {
             WorkToFe.push(server, worldPosition, energy);
         }
@@ -336,6 +355,22 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
     /** Whether it is switched on. */
     public boolean on() {
         return on;
+    }
+
+    /** Whether the engine runs: switched on, and let run by its redstone setting at its last read. */
+    public boolean runs() {
+        return on && redstone.allows();
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
+    }
+
+    /** What a comparator reads (CONT-175): its store over its capacity. A change saves, which tells it. */
+    public int signal() {
+        int capacity = energy.getMaxEnergyStored();
+        return capacity <= 0 ? 0 : Comparators.fill((double) energy.getEnergyStored() / capacity);
     }
 
     /** Switches the engine on or off. Off, its turbine lets nothing out, its compressor releases nothing and its shaft runs down. */
@@ -420,10 +455,14 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
         return AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_BURN);
     }
 
-    /** Sets its burn rate, clamped to 0 to {@link #maxBurnRate}, to the hundredth. */
+    /** A burn rate clamped to 0 to {@link #maxBurnRate}; NaN is 0. */
+    public static double clampBurnRate(double rate) {
+        return Double.isNaN(rate) ? 0 : Math.max(0, Math.min(maxBurnRate(), rate));
+    }
+
+    /** Sets its burn rate, clamped ({@link #clampBurnRate}). */
     public void setBurnRate(double rate) {
-        double r = Double.isFinite(rate) ? rate : 0;
-        burnRate = Math.round(Math.max(0, Math.min(maxBurnRate(), r)) * 100) / 100.0;
+        burnRate = clampBurnRate(rate);
         setChanged();
     }
 
@@ -480,13 +519,18 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
             case TurbineControllerMenu.DATA_LINKS ->
                 (linked(Part.TURBINE) ? 1 : 0) | (linked(Part.COMPRESSOR) ? 2 : 0) | (linked(Part.IGNITER) ? 4 : 0);
             case TurbineControllerMenu.DATA_BUFFER_PRESSURE ->
-                c == null ? TurbineControllerMenu.NONE : TurbineControllerMenu.shortOf(Math.round(c.buffer().pressure()));
+                c == null
+                        ? TurbineControllerMenu.NONE
+                        : TurbineControllerMenu.shortOf(Math.round(c.buffer().pressure()));
             case TurbineControllerMenu.DATA_BUFFER_FUEL ->
-                c == null || fuel == null ? 0 : TurbineControllerMenu.shortOf(Math.round(c.buffer().partialPressure(fuel)));
+                c == null || fuel == null
+                        ? 0
+                        : TurbineControllerMenu.shortOf(Math.round(c.buffer().partialPressure(fuel)));
             case TurbineControllerMenu.DATA_BUFFER_OXIDIZER ->
                 c == null || oxidizer == null
                         ? 0
                         : TurbineControllerMenu.shortOf(Math.round(c.buffer().partialPressure(oxidizer)));
+            case TurbineControllerMenu.DATA_REDSTONE -> redstone.data();
             default -> 0;
         };
     }
@@ -511,6 +555,7 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
         tag.putBoolean(AUTO, auto);
         tag.putDouble(RATE, burnRate);
         tag.putInt(ENERGY, energy.getEnergyStored());
+        redstone.save(tag);
         if (fuel != null) {
             tag.putString(FUEL, fuel.toString());
         }
@@ -534,6 +579,7 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
             burnRate = DEFAULT_BURN_RATE;
         }
         energy.set(tag.getInt(ENERGY));
+        redstone.load(tag);
         fuel = tag.contains(FUEL) ? ResourceLocation.tryParse(tag.getString(FUEL)) : null;
         oxidizer = tag.contains(OXIDIZER) ? ResourceLocation.tryParse(tag.getString(OXIDIZER)) : null;
         for (Part p : Part.values()) {

@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.turbine;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.netty.buffer.ByteBuf;
@@ -20,7 +21,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A gas turbine controller's window (CONT-163): its switch and state, its links, the shaft's speed, the
  * chamber, the compressor's buffer, what the generator makes and what the controller has stored; and
- * its fuel, oxidizer, burn rate, igniter button and auto switch. The server fixes the fuel and oxidizer
+ * its fuel, oxidizer, burn rate, igniter button and auto switch, and its redstone setting (CONT-170).
+ * The server fixes the fuel and oxidizer
  * lists when the window opens and sends them, and a button names a gas only by its place in its list,
  * so a client can't name a gas the server doesn't burn. Menu data syncs as shorts, so the store's FE
  * comes in two halves.
@@ -87,7 +89,10 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
     /** The oxidizer's partial pressure in the buffer, kPa. */
     public static final int DATA_BUFFER_OXIDIZER = 18;
 
-    public static final int DATA_COUNT = 19;
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = 19;
+
+    public static final int DATA_COUNT = 20;
 
     /** A reading there is none of. */
     public static final int NONE = -1;
@@ -156,6 +161,11 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
         return TurbineStatus.of(data.get(DATA_STATUS));
     }
 
+    /** Its redstone setting and signal, as synced: read with {@link RedstoneControl#mode(int)} and the rest. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
     /** Whether a part is linked. */
     public boolean linked(TurbineControllerBlockEntity.Part part) {
         return (data.get(DATA_LINKS) & 1 << part.ordinal()) != 0;
@@ -181,6 +191,9 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
         if (controller == null || controller.isRemoved() || player.isSpectator()) {
             return false;
         }
+        if (RedstoneControl.isButton(id)) {
+            return controller.redstone().button(id);
+        }
         if (id == TOGGLE) {
             controller.setOn(!controller.on());
         } else if (id == AUTO) {
@@ -188,7 +201,8 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
         } else if (id == IGNITE) {
             return controller.ignite();
         } else if (id >= RATE_DOWN_TENTH && id < RATE_DOWN_TENTH + RATE_STEPS.length) {
-            controller.setBurnRate(controller.burnRate() + RATE_STEPS[id - RATE_DOWN_TENTH]);
+            double next = controller.burnRate() + RATE_STEPS[id - RATE_DOWN_TENTH];
+            controller.setBurnRate(Math.round(next * 100) / 100.0);
         } else if (id >= FUEL && id - FUEL < Math.min(fuels.size(), MOST_GASES)) {
             return controller.setFuel(fuels.get(id - FUEL));
         } else if (id >= OXIDIZER && id - OXIDIZER < Math.min(oxidizers.size(), MOST_GASES)) {

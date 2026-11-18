@@ -173,8 +173,10 @@ public class TurbineBlockEntity extends AtmosDevice {
         AtmosphereSample exhaust = Atmospheres.at(level, exhaustPoint());
         boolean chamberOk = chamberWatch.trust(chamber) && chamber.state() == AtmosphereState.ZONED;
         boolean exhaustOk = exhaustWatch.trust(exhaust);
-        chamberPressure = chamber.state() == AtmosphereState.ZONED ? chamber.mixture().pressure() : 0;
-        chamberTemperature = chamber.state() == AtmosphereState.ZONED ? chamber.mixture().temperature() : 0;
+        chamberPressure =
+                chamber.state() == AtmosphereState.ZONED ? chamber.mixture().pressure() : 0;
+        chamberTemperature =
+                chamber.state() == AtmosphereState.ZONED ? chamber.mixture().temperature() : 0;
         lastTurbineWork = 0;
         lastCompressorWork = compressorWorkSince;
         compressorWorkSince = 0;
@@ -182,7 +184,7 @@ public class TurbineBlockEntity extends AtmosDevice {
         TurbineStatus next;
         if (c == null) {
             next = TurbineStatus.UNLINKED;
-        } else if (!c.on()) {
+        } else if (!c.runs()) {
             next = TurbineStatus.OFF;
         } else if (comp == null || !comp.equals(c.compressorPos())) {
             next = TurbineStatus.NO_COMPRESSOR;

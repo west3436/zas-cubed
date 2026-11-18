@@ -24,7 +24,7 @@ import net.minecraft.world.phys.Vec3;
  * signal and power paid for, and stops if either is gone. It never touches gas itself: the
  * framework ignites a flammable mixture beside a lit igniter (API-053).
  *
- * <p>A gas turbine controller it is linked to can also spark it on command ({@link #spark}, CONT-164):
+ * <p>A gas turbine controller it is linked to can also spark it on command ({@link #spark}, CONT-191):
  * lit for {@value #COMMAND_STEPS} atmos ticks whatever its signal and power, as a single spark that
  * draws nothing.
  */
@@ -58,7 +58,7 @@ public class IgniterBlockEntity extends AtmosDevice implements PoweredDevice, La
     }
 
     /**
-     * Sparks it once, on command from a gas turbine controller (CONT-164): it is lit at once and for
+     * Sparks it once, on command from a gas turbine controller (CONT-191): it is lit at once and for
      * {@value #COMMAND_STEPS} atmos ticks, then goes back to following its signal. Server side.
      */
     public void spark() {

@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity.Part;
 import io.github.west3436.zas.atmos.turbine.TurbineControllerMenu;
 import io.github.west3436.zas.atmos.turbine.TurbineStatus;
@@ -14,15 +15,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * A gas turbine controller's window (CONT-163): its state and switch, and a tick or a cross for each
- * linked part; the shaft's speed as a bar, the chamber, the compressor's buffer, what it makes and
+ * A gas turbine controller's window (CONT-163): its state and switch, its redstone setting (CONT-170),
+ * and a tick or a cross for each linked part; the shaft's speed as a bar, the chamber, the compressor's buffer, what it makes and
  * what it has stored; the burn rate, the igniter's button and auto switch; then a box per fuel and per
  * oxidizer, of which the ticked one is what the compressor feeds.
  */
 final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
     private static final int WIDTH = 236;
     private static final int COLUMNS = 3;
-    private static final int STATE = 2 + Ui.BUTTON_ROW + Ui.ROW + 1;
+    private static final int STATE = 2 + 2 * Ui.BUTTON_ROW + Ui.ROW + 1;
     private static final int READINGS = 2 + 5 * Ui.ROW + 1;
     private static final int SETTINGS = 2 + 2 * Ui.BUTTON_ROW + 1;
     private static final String[] RATE_STEPS = {"−0.1", "−0.01", "+0.01", "+0.1"};
@@ -68,8 +69,17 @@ final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
         int row = y + 1;
         DeviceParts.label(ui, "state", labelX, row, Ui.BUTTON_HEIGHT);
         TurbineStatus status = menu.status();
-        DeviceParts.status(ui, Component.translatable(status.key()), colour(status), valueX, row, Ui.BUTTON_HEIGHT);
+        boolean held = menu.on() && RedstoneControl.holds(menu.redstone());
+        DeviceParts.status(
+                ui,
+                held ? DeviceParts.held() : Component.translatable(status.key()),
+                held ? Ui.AVERAGE : colour(status),
+                valueX,
+                row,
+                Ui.BUTTON_HEIGHT);
         DeviceParts.onOff(ui, x + w - Ui.PAD, row, menu.on(), () -> press(TurbineControllerMenu.TOGGLE));
+        row += Ui.BUTTON_ROW;
+        DeviceParts.redstone(ui, x, row, w, menu.redstone(), this::press);
         row += Ui.BUTTON_ROW;
         DeviceParts.label(ui, "links", labelX, row, Ui.ROW);
         int partX = valueX;
@@ -86,7 +96,15 @@ final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
         int rpm = menu.value(TurbineControllerMenu.DATA_RPM);
         int top = Math.max(1, menu.value(TurbineControllerMenu.DATA_TOP_RPM));
         DeviceParts.label(ui, "speed", labelX, row, Ui.ROW - 1);
-        ui.bar(valueX, row, valueW, Ui.ROW - 1, (double) rpm / top, Ui.BLUE, Ui.BLUE_EDGE, DeviceParts.text("rpm", rpm));
+        ui.bar(
+                valueX,
+                row,
+                valueW,
+                Ui.ROW - 1,
+                (double) rpm / top,
+                Ui.BLUE,
+                Ui.BLUE_EDGE,
+                DeviceParts.text("rpm", rpm));
         row += Ui.ROW;
         DeviceParts.label(ui, "chamber", labelX, row, Ui.ROW);
         int kpa = menu.value(TurbineControllerMenu.DATA_CHAMBER_PRESSURE);
@@ -102,17 +120,18 @@ final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
         DeviceParts.label(ui, "buffer", labelX, row, Ui.ROW);
         int buffer = menu.value(TurbineControllerMenu.DATA_BUFFER_PRESSURE);
         ui.line(
-                Component.literal(buffer == TurbineControllerMenu.NONE
-                        ? "—"
-                        : Readout.pressure(buffer)
-                                + "  "
-                                + share(menu.fuels(), menu.value(TurbineControllerMenu.DATA_FUEL))
-                                + " "
-                                + Readout.pressure(menu.value(TurbineControllerMenu.DATA_BUFFER_FUEL))
-                                + "  "
-                                + share(menu.oxidizers(), menu.value(TurbineControllerMenu.DATA_OXIDIZER))
-                                + " "
-                                + Readout.pressure(menu.value(TurbineControllerMenu.DATA_BUFFER_OXIDIZER))),
+                Component.literal(
+                        buffer == TurbineControllerMenu.NONE
+                                ? "—"
+                                : Readout.pressure(buffer)
+                                        + "  "
+                                        + share(menu.fuels(), menu.value(TurbineControllerMenu.DATA_FUEL))
+                                        + " "
+                                        + Readout.pressure(menu.value(TurbineControllerMenu.DATA_BUFFER_FUEL))
+                                        + "  "
+                                        + share(menu.oxidizers(), menu.value(TurbineControllerMenu.DATA_OXIDIZER))
+                                        + " "
+                                        + Readout.pressure(menu.value(TurbineControllerMenu.DATA_BUFFER_OXIDIZER))),
                 valueX,
                 row,
                 Ui.ROW,
@@ -138,7 +157,7 @@ final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
                 DeviceParts.text("mol_per_second", String.format(Locale.ROOT, "%.2f", rate)),
                 Ui.WHITE,
                 RATE_STEPS,
-                "mol/s",
+                DeviceParts.MOL_PER_SECOND,
                 i -> press(TurbineControllerMenu.RATE_DOWN_TENTH + i),
                 null,
                 null);
@@ -165,11 +184,20 @@ final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
         y += SETTINGS + Ui.PAD;
 
         y = gases(ui, x, y, w, "fuel", menu.fuels(), TurbineControllerMenu.DATA_FUEL, TurbineControllerMenu.FUEL);
-        gases(ui, x, y + Ui.PAD, w, "oxidizer", menu.oxidizers(), TurbineControllerMenu.DATA_OXIDIZER, TurbineControllerMenu.OXIDIZER);
+        gases(
+                ui,
+                x,
+                y + Ui.PAD,
+                w,
+                "oxidizer",
+                menu.oxidizers(),
+                TurbineControllerMenu.DATA_OXIDIZER,
+                TurbineControllerMenu.OXIDIZER);
     }
 
     /** A list of gases, the chosen one ticked; returns where it ends. */
-    private int gases(Ui ui, int x, int y, int w, String key, List<ResourceLocation> gases, int dataIndex, int firstButton) {
+    private int gases(
+            Ui ui, int x, int y, int w, String key, List<ResourceLocation> gases, int dataIndex, int firstButton) {
         int height = listHeight(gases);
         int top = ui.section(x, y, w, height, DeviceParts.text(key));
         int chosen = menu.value(dataIndex);
@@ -193,7 +221,9 @@ final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
 
     /** A gas's short name in a list by its index, or a dash. */
     private static String share(List<ResourceLocation> gases, int index) {
-        return index >= 0 && index < gases.size() ? GasParts.label(gases.get(index)).getString() : "—";
+        return index >= 0 && index < gases.size()
+                ? GasParts.label(gases.get(index)).getString()
+                : "—";
     }
 
     private static int colour(TurbineStatus status) {

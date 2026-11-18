@@ -204,14 +204,28 @@ final class Devices {
                         "getRedstoneMode",
                         "setRedstoneMode"));
         surface.put(
-                "zas_turbine",
+                "zas_turbine_controller",
                 List.of(
                         "isOn",
                         "setOn",
                         "getState",
+                        "getFuel",
+                        "setFuel",
+                        "getOxidizer",
+                        "setOxidizer",
+                        "getFuels",
+                        "getOxidizers",
+                        "getBurnRate",
+                        "setBurnRate",
+                        "getMaxBurnRate",
+                        "isAutoIgnite",
+                        "setAutoIgnite",
+                        "ignite",
+                        "getLinks",
                         "getRpm",
                         "getMaxRpm",
                         "getChamber",
+                        "getBuffer",
                         "getPower",
                         "getEnergy",
                         "getEnergyCapacity",
@@ -374,7 +388,7 @@ final class Devices {
             case "zas_portable_pump" -> AtmosBlocks.PORTABLE_PUMP.get();
             case "zas_generator" -> AtmosBlocks.GENERATOR.get();
             case "zas_teg" -> AtmosBlocks.TEG.get();
-            case "zas_turbine" -> AtmosBlocks.TURBINE.get();
+            case "zas_turbine_controller" -> AtmosBlocks.TURBINE_CONTROLLER.get();
             case "zas_gas_miner" -> AtmosBlocks.GAS_MINER.get();
             default -> throw new GameTestAssertException("no block for " + type);
         };

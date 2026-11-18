@@ -121,7 +121,7 @@ public class CompressorBlockEntity extends PipeNodeEntity {
         lastFuel = 0;
         lastOxidizer = 0;
         TurbineControllerBlockEntity c = controller();
-        if (c == null || !c.on()) {
+        if (c == null || !c.runs()) {
             reportStopped();
             return;
         }
@@ -138,7 +138,9 @@ public class CompressorBlockEntity extends PipeNodeEntity {
             return;
         }
         AtmosphereSample chamber = Atmospheres.at(level, chamberPoint());
-        if (!cellWatch().trust(chamber) || chamber.state() != AtmosphereState.ZONED || chamber.zone().isEmpty()) {
+        if (!cellWatch().trust(chamber)
+                || chamber.state() != AtmosphereState.ZONED
+                || chamber.zone().isEmpty()) {
             reportStopped();
             return;
         }

@@ -21,6 +21,7 @@ import io.github.west3436.zas.atmos.controller.ZonePriority;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.heater.ThermoMachineBlockEntity;
 import io.github.west3436.zas.atmos.heater.ThermoMachineMenu;
+import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceMenu;
 import io.github.west3436.zas.atmos.inline.SidePortMenu;
@@ -38,8 +39,8 @@ import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.teg.TegBlockEntity;
 import io.github.west3436.zas.atmos.teg.TegMenu;
-import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
-import io.github.west3436.zas.atmos.turbine.TurbineMenu;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerMenu;
 import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
@@ -684,8 +685,9 @@ public final class CcWriteTests {
     }
 
     /**
-     * A computer switches a TEG core and a gas turbine as their windows do, and a turbine's compressor
-     * is its turbine's peripheral; a compressor with no turbine is none (CONT-158, CONT-161).
+     * A computer switches a TEG core and a gas turbine controller as their windows do, and sets the
+     * controller's fuel, oxidizer, burn rate and auto relight over the window's ranges, and sparks its
+     * igniter; a turbine and its compressor are no peripherals (CONT-158, CONT-163, CONT-190, CONT-191).
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_161_the_teg_and_the_turbine_switch_as_their_windows_do(GameTestHelper h)
@@ -703,28 +705,58 @@ public final class CcWriteTests {
                 "the core's window refused its switch");
         h.assertFalse(tp.isOn(), "the core is still on after the window's switch");
 
-        // Intake | compressor | two open cells | turbine | exhaust, all passing gas east.
+        // A turbine and its compressor are no peripherals: the controller is the engine's one face.
+        TurbineControllerBlockEntity controller =
+                (TurbineControllerBlockEntity) Devices.place(s, "zas_turbine_controller", 4, 1, 1);
+        TurbineControllerPeripheral up = s.peripheral(4, 1, 1, TurbineControllerPeripheral.class);
         BlockState compressor =
                 AtmosBlocks.COMPRESSOR.get().defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST);
-        s.set(4, 1, 1, compressor);
-        h.assertTrue(
-                s.peripheral(s.abs(4, 1, 1), Direction.NORTH) == null, "a compressor with no turbine is a peripheral");
-        TurbineBlockEntity turbine = s.place(
-                7,
-                1,
-                1,
-                AtmosBlocks.TURBINE.get().defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST),
-                TurbineBlockEntity.class);
-        TurbinePeripheral up = s.peripheral(7, 1, 1, TurbinePeripheral.class);
-        TurbinePeripheral viaCompressor = s.peripheral(4, 1, 1, TurbinePeripheral.class);
-        h.assertTrue(viaCompressor.getTarget() == turbine, "the compressor isn't its turbine's peripheral");
-        h.assertTrue(viaCompressor.equals(up), "the compressor's and the turbine's peripherals aren't equal");
-        viaCompressor.setOn(true);
-        h.assertTrue(turbine.on(), "the turbine didn't switch on through its compressor");
-        h.assertTrue(
-                turbine.createMenu(1, player.getInventory(), player).clickMenuButton(player, TurbineMenu.TOGGLE),
-                "the turbine's window refused its switch");
-        h.assertFalse(up.isOn(), "the turbine is still on after the window's switch");
+        BlockState turbine =
+                AtmosBlocks.TURBINE.get().defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST);
+        s.set(6, 1, 1, compressor);
+        s.set(8, 1, 1, turbine);
+        controller.toggleLink(s.level, s.abs(6, 1, 1));
+        controller.toggleLink(s.level, s.abs(8, 1, 1));
+        h.assertTrue(s.peripheral(s.abs(6, 1, 1), Direction.NORTH) == null, "a compressor is a peripheral");
+        h.assertTrue(s.peripheral(s.abs(8, 1, 1), Direction.NORTH) == null, "a turbine is a peripheral");
+
+        up.setOn(true);
+        h.assertTrue(controller.on(), "the controller didn't switch on");
+        TurbineControllerMenu window = (TurbineControllerMenu) controller.createMenu(1, player.getInventory(), player);
+        h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.TOGGLE), "the window refused its switch");
+        h.assertFalse(up.isOn(), "the controller is still on after the window's switch");
+
+        up.setFuel(Spot.H2.toString());
+        up.setOxidizer(Spot.O2.toString());
+        h.assertValueEqual(controller.fuel(), Spot.H2, "the fuel a computer set");
+        h.assertValueEqual(controller.oxidizer(), Spot.O2, "the oxidizer a computer set");
+        h.assertValueEqual(
+                s.refused(() -> up.setFuel(Spot.N2.toString()), "nitrogen as a fuel"),
+                "not a fuel: " + Spot.N2,
+                "a gas that doesn't burn");
+        h.assertValueEqual(
+                s.refused(() -> up.setOxidizer(Spot.H2.toString()), "hydrogen as an oxidizer"),
+                "not an oxidizer: " + Spot.H2,
+                "a fuel as an oxidizer");
+        up.setBurnRate(0.5);
+        h.assertValueEqual(controller.burnRate(), 0.5, "the burn rate a computer set");
+        double most = TurbineControllerBlockEntity.maxBurnRate();
+        h.assertValueEqual(
+                s.refused(() -> up.setBurnRate(most + 1), "a burn rate past the most"),
+                "burn rate must be 0 to " + Lua.number(most) + " mol/s",
+                "the burn rate's range");
+        h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.RATE_DOWN_TENTH), "the rate's button");
+        h.assertValueEqual(up.getBurnRate(), 0.4, "the rate after the window's -0.1");
+        up.setAutoIgnite(false);
+        h.assertFalse(controller.autoIgnite(), "auto relight a computer switched off");
+
+        h.assertFalse(up.ignite(), "a spark with no igniter");
+        s.set(10, 0, 1, Spot.STONE);
+        IgniterBlockEntity igniter =
+                s.place(10, 1, 1, AtmosBlocks.IGNITER.get().defaultBlockState(), IgniterBlockEntity.class);
+        controller.toggleLink(s.level, igniter.getBlockPos());
+        h.assertTrue(up.ignite(), "a computer's spark was refused");
+        h.assertTrue(igniter.lit(), "the igniter didn't spark");
         Devices.clear(s);
         h.succeed();
     }

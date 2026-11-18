@@ -77,8 +77,8 @@ public final class AtmosMenus {
             MENUS.register("teg", () -> new MenuType<>(TegMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     /** A gas turbine controller's switch, settings and readings (CONT-163). */
-    public static final Supplier<MenuType<TurbineControllerMenu>> TURBINE_CONTROLLER = MENUS.register(
-            "turbine_controller", () -> IMenuTypeExtension.create(TurbineControllerMenu::new));
+    public static final Supplier<MenuType<TurbineControllerMenu>> TURBINE_CONTROLLER =
+            MENUS.register("turbine_controller", () -> IMenuTypeExtension.create(TurbineControllerMenu::new));
 
     /** A pressure pump's switch and target (CONT-011). */
     public static final Supplier<MenuType<PumpMenu>> PRESSURE_PUMP = MENUS.register(

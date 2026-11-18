@@ -12,7 +12,7 @@ import java.util.TreeMap;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * What the gas turbine can burn, from the engine's own reactions through the API (CONT-160, CONT-164):
+ * What the gas turbine can burn, from the engine's own reactions through the API (CONT-160, CONT-163):
  * no gas is named here. The fuels are the gases in {@link GasTags#FLAMMABLE} and the oxidizers those
  * in {@link GasTags#OXIDIZER}, as the fire code reads them, and a fuel and an oxidizer go together if
  * a spark burns a mixture of the two in {@link Reactions#applyStandalone}. The ratio is what that
@@ -40,8 +40,7 @@ public final class TurbineFuels {
         return burning(GasTags.OXIDIZER, GasTags.FLAMMABLE, false);
     }
 
-    private static List<ResourceLocation> burning(
-            GasTag mine, GasTag other, boolean fuel) {
+    private static List<ResourceLocation> burning(GasTag mine, GasTag other, boolean fuel) {
         List<ResourceLocation> out = new ArrayList<>();
         for (ResourceLocation gas : sorted(mine)) {
             for (ResourceLocation partner : sorted(other)) {
