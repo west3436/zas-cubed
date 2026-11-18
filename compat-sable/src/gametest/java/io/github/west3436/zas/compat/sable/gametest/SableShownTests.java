@@ -18,6 +18,11 @@ import io.github.west3436.zas.atmos.device.ClientDeviceActivity;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
 import io.github.west3436.zas.atmos.device.DeviceActivitySync;
+import io.github.west3436.zas.atmos.particle.DeviceJets;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
+import io.github.west3436.zas.atmos.particle.JetEmitters;
+import io.github.west3436.zas.atmos.particle.ParticleDensity;
+import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.config.AirflowConfig;
 import io.github.west3436.zas.engine.flow.FlowField;
 import io.github.west3436.zas.hotspot.GasFireScan;
@@ -30,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -45,7 +51,7 @@ import org.joml.Vector3d;
  * What a player sees, hears and reads of a sub-level is where the world shows it, not in its plot
  * (COMPAT-101, COMPAT-102, API-068): a breach on board hisses, puffs and pushes at the hole on the
  * ship, the way the ship turns it, its hull is in the way of a player the flow carries, devices on
- * board are heard there, and coordinates on board are on the ship.
+ * board are heard there and their vents puff there, and coordinates on board are on the ship.
  */
 @GameTestHolder(SableGateTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
@@ -373,6 +379,71 @@ public final class SableShownTests {
         } finally {
             DeviceActivitySync.reportForTest(d.level, device, DeviceActivity.IDLE, now);
         }
+        h.succeed();
+    }
+
+    /**
+     * A vent blowing on a flying, turned ship (CLIENT-019): its jet starts at its grille where the ship
+     * shows it, and its puffs go out the way the ship turns the vent. A vent on the ground blows from
+     * its grille the way it faces, as before. Before, the client measured to the vent in the ship's
+     * plot, so it showed nothing.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void client_019_a_vent_on_a_flying_ship_puffs_from_its_grille_the_way_the_ship_turns_it(
+            GameTestHelper h) {
+        Deck d = new Deck(h, h.getLevel(), 11);
+        d.box();
+        ServerSubLevel sub = d.assemble();
+        fly(d, sub);
+        BlockPos vent = Deck.onBoard(sub, 2, 1, 3);
+        Vec3 grille = shown(sub, Vec3.atCenterOf(vent).add(0, 0, -DeviceJets.MOUTH));
+        Vector3d turned = sub.logicalPose().orientation().transform(new Vector3d(0, 0, -1));
+        Vec3 out = new Vec3(turned.x, turned.y, turned.z);
+
+        DeviceJets.Placed jet = DeviceJets.place(d.level, vent, Direction.NORTH);
+        h.assertTrue(
+                jet.mouth().distanceTo(grille) < 1e-6,
+                "the jet starts at " + jet.mouth() + ", the grille shows at " + grille);
+        h.assertTrue(
+                jet.way().subtract(out).length() < 1e-6, "the jet points " + jet.way() + ", the vent faces " + out);
+
+        // The puffs, from a camera in the cabin.
+        Vec3 camera = shown(sub, Vec3.atCenterOf(Deck.onBoard(sub, 2, 2, 1)));
+        JetEmitters emitters = new JetEmitters(new Random(3));
+        List<double[]> puffs = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            emitters.add(
+                    "vent",
+                    GasJetKind.DEVICE,
+                    jet.mouth().x,
+                    jet.mouth().y,
+                    jet.mouth().z,
+                    jet.way().x,
+                    jet.way().y,
+                    jet.way().z,
+                    DeviceJets.vent(VentMode.BLOW, DeviceActivity.HARD));
+            emitters.tick(
+                    camera.x,
+                    camera.y,
+                    camera.z,
+                    ParticleDensity.ALL,
+                    (x, y, z, vx, vy, vz, lifetime, shade, size) -> puffs.add(new double[] {x, y, z, vx, vy, vz}));
+        }
+        h.assertFalse(puffs.isEmpty(), "no puffs");
+        for (double[] p : puffs) {
+            double off = grille.distanceTo(new Vec3(p[0], p[1], p[2]));
+            h.assertTrue(off < 1.5, "a puff starts " + off + " blocks from the grille");
+            double speed = Math.sqrt(p[3] * p[3] + p[4] * p[4] + p[5] * p[5]);
+            double along = (p[3] * out.x + p[4] * out.y + p[5] * out.z) / speed;
+            h.assertTrue(along > 0.8, "a puff goes " + along + " of its speed out of the grille");
+        }
+
+        // A vent on the ground blows from its grille the way it faces.
+        BlockPos ground = d.abs(2, 8, 2);
+        DeviceJets.Placed still = DeviceJets.place(d.level, ground, Direction.UP);
+        h.assertValueEqual(
+                still.mouth(), Vec3.atCenterOf(ground).add(0, DeviceJets.MOUTH, 0), "the ground vent's mouth");
+        h.assertValueEqual(still.way(), new Vec3(0, 1, 0), "the ground vent's way");
         h.succeed();
     }
 

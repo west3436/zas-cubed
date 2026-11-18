@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.device.DeviceActivity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.function.IntToDoubleFunction;
 import org.junit.jupiter.api.Test;
 
 /** What a client makes of its jets: the caps per source and in total, the setting, and that they end (CLIENT-017). */
@@ -337,5 +338,65 @@ class JetEmittersTest {
             double speed = Math.sqrt(s.vx * s.vx + s.vy * s.vy + s.vz * s.vz);
             assertTrue(s.vx / speed >= Math.cos(JetPlan.SPRAY_SPREAD) - 1e-9, "outside the cone");
         }
+    }
+    /**
+     * A vent's puffs, the same vent kept still and asked for at {@code z(i)} on tick i: each pair made
+     * with the same random draws, the still one's first.
+     */
+    private static List<Spawned[]> beside(IntToDoubleFunction z, double level, int ticks) {
+        JetEmitters still = new JetEmitters(new Random(1));
+        JetEmitters moving = new JetEmitters(new Random(1));
+        List<Spawned> a = new ArrayList<>();
+        List<Spawned> b = new ArrayList<>();
+        for (int i = 0; i < ticks; i++) {
+            still.add("vent", GasJetKind.DEVICE, 1, 0, 0, 1, 0, 0, level);
+            moving.add("vent", GasJetKind.DEVICE, 1, 0, z.applyAsDouble(i), 1, 0, 0, level);
+            assertEquals(1, moving.sources(), "sources after " + (i + 1) + " ticks");
+            still.tick(
+                    0,
+                    0,
+                    0,
+                    ParticleDensity.ALL,
+                    (x, y, zz, vx, vy, vz, l, shade, size) -> a.add(new Spawned(x, y, zz, vx, vy, vz, shade)));
+            moving.tick(
+                    0,
+                    0,
+                    0,
+                    ParticleDensity.ALL,
+                    (x, y, zz, vx, vy, vz, l, shade, size) -> b.add(new Spawned(x, y, zz, vx, vy, vz, shade)));
+            assertEquals(a.size(), b.size(), "particles after " + (i + 1) + " ticks");
+        }
+        List<Spawned[]> out = new ArrayList<>();
+        for (int i = 0; i < a.size(); i++) {
+            out.add(new Spawned[] {a.get(i), b.get(i)});
+        }
+        return out;
+    }
+
+    /**
+     * A working vent on a moving Sable ship, asked for each tick a little further on (COMPAT-101): it
+     * keeps one source, so its share of particles builds up as a still one's does, and each of its
+     * particles is carried by the ship's move on top of what a still vent's gets.
+     */
+    @Test
+    void client_019_a_vent_on_a_moving_ship_keeps_its_source_and_is_carried() {
+        double move = 0.1; // 20 blocks in all, within range of the camera
+        int ticks = 200;
+        List<Spawned[]> pairs = beside(i -> i * move, DeviceActivity.WORKING, ticks);
+        double perTick = JetPlan.of(GasJetKind.DEVICE, DeviceActivity.WORKING).perTick();
+        assertEquals(perTick * ticks, pairs.size(), 1.0, "particles over " + ticks + " ticks");
+        for (Spawned[] p : pairs) {
+            assertEquals(p[0].vx, p[1].vx, 1e-9, "the way out changed");
+            assertEquals(p[0].vz + move, p[1].vz, 1e-9, "not carried by the ship");
+        }
+    }
+
+    /** A named jet that jumped further than a ship flies in a tick, as by a teleport, carries nothing. */
+    @Test
+    void client_019_a_jet_that_jumped_carries_nothing() {
+        List<Spawned[]> pairs = beside(i -> i < 20 ? 0 : 2 * JetEmitters.MAX_CARRIED, DeviceActivity.HARD, 21);
+        Spawned[] last = pairs.get(pairs.size() - 1);
+        assertEquals(last[0].vz, last[1].vz, 1e-9, "carried by the jump");
+        assertEquals(last[0].z + 2 * JetEmitters.MAX_CARRIED, last[1].z, 1e-9, "not where it jumped to");
     }
 }

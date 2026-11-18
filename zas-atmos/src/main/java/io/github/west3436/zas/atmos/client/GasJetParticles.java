@@ -14,7 +14,6 @@ import java.util.SplittableRandom;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,6 +29,9 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  */
 final class GasJetParticles {
     private static final JetEmitters EMITTERS = new JetEmitters(new SplittableRandom());
+
+    /** What names a device's jet: its block, so a jet on a moving ship keeps its source. */
+    private record Device(long pos) {}
 
     /** The level the jets are in: another level, or none, ends them. */
     private static ClientLevel showingIn;
@@ -76,18 +78,11 @@ final class GasJetParticles {
     /**
      * Asks for a jet from each vent and scrubber in range that is working, for this game tick. Its way
      * comes from its block state, so a device whose block has gone, or that has just been switched off,
-     * shows nothing whatever the table says.
+     * shows nothing whatever the table says. One on a Sable ship starts at its grille where the ship
+     * shows it, the way the ship turns it, and is carried along as the ship moves (COMPAT-101).
      */
     private static void askForDevices(ClientLevel level, Vec3 camera) {
-        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
-        ClientDeviceActivity.LOCAL.forEach((pos, activity) -> {
-            at.set(pos);
-            double x = at.getX() + 0.5;
-            double y = at.getY() + 0.5;
-            double z = at.getZ() + 0.5;
-            if (camera.distanceToSqr(x, y, z) > JetEmitters.RANGE * JetEmitters.RANGE) {
-                return;
-            }
+        ClientDeviceActivity.LOCAL.forEachHeard(level, camera, JetEmitters.RANGE, (at, activity, shown) -> {
             BlockState state = level.getBlockState(at);
             double amount;
             Direction facing;
@@ -101,14 +96,16 @@ final class GasJetParticles {
                 return;
             }
             if (amount != 0) {
+                DeviceJets.Placed jet = DeviceJets.place(level, at, facing);
                 EMITTERS.add(
+                        new Device(at.asLong()),
                         GasJetKind.DEVICE,
-                        x + facing.getStepX() * DeviceJets.MOUTH,
-                        y + facing.getStepY() * DeviceJets.MOUTH,
-                        z + facing.getStepZ() * DeviceJets.MOUTH,
-                        facing.getStepX(),
-                        facing.getStepY(),
-                        facing.getStepZ(),
+                        jet.mouth().x,
+                        jet.mouth().y,
+                        jet.mouth().z,
+                        jet.way().x,
+                        jet.way().y,
+                        jet.way().z,
                         amount);
             }
         });
