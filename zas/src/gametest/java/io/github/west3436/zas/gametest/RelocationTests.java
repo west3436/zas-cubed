@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -59,7 +60,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Moving blocks with their air through {@link Relocations} in a real level (API-065, API-066, API-067,
- * GEO-046, GEO-047, DATA-020).
+ * API-069, GEO-046, GEO-047, DATA-020).
  *
  * <p>Each test moves its blocks itself, as a mover mod would: it begins, takes the blocks away, sets
  * them at the destination turned as the destination says, carries the entities, and completes, all
@@ -131,7 +132,11 @@ public final class RelocationTests {
      * @return the ticket and the complete's future
      */
     private static Move move(ServerLevel from, BoundingBox box, Destination d) {
-        RelocationTicket ticket = Relocations.begin(from, box, MOVER);
+        return move(from, box, d, Relocations.begin(from, box, MOVER));
+    }
+
+    /** {@link #move(ServerLevel, BoundingBox, Destination)} under a ticket already begun. */
+    private static Move move(ServerLevel from, BoundingBox box, Destination d, RelocationTicket ticket) {
         Map<BlockPos, BlockState> states = new LinkedHashMap<>();
         for (BlockPos p : BlockPos.betweenClosed(
                 new BlockPos(box.minX(), box.minY(), box.minZ()), new BlockPos(box.maxX(), box.maxY(), box.maxZ()))) {
@@ -491,6 +496,48 @@ public final class RelocationTests {
                     Relocations.begin(r.level, BoundingBox.fromCorners(far, far.offset(4, 4, 4)), MOVER);
             h.assertTrue(unloaded.begun().isDone(), "an unloaded begin didn't answer at once");
             h.assertValueEqual(unloaded.begun().join().outcome(), RelocationOutcome.UNLOADED, "an unloaded begin");
+        });
+        h.succeed();
+    }
+
+    /**
+     * A begin that names the destination holds it as moving from the begin, not from the complete,
+     * and lets it go when the ticket ends, cancelled or arrived (API-069). The room moves as it does
+     * without one.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100, batch = BATCH)
+    public static void api_069_a_named_destination_is_moving_from_the_begin(GameTestHelper h) {
+        Rooms r = rooms(h, h.getLevel(), 7, 100);
+        r.clear(0, 30);
+        r.shell(0, 4);
+        Rooms.withoutHeat(() -> {
+            ZoneInfo before = fill(r, 2, 2, 2, 110);
+            BoundingBox box = box(r, 0, 0, 4, 4);
+            Destination d = Destination.offset(r.level, new Vec3i(20, 0, 0));
+
+            RelocationTicket cancelled = Relocations.begin(r.level, box, d, MOVER);
+            h.assertValueEqual(cancelled.destination(), Optional.of(d), "the ticket's destination");
+            h.assertTrue(Relocations.isMoving(r.level, r.abs(2, 2, 2)), "the box isn't moving");
+            h.assertTrue(Relocations.isMoving(r.level, r.abs(22, 2, 2)), "the destination isn't moving");
+            h.assertFalse(Relocations.isMoving(r.level, r.abs(25, 2, 2)), "a block past the destination is moving");
+            h.assertValueEqual(r.settle(cancelled.begun()).outcome(), RelocationOutcome.BEGUN, "the begin");
+            h.assertTrue(Relocations.isMoving(r.level, r.abs(22, 2, 2)), "the destination isn't moving once begun");
+            h.assertValueEqual(
+                    r.settle(Relocations.cancel(cancelled)).outcome(), RelocationOutcome.CANCELLED, "the cancel");
+            h.assertFalse(Relocations.isMoving(r.level, r.abs(22, 2, 2)), "the destination is moving after the cancel");
+            h.assertFalse(Relocations.isMoving(r.level, r.abs(2, 2, 2)), "the box is moving after the cancel");
+            r.tick();
+
+            RelocationTicket ticket = Relocations.begin(r.level, box, d, MOVER);
+            h.assertTrue(Relocations.isMoving(r.level, r.abs(22, 2, 2)), "the destination isn't moving");
+            RelocationResult moved = r.settle(move(r.level, box, d, ticket).done());
+            h.assertValueEqual(moved.outcome(), RelocationOutcome.MOVED, "the move");
+            h.assertFalse(Relocations.isMoving(r.level, r.abs(22, 2, 2)), "still moving after it arrived");
+            carried(h, before, r.zone(22, 2, 2), "after the move");
+            RelocationTicket unnamed = Relocations.begin(r.level, box, MOVER);
+            h.assertTrue(unnamed.destination().isEmpty(), "a ticket begun without a destination has one");
+            h.assertFalse(Relocations.isMoving(r.level, r.abs(22, 2, 2)), "an unnamed destination is moving");
+            r.settle(Relocations.cancel(unnamed));
         });
         h.succeed();
     }

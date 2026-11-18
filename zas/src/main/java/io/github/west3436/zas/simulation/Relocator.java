@@ -24,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The server's side of moves (API-065, API-067): the open tickets, what each step waits for, and the
@@ -56,6 +57,13 @@ public final class Relocator {
         CompletableFuture<RelocationResult> completed;
         DimensionAtmos target;
         BoundingBox targetBox;
+        /** Where the begin said the blocks go (API-069), held as moving until the complete. */
+        @Nullable
+        ServerLevel plannedLevel;
+
+        @Nullable
+        BoundingBox plannedBox;
+
         long[] targetChunks = new long[0];
         int waiting;
         final Map<ZoneId, ZoneId> moved = new LinkedHashMap<>();
@@ -71,12 +79,21 @@ public final class Relocator {
         this.service = service;
     }
 
-    /** Starts a move ({@link io.github.west3436.zas.api.relocation.Relocations#begin}). */
-    public RelocationTicket begin(ServerLevel level, BoundingBox box, SourceId mover) {
+    /**
+     * Starts a move ({@link io.github.west3436.zas.api.relocation.Relocations#begin}). A destination
+     * named now is held as moving from now on (API-069), so blocks set down there before the move
+     * completes wait for the rest.
+     */
+    public RelocationTicket begin(
+            ServerLevel level, BoundingBox box, @Nullable Destination destination, SourceId mover) {
         DimensionAtmos d = service.dimensionFor(level);
         CompletableFuture<RelocationResult> begun = new CompletableFuture<>();
-        RelocationTicket ticket = new RelocationTicket(level, box, mover, nextTicket++, begun);
+        RelocationTicket ticket = new RelocationTicket(level, box, destination, mover, nextTicket++, begun);
         Move m = new Move(ticket, d, level.getServer().getTickCount());
+        if (destination != null) {
+            m.plannedLevel = destination.level();
+            m.plannedBox = destination.map(box);
+        }
         if (!allLoaded(d, box)) {
             end(m, RelocationOutcome.UNLOADED);
             begun.complete(RelocationResult.of(RelocationOutcome.UNLOADED));
@@ -253,14 +270,15 @@ public final class Relocator {
         return f;
     }
 
-    /** Whether a move holds a block (API-067). */
+    /** Whether a move holds a block (API-067, API-069). */
     public boolean isMoving(ServerLevel level, BlockPos pos) {
         for (Move m : moves.values()) {
             if (m.state == State.COMPLETING) {
                 if (m.target.level() == level && m.targetBox.isInside(pos)) {
                     return true;
                 }
-            } else if (m.ticket.level() == level && m.ticket.box().isInside(pos)) {
+            } else if ((m.ticket.level() == level && m.ticket.box().isInside(pos))
+                    || (m.plannedLevel == level && m.plannedBox.isInside(pos))) {
                 return true;
             }
         }

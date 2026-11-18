@@ -623,6 +623,30 @@ public interface ZasApiProvider {
     }
 
     /**
+     * Starts a move of a box of blocks whose destination is known, suspending the zones wholly inside
+     * it and holding both boxes as moving (API-065, API-069).
+     *
+     * <p>The default begins without the destination, as {@link #beginRelocation(ServerLevel,
+     * BoundingBox, SourceId)} does: the fallback's answer, a ticket whose begin is {@link
+     * RelocationResult#ABSENT} at once, unless that is overridden. It is there for the same reason as
+     * {@link #pin}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level the blocks leave
+     * @param box the blocks
+     * @param destination where they go
+     * @param mover who moves them
+     * @return the ticket
+     * @since 1.3.0
+     */
+    @ServerThread
+    default RelocationTicket beginRelocation(
+            ServerLevel level, BoundingBox box, Destination destination, SourceId mover) {
+        return beginRelocation(level, box, mover);
+    }
+
+    /**
      * Ends a move, carrying the ticket's zones to the destination (API-065).
      *
      * <p>The default is the fallback's answer: {@link RelocationResult#ABSENT} at once. It is there
@@ -667,7 +691,8 @@ public interface ZasApiProvider {
      *
      * @param level the level
      * @param pos the block
-     * @return whether it is in an open ticket's box or a destination not yet arrived at
+     * @return whether it is in an open ticket's box, the destination an open ticket named at its
+     *     begin, or a destination not yet arrived at
      * @since 1.2.0
      */
     @ServerThread
