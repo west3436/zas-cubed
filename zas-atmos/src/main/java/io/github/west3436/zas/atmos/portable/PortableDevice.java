@@ -2,6 +2,9 @@ package io.github.west3436.zas.atmos.portable;
 
 import io.github.west3436.zas.atmos.battery.Batteries;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.device.Comparators;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -25,10 +28,12 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * io.github.west3436.zas.atmos.power.PoweredDevice}, so no area air controller powers, orders or
  * lists it, and a link to it doesn't hold.
  */
-public abstract class PortableDevice extends AtmosDevice implements MenuProvider {
+public abstract class PortableDevice extends AtmosDevice implements MenuProvider, RedstoneControlled {
     private static final String ON = "On";
 
     private final Batteries.Slot battery = new Batteries.Slot(this::setChanged);
+    private final RedstoneControl redstone = new RedstoneControl(this);
+    private final Comparators.Output comparator = new Comparators.Output();
     private boolean on;
 
     protected PortableDevice(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -57,9 +62,39 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
         return e == null ? 0 : e.getMaxEnergyStored();
     }
 
+    /**
+     * What a comparator reads (CONT-175): its battery's charge over its capacity, 0 with none. A pump
+     * or scrubber reads its store instead.
+     */
+    public int signal() {
+        int capacity = capacity();
+        return capacity <= 0 ? 0 : Comparators.fill((double) energy() / capacity);
+    }
+
+    /** Tells its comparators what {@link #signal()} reads now, if that changed: at the end of each step. */
+    protected final void updateComparator(ServerLevel level) {
+        if (!isRemoved()) {
+            comparator.update(level, worldPosition, getBlockState().getBlock(), signal());
+        }
+    }
+
     /** Whether it is switched on. */
     public boolean on() {
         return on;
+    }
+
+    @Override
+    public RedstoneControl redstone() {
+        return redstone;
+    }
+
+    /**
+     * Whether it works at this step: switched on, and let run by its redstone setting, which this
+     * reads now (CONT-170). A step calls it once, at its start.
+     */
+    protected final boolean runs() {
+        redstone.read();
+        return on && redstone.allows();
     }
 
     /**
@@ -74,7 +109,7 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
             if (!isRemoved() && level instanceof ServerLevel server) {
                 server.playSound(null, worldPosition, on ? switchOnSound() : switchOffSound(), SoundSource.BLOCKS);
                 boolean working = false;
-                if (on) {
+                if (on && redstone.allows()) {
                     working = reportNextStep(server);
                 } else {
                     reportStopped();
@@ -123,6 +158,7 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
             case PortableMenu.DATA_ENERGY_HI -> energy() >>> 16;
             case PortableMenu.DATA_CAPACITY_LO -> capacity() & 0xFFFF;
             case PortableMenu.DATA_CAPACITY_HI -> capacity() >>> 16;
+            case PortableMenu.DATA_REDSTONE -> redstone.data();
             default -> 0;
         };
     }
@@ -150,6 +186,7 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
         super.saveAdditional(tag, registries);
         tag.putBoolean(ON, on);
         battery.save(tag, registries);
+        redstone.save(tag);
     }
 
     @Override
@@ -157,6 +194,7 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
         super.loadAdditional(tag, registries);
         on = tag.getBoolean(ON);
         battery.load(tag, registries);
+        redstone.load(tag);
     }
 
     @Override

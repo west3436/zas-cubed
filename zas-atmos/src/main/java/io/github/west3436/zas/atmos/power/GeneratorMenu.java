@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.power;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -14,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The generator's GUI (CONT-074): one fuel slot, which takes only furnace fuel, and the burn
@@ -26,10 +28,17 @@ public class GeneratorMenu extends AbstractContainerMenu {
     public static final int FUEL_Y = 23;
 
     /** Where the player's inventory starts. */
-    public static final int INVENTORY_Y = 49;
+    public static final int INVENTORY_Y = 60;
+
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170), after its burn and store. */
+    public static final int DATA_REDSTONE = 4;
+
+    /** How many values it syncs. */
+    public static final int DATA_COUNT = 5;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
+    private final @Nullable GeneratorBlockEntity generator;
 
     /** On the server. */
     public GeneratorMenu(int id, Inventory inventory, GeneratorBlockEntity generator, ContainerData data) {
@@ -38,7 +47,8 @@ public class GeneratorMenu extends AbstractContainerMenu {
                 inventory,
                 generator.fuel(),
                 data,
-                ContainerLevelAccess.create(generator.getLevel(), generator.getBlockPos()));
+                ContainerLevelAccess.create(generator.getLevel(), generator.getBlockPos()),
+                generator);
     }
 
     /** On the client. */
@@ -52,16 +62,23 @@ public class GeneratorMenu extends AbstractContainerMenu {
                         return GeneratorBlockEntity.isFuel(stack);
                     }
                 },
-                new SimpleContainerData(4),
-                ContainerLevelAccess.NULL);
+                new SimpleContainerData(DATA_COUNT),
+                ContainerLevelAccess.NULL,
+                null);
         buf.readBlockPos();
     }
 
     private GeneratorMenu(
-            int id, Inventory inventory, IItemHandler fuel, ContainerData data, ContainerLevelAccess access) {
+            int id,
+            Inventory inventory,
+            IItemHandler fuel,
+            ContainerData data,
+            ContainerLevelAccess access,
+            @Nullable GeneratorBlockEntity generator) {
         super(AtmosMenus.GENERATOR.get(), id);
         this.data = data;
         this.access = access;
+        this.generator = generator;
         addSlot(new SlotItemHandler(fuel, 0, FUEL_X, FUEL_Y));
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -90,6 +107,19 @@ public class GeneratorMenu extends AbstractContainerMenu {
 
     public int capacity() {
         return data.get(3);
+    }
+
+    /** Its redstone setting and signal, as synced. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
+    /** Applies a button, on the server: its redstone setting's are its only ones. */
+    @Override
+    public boolean clickMenuButton(Player player, int id) {
+        return generator != null
+                && !generator.isRemoved()
+                && generator.redstone().button(id);
     }
 
     @Override

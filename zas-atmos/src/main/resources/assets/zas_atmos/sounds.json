@@ -166,6 +166,34 @@
     "subtitle": "subtitles.zas_atmos.device.generator.off",
     "sounds": [{ "name": "zas_atmos:device/click", "pitch": 0.7, "volume": 0.35 }]
   },
+  "device.teg.run": {
+    "subtitle": "subtitles.zas_atmos.device.teg.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "pitch": 0.6, "volume": 0.3 }]
+  },
+  "device.circulator.run": {
+    "subtitle": "subtitles.zas_atmos.device.circulator.run",
+    "sounds": [{ "name": "zas_atmos:device/rush", "pitch": 0.9, "volume": 0.2 }]
+  },
+  "device.turbine.run": {
+    "subtitle": "subtitles.zas_atmos.device.turbine.run",
+    "sounds": [{ "name": "zas_atmos:device/engine", "volume": 0.5 }]
+  },
+  "device.teg.on": {
+    "subtitle": "subtitles.zas_atmos.device.teg.on",
+    "sounds": [{ "name": "zas_atmos:device/click", "pitch": 0.85, "volume": 0.35 }]
+  },
+  "device.teg.off": {
+    "subtitle": "subtitles.zas_atmos.device.teg.off",
+    "sounds": [{ "name": "zas_atmos:device/click", "pitch": 0.75, "volume": 0.35 }]
+  },
+  "device.turbine.on": {
+    "subtitle": "subtitles.zas_atmos.device.turbine.on",
+    "sounds": [{ "name": "zas_atmos:device/click", "pitch": 0.65, "volume": 0.4 }]
+  },
+  "device.turbine.off": {
+    "subtitle": "subtitles.zas_atmos.device.turbine.off",
+    "sounds": [{ "name": "zas_atmos:device/click", "pitch": 0.55, "volume": 0.4 }]
+  },
   "device.controller.on": {
     "subtitle": "subtitles.zas_atmos.device.controller.on",
     "sounds": [{ "name": "zas_atmos:device/click", "pitch": 1.6, "volume": 0.35 }]

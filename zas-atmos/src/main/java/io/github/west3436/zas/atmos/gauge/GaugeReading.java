@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gauge;
 
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.gas.GasStore;
@@ -61,6 +62,12 @@ public enum GaugeReading implements StringRepresentable {
     /** The temperature at the top of the scale, K. */
     public static final double TOP_KELVIN = 1000;
 
+    /**
+     * The pressure at the top of an air sensor's scale, kPa: 2 atm, so a room at 1 atm reads half way
+     * (CONT-177).
+     */
+    public static final double ROOM_TOP_KPA = 2 * ContainerFailure.ATM_KPA;
+
     private static final GaugeReading[] ALL = values();
 
     private final String name;
@@ -115,6 +122,49 @@ public enum GaugeReading implements StringRepresentable {
             case TEMPERATURE -> gas.temperature();
             default -> gas.moles(this.gas) / gas.totalMoles();
         };
+    }
+
+    /**
+     * The value it reads of a room's air, as an air sensor reads it (CONT-177): kPa, K, or a share
+     * from 0 to 1. No gas reads 0.
+     *
+     * @param air the air read
+     * @return the value
+     */
+    public double value(GasMixture air) {
+        double total = air.totalMoles();
+        if (!(total > 0)) {
+            return 0;
+        }
+        return switch (this) {
+            case PRESSURE -> air.pressure();
+            case TEMPERATURE -> air.temperature();
+            default -> air.moles(this.gas) / total;
+        };
+    }
+
+    /**
+     * Where an air sensor's reading stands on its scale (CONT-177): as {@link #along}, but a pressure
+     * runs straight from none to {@link #ROOM_TOP_KPA}, as a room's air has no burst pressure.
+     *
+     * @param value what {@link #value(GasMixture)} read
+     * @return 0 to 1
+     */
+    public double alongInRoom(double value) {
+        if (this != PRESSURE) {
+            return along(value, false);
+        }
+        return value > 0 ? Math.min(1, value / ROOM_TOP_KPA) : 0;
+    }
+
+    /** The reading a word names, as {@link #getSerializedName}, or null for none. */
+    public static @Nullable GaugeReading named(String word) {
+        for (GaugeReading reading : ALL) {
+            if (reading.name.equals(word)) {
+                return reading;
+            }
+        }
+        return null;
     }
 
     /**

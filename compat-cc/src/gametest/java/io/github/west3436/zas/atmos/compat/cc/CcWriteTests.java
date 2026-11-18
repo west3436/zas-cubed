@@ -21,6 +21,7 @@ import io.github.west3436.zas.atmos.controller.ZonePriority;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.heater.ThermoMachineBlockEntity;
 import io.github.west3436.zas.atmos.heater.ThermoMachineMenu;
+import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceMenu;
 import io.github.west3436.zas.atmos.inline.SidePortMenu;
@@ -36,6 +37,11 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
+import io.github.west3436.zas.atmos.teg.TegBlockEntity;
+import io.github.west3436.zas.atmos.teg.TegMenu;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerMenu;
+import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
@@ -52,6 +58,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -508,6 +515,54 @@ public final class CcWriteTests {
     }
 
     /**
+     * An area air controller's thermostat takes a target from a computer as from its window: from
+     * the lowest to the highest the window's buttons reach, refused beyond them, and off with nil, as
+     * the window's switch (CONT-165).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_165_an_area_air_controller_takes_a_target_temperature(GameTestHelper h)
+            throws LuaException {
+        Spot s = new Spot(h, 5720);
+        Devices.clear(s);
+        Player player = player(h);
+        AreaAirControllerBlockEntity controller = Devices.areaAirController(s, 2, 2, 2);
+        AreaAirControllerPeripheral p = s.peripheral(2, 2, 2, AreaAirControllerPeripheral.class);
+        ControllerMenu window = new ControllerMenu(1, player.getInventory(), controller);
+        h.assertValueEqual(p.getThermostat(), "off", "a new controller's thermostat");
+        h.assertTrue(p.getTargetTemperature() == null, "an off thermostat has a target");
+
+        h.assertTrue(window.clickMenuButton(player, ControllerMenu.THERMOSTAT), "the window's switch");
+        h.assertValueEqual(p.getTargetTemperature(), controller.target(), "the target the window's switch set");
+        h.assertValueEqual(p.getThermostat(), "idle", "a thermostat switched on");
+        DoubleSupplier target = controller::target;
+        double low = pressed(s, window, player, ControllerMenu.TARGET, target);
+        double high = pressed(s, window, player, ControllerMenu.TARGET + 3, target);
+        String range = "target temperature must be " + Lua.number(low) + " to " + Lua.number(high) + " K";
+        p.setTargetTemperature(Optional.of(low));
+        h.assertValueEqual(controller.target(), low, "the target at the window's lowest");
+        p.setTargetTemperature(Optional.of(high));
+        h.assertValueEqual(controller.target(), high, "the target at the window's highest");
+        p.setTargetTemperature(Optional.of(300.5));
+        h.assertValueEqual(controller.target(), 300.5, "the target set");
+        h.assertValueEqual(window.sync().target(), 300.5, "the window's target");
+        for (double beyond : new double[] {high + 0.001, low - 0.001, -1, Double.NaN, Double.POSITIVE_INFINITY}) {
+            h.assertValueEqual(
+                    s.refused(() -> p.setTargetTemperature(Optional.of(beyond)), "a target of " + beyond),
+                    range,
+                    "a target of " + beyond);
+        }
+        h.assertValueEqual(controller.target(), 300.5, "the target after the refusals");
+
+        p.setTargetTemperature(Optional.empty());
+        h.assertTrue(Double.isNaN(controller.target()), "nil left the thermostat on");
+        h.assertValueEqual(p.getThermostat(), "off", "the thermostat turned off");
+        h.assertValueEqual(window.sync().thermostat(), 0, "the window's thermostat");
+        h.assertFalse(window.clickMenuButton(player, ControllerMenu.TARGET + 3), "the window stepped an off target");
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /**
      * A central atmospherics controller takes a range and a zone's priority from a computer as from
      * its window, and refuses a range the window can't reach and a controller it hasn't claimed.
      */
@@ -625,6 +680,83 @@ public final class CcWriteTests {
                 s.refused(() -> p.cycle("up"), "a side there isn't"), "side must be one of: inner, outer", "the sides");
         h.assertFalse(p.stop(), "stopping with no cycle");
         h.assertValueEqual(p.getState(), "idle", "its state after the refusals");
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /**
+     * A computer switches a TEG core and a gas turbine controller as their windows do, and sets the
+     * controller's fuel, oxidizer, burn rate and auto relight over the window's ranges, and sparks its
+     * igniter; a turbine and its compressor are no peripherals (CONT-158, CONT-163, CONT-190, CONT-191).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_161_the_teg_and_the_turbine_switch_as_their_windows_do(GameTestHelper h)
+            throws LuaException {
+        Spot s = new Spot(h, 57);
+        Devices.clear(s);
+        Player player = player(h);
+
+        TegBlockEntity teg = (TegBlockEntity) Devices.place(s, "zas_teg", 1, 1, 1);
+        TegPeripheral tp = s.peripheral(1, 1, 1, TegPeripheral.class);
+        tp.setOn(true);
+        h.assertTrue(teg.on(), "the core didn't switch on");
+        h.assertTrue(
+                teg.createMenu(1, player.getInventory(), player).clickMenuButton(player, TegMenu.TOGGLE),
+                "the core's window refused its switch");
+        h.assertFalse(tp.isOn(), "the core is still on after the window's switch");
+
+        // A turbine and its compressor are no peripherals: the controller is the engine's one face.
+        TurbineControllerBlockEntity controller =
+                (TurbineControllerBlockEntity) Devices.place(s, "zas_turbine_controller", 4, 1, 1);
+        TurbineControllerPeripheral up = s.peripheral(4, 1, 1, TurbineControllerPeripheral.class);
+        BlockState compressor =
+                AtmosBlocks.COMPRESSOR.get().defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST);
+        BlockState turbine =
+                AtmosBlocks.TURBINE.get().defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST);
+        s.set(6, 1, 1, compressor);
+        s.set(8, 1, 1, turbine);
+        controller.toggleLink(s.level, s.abs(6, 1, 1));
+        controller.toggleLink(s.level, s.abs(8, 1, 1));
+        h.assertTrue(s.peripheral(s.abs(6, 1, 1), Direction.NORTH) == null, "a compressor is a peripheral");
+        h.assertTrue(s.peripheral(s.abs(8, 1, 1), Direction.NORTH) == null, "a turbine is a peripheral");
+
+        up.setOn(true);
+        h.assertTrue(controller.on(), "the controller didn't switch on");
+        TurbineControllerMenu window = (TurbineControllerMenu) controller.createMenu(1, player.getInventory(), player);
+        h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.TOGGLE), "the window refused its switch");
+        h.assertFalse(up.isOn(), "the controller is still on after the window's switch");
+
+        up.setFuel(Spot.H2.toString());
+        up.setOxidizer(Spot.O2.toString());
+        h.assertValueEqual(controller.fuel(), Spot.H2, "the fuel a computer set");
+        h.assertValueEqual(controller.oxidizer(), Spot.O2, "the oxidizer a computer set");
+        h.assertValueEqual(
+                s.refused(() -> up.setFuel(Spot.N2.toString()), "nitrogen as a fuel"),
+                "not a fuel: " + Spot.N2,
+                "a gas that doesn't burn");
+        h.assertValueEqual(
+                s.refused(() -> up.setOxidizer(Spot.H2.toString()), "hydrogen as an oxidizer"),
+                "not an oxidizer: " + Spot.H2,
+                "a fuel as an oxidizer");
+        up.setBurnRate(0.5);
+        h.assertValueEqual(controller.burnRate(), 0.5, "the burn rate a computer set");
+        double most = TurbineControllerBlockEntity.maxBurnRate();
+        h.assertValueEqual(
+                s.refused(() -> up.setBurnRate(most + 1), "a burn rate past the most"),
+                "burn rate must be 0 to " + Lua.number(most) + " mol/s",
+                "the burn rate's range");
+        h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.RATE_DOWN_TENTH), "the rate's button");
+        h.assertValueEqual(up.getBurnRate(), 0.4, "the rate after the window's -0.1");
+        up.setAutoIgnite(false);
+        h.assertFalse(controller.autoIgnite(), "auto relight a computer switched off");
+
+        h.assertFalse(up.ignite(), "a spark with no igniter");
+        s.set(10, 0, 1, Spot.STONE);
+        IgniterBlockEntity igniter =
+                s.place(10, 1, 1, AtmosBlocks.IGNITER.get().defaultBlockState(), IgniterBlockEntity.class);
+        controller.toggleLink(s.level, igniter.getBlockPos());
+        h.assertTrue(up.ignite(), "a computer's spark was refused");
+        h.assertTrue(igniter.lit(), "the igniter didn't spark");
         Devices.clear(s);
         h.succeed();
     }

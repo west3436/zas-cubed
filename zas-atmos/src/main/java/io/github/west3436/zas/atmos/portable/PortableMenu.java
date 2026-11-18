@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.portable;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import java.util.List;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -15,7 +16,8 @@ import net.minecraft.world.level.block.Block;
  * A portable's GUI (CONT-018, CONT-074): its slots, which take only what they hold (CONT-112), its
  * switch and its battery's charge, above the player's inventory. The client sends only button ids;
  * the server checks each id and refuses a player too far away ({@link #stillValid}). A subclass adds
- * its own buttons from {@link #TOGGLE} + 1 and its own values from {@link #DATA_COUNT}.
+ * its own buttons from {@link #TOGGLE} + 1 and its own values from {@link #DATA_COUNT}. Its redstone
+ * setting's buttons are {@link RedstoneControl#FIRST_BUTTON} on (CONT-170).
  */
 public abstract class PortableMenu extends AbstractContainerMenu {
     /** Switches it on or off. */
@@ -30,8 +32,12 @@ public abstract class PortableMenu extends AbstractContainerMenu {
     public static final int DATA_ENERGY_HI = 2;
     public static final int DATA_CAPACITY_LO = 3;
     public static final int DATA_CAPACITY_HI = 4;
+
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = 5;
+
     /** How many values every portable syncs. */
-    public static final int DATA_COUNT = 5;
+    public static final int DATA_COUNT = 6;
 
     private final int deviceSlots;
     private final ContainerData data;
@@ -96,6 +102,11 @@ public abstract class PortableMenu extends AbstractContainerMenu {
         return (data.get(DATA_CAPACITY_LO) & 0xFFFF) | (data.get(DATA_CAPACITY_HI) & 0xFFFF) << 16;
     }
 
+    /** Its redstone setting and signal, as synced. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
     /** Whether the server can apply a button: it has a portable, and the portable is still there. */
     protected boolean live() {
         return device != null && !device.isRemoved();
@@ -104,6 +115,9 @@ public abstract class PortableMenu extends AbstractContainerMenu {
     /** Applies a button: the server's half of the GUI. Unknown ids are refused. */
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if (RedstoneControl.isButton(id) && live()) {
+            return device.redstone().button(id);
+        }
         if (id != TOGGLE || !live()) {
             return false;
         }

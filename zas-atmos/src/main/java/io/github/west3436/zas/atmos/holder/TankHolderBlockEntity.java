@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.holder;
 
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.TankKind;
@@ -28,7 +29,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  *
  * <p>After a change it saves, sets the block's {@link TankHolderBlock#TANKS} and sends clients each
  * tank's {@link TankKind}, which the block's colour handler tints that tank by. It has no window, no
- * item handler for other blocks and no comparator output.
+ * item handler for other blocks. A comparator reads how many places are taken (CONT-175).
  */
 public class TankHolderBlockEntity extends BlockEntity {
     /** How many tanks it holds. */
@@ -60,6 +61,11 @@ public class TankHolderBlockEntity extends BlockEntity {
     /** How many tanks it holds. */
     public int count() {
         return tanks.count();
+    }
+
+    /** What a comparator reads (CONT-175): its tanks over its places. A change saves, which tells it. */
+    public int signal() {
+        return Comparators.fill((double) count() / PLACES);
     }
 
     /**

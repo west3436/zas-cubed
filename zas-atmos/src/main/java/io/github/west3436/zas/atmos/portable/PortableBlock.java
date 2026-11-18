@@ -95,4 +95,15 @@ public abstract class PortableBlock extends BaseEntityBlock {
         }
         super.onRemove(state, level, pos, newState, moved);
     }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full it is (CONT-175): a pump's or scrubber's store, or a heater's or air conditioner's battery. */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof PortableDevice device ? device.signal() : 0;
+    }
 }

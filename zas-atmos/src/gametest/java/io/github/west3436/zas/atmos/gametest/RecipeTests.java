@@ -35,10 +35,15 @@ public final class RecipeTests {
 
     /**
      * The content mod's items with no recipe: the O2 and air tanks, made by filling an empty tank
-     * from a canister (CONT-039), and the bike horn, found only in chests (CONT-154).
+     * from a canister (CONT-039), the bike horn, found only in chests (CONT-154), and the gas miner,
+     * which only creative mode has (CONT-183).
      */
     private static Set<Item> uncrafted() {
-        return Set.of(AtmosItems.OXYGEN_TANK.get(), AtmosItems.AIR_TANK.get(), AtmosItems.BIKE_HORN.get());
+        return Set.of(
+                AtmosItems.OXYGEN_TANK.get(),
+                AtmosItems.AIR_TANK.get(),
+                AtmosItems.BIKE_HORN.get(),
+                AtmosItems.GAS_MINER.get());
     }
 
     /**

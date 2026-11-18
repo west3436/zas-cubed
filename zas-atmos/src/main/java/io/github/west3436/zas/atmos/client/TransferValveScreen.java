@@ -7,8 +7,12 @@ import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.ttv.ProximitySensorItem;
+import io.github.west3436.zas.atmos.ttv.RemoteSignalerItem;
+import io.github.west3436.zas.atmos.ttv.Signal;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
+import io.github.west3436.zas.atmos.ttv.TtvTrigger;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -16,8 +20,9 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * A held TTV's window (CONT-103, CONT-104): its two tanks with an arrow from the first to the second,
- * green while the valve is open, its valve and timer, and the player's inventory. The TTV's own slot
+ * A TTV's window (CONT-103, CONT-104, CONT-184): its two tanks with an arrow from the first to the
+ * second, green while the valve is open, the slot for a trigger in its timer's place, its valve, its
+ * timer or what is fitted in its place, and the player's inventory. Start reads Arm with a trigger. The TTV's own slot
  * is locked. Starting the timer can't be undone, so it asks for a second click. The server applies and
  * checks everything, and closes the window when the hand no longer holds the TTV, as it doesn't once
  * its timer starts.
@@ -27,6 +32,7 @@ final class TransferValveScreen extends TguiScreen<TransferValveMenu> {
     private static final int TANKS_HEIGHT = TransferValveMenu.SECOND_Y + 17 + 2 - (Ui.TITLE_HEIGHT + Ui.PAD);
     private static final int CONTROLS_HEIGHT = 2 + 3 * Ui.BUTTON_ROW + 1;
     private static final List<Component> VALVE = List.of(DeviceParts.text("open"), DeviceParts.text("closed"));
+    private static final String[] RANGE_STEPS = {"−1", "+1"};
 
     TransferValveScreen(TransferValveMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, TransferValveMenu.WIDTH, HEIGHT);
@@ -35,10 +41,19 @@ final class TransferValveScreen extends TguiScreen<TransferValveMenu> {
     @Override
     protected void draw(Ui ui, int x, int y, int w, int h) {
         TransferValve valve = menu.valve();
+        ItemStack trigger = menu.trigger();
+        TtvTrigger kind = TtvTrigger.of(trigger);
         ui.section(x, y, w, TANKS_HEIGHT, null);
         slots(ui, TransferValveMenu.INVENTORY_Y);
-        tank(ui, valve.first(), TransferValveMenu.FIRST_Y, x + w - Ui.PAD);
-        tank(ui, valve.second(), TransferValveMenu.SECOND_Y, x + w - Ui.PAD);
+        int tanksRight = leftPos + TransferValveMenu.TRIGGER_X - 4;
+        tank(ui, valve.first(), TransferValveMenu.FIRST_Y, tanksRight);
+        tank(ui, valve.second(), TransferValveMenu.SECOND_Y, tanksRight);
+        if (trigger.isEmpty()) {
+            ui.ghost(
+                    leftPos + TransferValveMenu.TRIGGER_X,
+                    topPos + TransferValveMenu.TRIGGER_Y,
+                    new ItemStack(AtmosItems.REMOTE_SIGNALER.get()));
+        }
         float arrowX = leftPos + TransferValveMenu.TANK_X + 8;
         ui.arrow(
                 arrowX,
@@ -66,20 +81,50 @@ final class TransferValveScreen extends TguiScreen<TransferValveMenu> {
                 -1,
                 valve.joined() ? i -> press(TransferValveMenu.VALVE) : null);
         row += Ui.BUTTON_ROW;
-        DeviceParts.label(ui, "timer", labelX, row, Ui.BUTTON_HEIGHT);
-        ui.stepper(
-                valueX,
-                row,
-                w - 2 * Ui.PAD - DeviceParts.LABEL_WIDTH,
-                DeviceParts.text("seconds", menu.timer()),
-                Ui.WHITE,
-                DeviceParts.SMALL_STEPS,
-                "s",
-                i -> press(TransferValveMenu.DOWN_10 + i),
-                DeviceParts.text("default"),
-                () -> press(TransferValveMenu.DEFAULT));
+        int valueWidth = w - 2 * Ui.PAD - DeviceParts.LABEL_WIDTH;
+        switch (kind) {
+            case TIMER -> {
+                DeviceParts.label(ui, "timer", labelX, row, Ui.BUTTON_HEIGHT);
+                ui.stepper(
+                        valueX,
+                        row,
+                        valueWidth,
+                        DeviceParts.text("seconds", menu.timer()),
+                        Ui.WHITE,
+                        DeviceParts.SMALL_STEPS,
+                        "s",
+                        i -> press(TransferValveMenu.DOWN_10 + i),
+                        DeviceParts.text("default"),
+                        () -> press(TransferValveMenu.DEFAULT));
+            }
+            case SIGNALER -> {
+                Signal signal = RemoteSignalerItem.signal(trigger);
+                DeviceParts.label(ui, "signal", labelX, row, Ui.BUTTON_HEIGHT);
+                ui.line(
+                        DeviceParts.text("signal_value", signal.frequencyText(), signal.code()),
+                        valueX,
+                        row,
+                        Ui.BUTTON_HEIGHT,
+                        Ui.WHITE,
+                        Face.BOLD);
+            }
+            case PROXIMITY -> {
+                DeviceParts.label(ui, "range", labelX, row, Ui.BUTTON_HEIGHT);
+                ui.stepper(
+                        valueX,
+                        row,
+                        valueWidth,
+                        DeviceParts.text("blocks", ProximitySensorItem.range(trigger)),
+                        Ui.WHITE,
+                        RANGE_STEPS,
+                        DeviceParts.text("block_unit").getString(),
+                        i -> press(i == 0 ? TransferValveMenu.RANGE_DOWN : TransferValveMenu.RANGE_UP),
+                        null,
+                        null);
+            }
+        }
         row += Ui.BUTTON_ROW;
-        Component start = DeviceParts.text("start");
+        Component start = DeviceParts.text(kind.arms() ? "arm" : "start");
         ui.confirm(
                 valueX,
                 row,

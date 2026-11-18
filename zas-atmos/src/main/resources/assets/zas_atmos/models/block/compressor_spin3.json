@@ -1,0 +1,222 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "side": "zas_atmos:block/compressor_side",
+    "top": "zas_atmos:block/compressor_top",
+    "lip": "zas_atmos:block/compressor_lip",
+    "wall": "zas_atmos:block/compressor_wall",
+    "intake": "zas_atmos:block/compressor_intake",
+    "particle": "zas_atmos:block/compressor_side",
+    "rotor": "zas_atmos:block/compressor_rotor_spin3"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        1,
+        16,
+        2
+      ],
+      "faces": {
+        "north": {
+          "texture": "#lip",
+          "cullface": "north"
+        },
+        "west": {
+          "texture": "#side",
+          "uv": [
+            16,
+            0,
+            14,
+            16
+          ],
+          "cullface": "west"
+        },
+        "down": {
+          "texture": "#top",
+          "uv": [
+            0,
+            2,
+            1,
+            0
+          ],
+          "cullface": "down"
+        },
+        "up": {
+          "texture": "#top",
+          "cullface": "up"
+        },
+        "east": {
+          "texture": "#wall"
+        }
+      }
+    },
+    {
+      "from": [
+        15,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        2
+      ],
+      "faces": {
+        "north": {
+          "texture": "#lip",
+          "cullface": "north"
+        },
+        "east": {
+          "texture": "#side",
+          "cullface": "east"
+        },
+        "down": {
+          "texture": "#top",
+          "uv": [
+            15,
+            2,
+            16,
+            0
+          ],
+          "cullface": "down"
+        },
+        "up": {
+          "texture": "#top",
+          "cullface": "up"
+        },
+        "west": {
+          "texture": "#wall"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        0,
+        0
+      ],
+      "to": [
+        15,
+        1,
+        2
+      ],
+      "faces": {
+        "north": {
+          "texture": "#lip",
+          "cullface": "north"
+        },
+        "down": {
+          "texture": "#top",
+          "uv": [
+            1,
+            2,
+            15,
+            0
+          ],
+          "cullface": "down"
+        },
+        "up": {
+          "texture": "#wall"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        15,
+        0
+      ],
+      "to": [
+        15,
+        16,
+        2
+      ],
+      "faces": {
+        "north": {
+          "texture": "#lip",
+          "cullface": "north"
+        },
+        "up": {
+          "texture": "#top",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#wall"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        2
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rotor"
+        },
+        "south": {
+          "texture": "#intake",
+          "cullface": "south"
+        },
+        "west": {
+          "texture": "#side",
+          "uv": [
+            14,
+            0,
+            0,
+            16
+          ],
+          "cullface": "west"
+        },
+        "east": {
+          "texture": "#side",
+          "cullface": "east"
+        },
+        "down": {
+          "texture": "#top",
+          "uv": [
+            0,
+            16,
+            16,
+            2
+          ],
+          "cullface": "down"
+        },
+        "up": {
+          "texture": "#top",
+          "cullface": "up"
+        }
+      }
+    }
+  ],
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
+    }
+  }
+}

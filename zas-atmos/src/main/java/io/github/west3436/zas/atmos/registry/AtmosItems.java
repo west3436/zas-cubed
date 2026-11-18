@@ -20,6 +20,8 @@ import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.tool.WrenchItem;
+import io.github.west3436.zas.atmos.ttv.ProximitySensorItem;
+import io.github.west3436.zas.atmos.ttv.RemoteSignalerItem;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +117,15 @@ public final class AtmosItems {
             ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_ADAPTOR);
     public static final DeferredItem<BlockItem> HEAT_EXCHANGER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.HEAT_EXCHANGER);
+
+    // Power generators: the TEG and the gas turbine (CONT-157 to CONT-164).
+
+    public static final DeferredItem<BlockItem> TEG = ITEMS.registerSimpleBlockItem(AtmosBlocks.TEG);
+    public static final DeferredItem<BlockItem> CIRCULATOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.CIRCULATOR);
+    public static final DeferredItem<BlockItem> COMPRESSOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.COMPRESSOR);
+    public static final DeferredItem<BlockItem> TURBINE = ITEMS.registerSimpleBlockItem(AtmosBlocks.TURBINE);
+    public static final DeferredItem<BlockItem> TURBINE_CONTROLLER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.TURBINE_CONTROLLER);
 
     // The station blocks (CONT-129 to CONT-131).
 
@@ -343,6 +354,20 @@ public final class AtmosItems {
     // The bike horn (CONT-154, D-87): an easter egg with no recipe, found in dungeon and stronghold chests.
 
     public static final DeferredItem<BikeHornItem> BIKE_HORN = ITEMS.registerItem("bike_horn", BikeHornItem::new);
+
+    // The gas miner (CONT-182): creative only, with no recipe.
+
+    public static final DeferredItem<BlockItem> GAS_MINER = ITEMS.registerSimpleBlockItem(AtmosBlocks.GAS_MINER);
+
+    // A tank transfer valve's triggers (CONT-184 to CONT-187), each fitted in place of its timer.
+
+    /** Sends a signal on its frequency and code, which a TTV fitted with a signaler set the same hears. */
+    public static final DeferredItem<RemoteSignalerItem> REMOTE_SIGNALER =
+            ITEMS.registerItem("remote_signaler", RemoteSignalerItem::new);
+
+    /** Opens a primed TTV it is fitted to when something living comes within its range. */
+    public static final DeferredItem<ProximitySensorItem> PROXIMITY_SENSOR =
+            ITEMS.registerItem("proximity_sensor", ProximitySensorItem::new);
 
     private AtmosItems() {}
 

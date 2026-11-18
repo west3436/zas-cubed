@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,running=false": {
+      "model": "zas_atmos:block/turbine_controller"
+    },
+    "facing=north,running=true": {
+      "model": "zas_atmos:block/turbine_controller_on"
+    },
+    "facing=east,running=false": {
+      "model": "zas_atmos:block/turbine_controller",
+      "y": 90
+    },
+    "facing=east,running=true": {
+      "model": "zas_atmos:block/turbine_controller_on",
+      "y": 90
+    },
+    "facing=south,running=false": {
+      "model": "zas_atmos:block/turbine_controller",
+      "y": 180
+    },
+    "facing=south,running=true": {
+      "model": "zas_atmos:block/turbine_controller_on",
+      "y": 180
+    },
+    "facing=west,running=false": {
+      "model": "zas_atmos:block/turbine_controller",
+      "y": 270
+    },
+    "facing=west,running=true": {
+      "model": "zas_atmos:block/turbine_controller_on",
+      "y": 270
+    }
+  }
+}

@@ -172,6 +172,17 @@ public class CanisterBlock extends BaseEntityBlock implements PipeConnector {
     }
 
     @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** How full it is, as a comparator reads a container (CONT-174): its pressure over its rating. */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof CanisterBlockEntity canister ? canister.signal() : 0;
+    }
+
+    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new CanisterBlockEntity(pos, state);
     }

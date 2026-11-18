@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "facing=north,spin=0": {
+      "model": "zas_atmos:block/compressor"
+    },
+    "facing=north,spin=1": {
+      "model": "zas_atmos:block/compressor_spin1"
+    },
+    "facing=north,spin=2": {
+      "model": "zas_atmos:block/compressor_spin2"
+    },
+    "facing=north,spin=3": {
+      "model": "zas_atmos:block/compressor_spin3"
+    },
+    "facing=east,spin=0": {
+      "model": "zas_atmos:block/compressor",
+      "y": 90
+    },
+    "facing=east,spin=1": {
+      "model": "zas_atmos:block/compressor_spin1",
+      "y": 90
+    },
+    "facing=east,spin=2": {
+      "model": "zas_atmos:block/compressor_spin2",
+      "y": 90
+    },
+    "facing=east,spin=3": {
+      "model": "zas_atmos:block/compressor_spin3",
+      "y": 90
+    },
+    "facing=south,spin=0": {
+      "model": "zas_atmos:block/compressor",
+      "y": 180
+    },
+    "facing=south,spin=1": {
+      "model": "zas_atmos:block/compressor_spin1",
+      "y": 180
+    },
+    "facing=south,spin=2": {
+      "model": "zas_atmos:block/compressor_spin2",
+      "y": 180
+    },
+    "facing=south,spin=3": {
+      "model": "zas_atmos:block/compressor_spin3",
+      "y": 180
+    },
+    "facing=west,spin=0": {
+      "model": "zas_atmos:block/compressor",
+      "y": 270
+    },
+    "facing=west,spin=1": {
+      "model": "zas_atmos:block/compressor_spin1",
+      "y": 270
+    },
+    "facing=west,spin=2": {
+      "model": "zas_atmos:block/compressor_spin2",
+      "y": 270
+    },
+    "facing=west,spin=3": {
+      "model": "zas_atmos:block/compressor_spin3",
+      "y": 270
+    }
+  }
+}

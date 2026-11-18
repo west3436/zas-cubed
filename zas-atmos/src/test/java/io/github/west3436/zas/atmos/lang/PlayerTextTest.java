@@ -35,7 +35,8 @@ import org.junit.jupiter.api.Test;
  */
 class PlayerTextTest {
     /** A unit's symbol reads the same in any language's text around it. */
-    private static final Set<String> UNIT_SYMBOLS = Set.of("kPa", "atm", "bar", "psi", "K", "°C", "°F", "L/s", "s");
+    private static final Set<String> UNIT_SYMBOLS =
+            Set.of("kPa", "atm", "bar", "psi", "K", "°C", "°F", "L/s", "mol/s", "s");
 
     /**
      * Who paused a dimension and why (OPS-005). They're logged and saved in the world's data, so they

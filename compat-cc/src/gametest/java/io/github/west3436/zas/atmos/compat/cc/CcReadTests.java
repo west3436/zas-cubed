@@ -19,6 +19,7 @@ import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
+import io.github.west3436.zas.atmos.controller.Thermostat;
 import io.github.west3436.zas.atmos.controller.ZonePriority;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMath;
@@ -46,9 +47,18 @@ import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
+import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
+import io.github.west3436.zas.atmos.teg.TegBlockEntity;
+import io.github.west3436.zas.atmos.teg.TegMenu;
+import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity.Part;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerMenu;
+import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
@@ -63,12 +73,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -110,7 +122,7 @@ public final class CcReadTests {
         int i = 0;
         for (String type : Devices.SURFACE.keySet()) {
             // Two rows, three blocks apart, so nothing joins and each wall panel has its stone.
-            BlockEntity device = Devices.place(s, type, 1 + 3 * (i % 8), 2, i < 8 ? 2 : 5);
+            BlockEntity device = Devices.place(s, type, 1 + 3 * (i % 11), 2, i < 11 ? 2 : 5);
             i++;
             for (Direction side : Direction.values()) {
                 IPeripheral found = s.peripheral(device.getBlockPos(), side);
@@ -121,7 +133,7 @@ public final class CcReadTests {
                 h.assertTrue(found != again && found.equals(again), type + ": two lookups aren't equal");
             }
         }
-        for (Block block : List.of(AtmosBlocks.PIPE.get(), AtmosBlocks.PASSIVE_VENT.get(), AtmosBlocks.IGNITER.get())) {
+        for (Block block : List.of(AtmosBlocks.PIPE.get(), AtmosBlocks.PASSIVE_VENT.get())) {
             s.set(1, 5, 2, block.defaultBlockState());
             for (Direction side : Direction.values()) {
                 h.assertTrue(s.peripheral(s.abs(1, 5, 2), side) == null, block + " is a peripheral");
@@ -519,6 +531,73 @@ public final class CcReadTests {
     }
 
     /**
+     * An area air controller's thermostat, and the heat its vent and its scrubber move for it, read
+     * as their windows show them: heating below the target, cooling above it (CONT-165 to CONT-167).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_165_a_thermostat_and_its_parts_read_as_their_windows_do(GameTestHelper h)
+            throws LuaException {
+        Spot s = new Spot(h, 5721);
+        Devices.clear(s);
+        Player player = player(h);
+        s.room(0);
+        AreaAirControllerBlockEntity controller = Devices.areaAirController(s, 2, 2, 1);
+        AreaAirControllerPeripheral p = s.peripheral(2, 2, 1, AreaAirControllerPeripheral.class);
+        VentBlockEntity vent = s.place(
+                1,
+                0,
+                2,
+                AtmosBlocks.VENT.get().defaultBlockState().setValue(VentBlock.FACING, Direction.UP),
+                VentBlockEntity.class);
+        ScrubberBlockEntity scrubber = s.place(
+                3,
+                0,
+                2,
+                AtmosBlocks.SCRUBBER.get().defaultBlockState().setValue(ScrubberBlock.FACING, Direction.UP),
+                ScrubberBlockEntity.class);
+        VentPeripheral v = s.peripheral(1, 0, 2, VentPeripheral.class);
+        ScrubberPeripheral sp = s.peripheral(3, 0, 2, ScrubberPeripheral.class);
+        VentMenu ventWindow = (VentMenu) vent.createMenu(1, player.getInventory(), player);
+        ScrubberMenu scrubberWindow = (ScrubberMenu) scrubber.createMenu(1, player.getInventory(), player);
+        Runnable step = () -> {
+            controller.buffer().set(controller.buffer().getMaxEnergyStored());
+            controller.step();
+            vent.step();
+            scrubber.step();
+            s.tick();
+        };
+        for (int i = 0; i < 4; i++) {
+            step.run();
+        }
+        h.assertValueEqual(v.getHeatingPower(), 0.0, "heat with the thermostat off");
+        h.assertValueEqual(sp.getCoolingPower(), 0.0, "cooling with the thermostat off");
+
+        p.setTargetTemperature(Optional.of(Spot.T + 50));
+        step.run();
+        step.run();
+        h.assertValueEqual(p.getThermostat(), "heating", "below the target");
+        ControllerSync window = new ControllerMenu(1, player.getInventory(), controller).sync();
+        h.assertValueEqual(p.getThermostat(), Lua.word(Thermostat.State.of(window.thermostat())), "the window's");
+        h.assertValueEqual(p.getTargetTemperature(), window.target(), "the window's target");
+        h.assertTrue(v.getHeatingPower() > 0, "the vent didn't heat");
+        h.assertValueEqual(v.getHeatingPower(), vent.heatWatts(), "the vent's heat");
+        h.assertValueEqual(ventWindow.value(VentMenu.DATA_HEAT), shown(v.getHeatingPower()), "the vent's window");
+        h.assertValueEqual(sp.getCoolingPower(), 0.0, "cooling while heating");
+
+        p.setTargetTemperature(Optional.of(Spot.T - 50));
+        step.run();
+        step.run();
+        h.assertValueEqual(p.getThermostat(), "cooling", "above the target");
+        h.assertTrue(sp.getCoolingPower() > 0, "the scrubber didn't cool");
+        h.assertValueEqual(sp.getCoolingPower(), scrubber.coolingWatts(), "the scrubber's cooling");
+        h.assertValueEqual(
+                scrubberWindow.value(ScrubberMenu.DATA_COOLING), shown(sp.getCoolingPower()), "the scrubber's window");
+        h.assertValueEqual(v.getHeatingPower(), 0.0, "heat while cooling");
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /**
      * A central atmospherics controller that has claimed an area air controller: its status, power,
      * range and rows are what its window is sent, and the area air controller names it.
      */
@@ -629,5 +708,86 @@ public final class CcReadTests {
                 "the chamber's pressure: " + chamber + ", the controller's " + controller.chamberKpa());
         Devices.clear(s);
         h.succeed();
+    }
+
+    /**
+     * A TEG core and a gas turbine controller read as their windows do (CONT-158, CONT-163): their
+     * switches, states, FE and stores, the core's two streams, and the controller's links, chamber,
+     * buffer, top speed, burn rate and the gases it offers.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_158_the_teg_and_the_turbine_read_as_their_windows_do(GameTestHelper h) throws LuaException {
+        Spot s = new Spot(h, 56);
+        Devices.clear(s);
+        Player player = player(h);
+
+        TegBlockEntity teg = (TegBlockEntity) Devices.place(s, "zas_teg", 1, 1, 1);
+        TegPeripheral tp = s.peripheral(1, 1, 1, TegPeripheral.class);
+        TegMenu tegWindow = (TegMenu) teg.createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(tp.getType(), "zas_teg", "the core's type");
+        h.assertValueEqual(tp.isOn(), tegWindow.on(), "its switch");
+        h.assertValueEqual(tp.getState(), Lua.word(tegWindow.status()), "its state");
+        h.assertValueEqual(tp.getPower(), 0.0, "its power with no circulators");
+        h.assertValueEqual(tp.getEnergy(), tegWindow.energy(), "its FE");
+        h.assertValueEqual(tp.getEnergyCapacity(), tegWindow.capacity(), "its buffer");
+        h.assertTrue(tp.getEnergyCapacity() > 0, "its buffer has no size");
+        for (int side = 0; side < 2; side++) {
+            Map<String, Double> stream = side == 0 ? tp.getHot() : tp.getCold();
+            h.assertValueEqual(
+                    stream.keySet(),
+                    java.util.Set.of("temperatureIn", "temperatureOut", "pressureIn", "pressureOut"),
+                    "a stream's keys");
+            h.assertValueEqual(
+                    shown(stream.get("temperatureIn")), tegWindow.temperature(side, true), "the window's temperature");
+            h.assertValueEqual(
+                    shown(stream.get("pressureOut")), tegWindow.pressure(side, false), "the window's pressure");
+        }
+
+        TurbineControllerBlockEntity controller =
+                (TurbineControllerBlockEntity) Devices.place(s, "zas_turbine_controller", 4, 1, 1);
+        TurbineControllerPeripheral up = s.peripheral(4, 1, 1, TurbineControllerPeripheral.class);
+        TurbineControllerMenu window = (TurbineControllerMenu) controller.createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(up.getType(), "zas_turbine_controller", "the controller's type");
+        h.assertValueEqual(
+                up.getLinks(), Map.of("turbine", false, "compressor", false, "igniter", false), "a new one's links");
+        h.assertTrue(up.getChamber() == null, "a chamber with no turbine");
+        h.assertTrue(up.getBuffer() == null, "a buffer with no compressor");
+        h.assertTrue(up.getFuel() == null && up.getOxidizer() == null, "a new one's gases");
+        TurbineBlockEntity turbine = s.place(6, 1, 1, part(AtmosBlocks.TURBINE.get()), TurbineBlockEntity.class);
+        s.place(8, 1, 1, part(AtmosBlocks.COMPRESSOR.get()), CompressorBlockEntity.class);
+        controller.toggleLink(s.level, turbine.getBlockPos());
+        controller.toggleLink(s.level, s.abs(8, 1, 1));
+        for (Part part : Part.values()) {
+            h.assertValueEqual(
+                    up.getLinks().get(Lua.word(part)), window.linked(part), "its " + Lua.word(part) + " link");
+        }
+        h.assertTrue(window.linked(Part.TURBINE) && window.linked(Part.COMPRESSOR), "the window's links");
+        h.assertValueEqual(up.isOn(), window.on(), "its switch");
+        h.assertValueEqual(up.getState(), Lua.word(window.status()), "its state");
+        h.assertValueEqual(up.getRpm(), 0.0, "a still shaft's speed");
+        h.assertValueEqual(up.getMaxRpm(), window.value(TurbineControllerMenu.DATA_TOP_RPM), "its top speed");
+        h.assertValueEqual(up.getChamber().keySet(), java.util.Set.of("pressure", "temperature"), "the chamber's keys");
+        h.assertValueEqual(
+                up.getBuffer().keySet(), java.util.Set.of("pressure", "temperature", "contents"), "the buffer's keys");
+        h.assertValueEqual(
+                (int) Math.round(up.getBurnRate() * 100),
+                window.value(TurbineControllerMenu.DATA_RATE),
+                "its burn rate");
+        h.assertValueEqual(up.isAutoIgnite(), window.value(TurbineControllerMenu.DATA_AUTO) != 0, "its auto relight");
+        h.assertValueEqual(up.getFuels(), names(window.fuels()), "the fuels it offers");
+        h.assertValueEqual(up.getOxidizers(), names(window.oxidizers()), "the oxidizers it offers");
+        h.assertValueEqual(up.getEnergy(), window.energy(), "its FE");
+        h.assertValueEqual(up.getEnergyCapacity(), window.capacity(), "its store");
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /** A turbine part facing east. */
+    private static BlockState part(Block block) {
+        return block.defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST);
+    }
+
+    private static List<String> names(List<ResourceLocation> gases) {
+        return gases.stream().map(ResourceLocation::toString).toList();
     }
 }

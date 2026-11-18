@@ -100,6 +100,55 @@ public class TransferValveItem extends BlockItem {
         stack.set(AtmosComponents.TTV_TIMER.get(), TransferValve.clampTimer(seconds));
     }
 
+    /** The item fitted in its timer's place (CONT-184), as a copy, or an empty stack for its timer. */
+    public static ItemStack trigger(ItemStack stack) {
+        return slot(stack.getOrDefault(AtmosComponents.TTV_TRIGGER.get(), ItemContainerContents.EMPTY), 0);
+    }
+
+    /**
+     * Puts an item in its timer's place as it is, checking nothing, or takes it away for an empty
+     * stack. For whoever has checked already, or a client being told what the server's stack holds.
+     */
+    static void setTrigger(ItemStack stack, ItemStack trigger) {
+        if (trigger.isEmpty()) {
+            stack.remove(AtmosComponents.TTV_TRIGGER.get());
+        } else {
+            stack.set(AtmosComponents.TTV_TRIGGER.get(), ItemContainerContents.fromItems(List.of(trigger)));
+        }
+    }
+
+    /**
+     * Fits a signaler or proximity sensor in its timer's place (CONT-184), if it has none fitted. The
+     * stack given isn't changed: the caller takes it away.
+     *
+     * @return whether it went on
+     */
+    public static boolean fitTrigger(ItemStack stack, ItemStack trigger) {
+        if (!TtvTrigger.fits(trigger) || !trigger(stack).isEmpty()) {
+            return false;
+        }
+        setTrigger(stack, trigger.copyWithCount(1));
+        return true;
+    }
+
+    /**
+     * Takes the fitted item off, which gives the TTV its timer back.
+     *
+     * @return the item, or an empty stack if none was fitted
+     */
+    public static ItemStack takeTrigger(ItemStack stack) {
+        ItemStack trigger = trigger(stack);
+        if (!trigger.isEmpty()) {
+            setTrigger(stack, ItemStack.EMPTY);
+        }
+        return trigger;
+    }
+
+    /** Fits a tank in the first free place or a trigger in the timer's, whichever the item is. */
+    static boolean fitAny(ItemStack stack, ItemStack item) {
+        return TtvTrigger.fits(item) ? fitTrigger(stack, item) : fit(stack, item);
+    }
+
     /** How many tanks a TTV stack holds. */
     public static int tankCount(ItemStack stack) {
         ItemContainerContents tanks = stack.getOrDefault(AtmosComponents.TTV_TANKS.get(), ItemContainerContents.EMPTY);
@@ -148,12 +197,13 @@ public class TransferValveItem extends BlockItem {
 
     /**
      * Fits a tank in the first free place, as every way of loading a TTV but a slot does, with the
-     * bundle's sound. The stack given isn't changed: the caller takes it away.
+     * bundle's sound; or a signaler or proximity sensor in its timer's place (CONT-184). The stack
+     * given isn't changed: the caller takes it away.
      *
      * @return whether it went on
      */
     static boolean fit(ItemStack stack, ItemStack tank, Player player) {
-        if (!fit(stack, tank)) {
+        if (!fitAny(stack, tank)) {
             return false;
         }
         sound(player, true);
@@ -303,8 +353,19 @@ public class TransferValveItem extends BlockItem {
                                 ? "item.zas_atmos.tank_transfer_valve.open"
                                 : "item.zas_atmos.tank_transfer_valve.closed")
                 .withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.zas_atmos.tank_transfer_valve.timer", timer(stack))
-                .withStyle(ChatFormatting.GRAY));
+        ItemStack trigger = trigger(stack);
+        Component line = switch (TtvTrigger.of(trigger)) {
+            case TIMER -> Component.translatable("item.zas_atmos.tank_transfer_valve.timer", timer(stack));
+            case SIGNALER -> {
+                Signal signal = RemoteSignalerItem.signal(trigger);
+                yield Component.translatable(
+                        "item.zas_atmos.tank_transfer_valve.signaler", signal.frequencyText(), signal.code());
+            }
+            case PROXIMITY ->
+                Component.translatable(
+                        "item.zas_atmos.tank_transfer_valve.proximity", ProximitySensorItem.range(trigger));
+        };
+        tooltip.add(line.copy().withStyle(ChatFormatting.GRAY));
         if (valve.first().isEmpty() && valve.second().isEmpty()) {
             tooltip.add(Component.translatable("item.zas_atmos.tank_transfer_valve.no_tanks")
                     .withStyle(ChatFormatting.GRAY));

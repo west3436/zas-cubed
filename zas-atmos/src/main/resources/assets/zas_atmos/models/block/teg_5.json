@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "north": "zas_atmos:block/teg_front_5",
+    "south": "zas_atmos:block/teg_back",
+    "east": "zas_atmos:block/teg_side",
+    "west": "zas_atmos:block/teg_side",
+    "up": "zas_atmos:block/teg_top",
+    "down": "zas_atmos:block/teg_top",
+    "particle": "zas_atmos:block/teg_side"
+  }
+}

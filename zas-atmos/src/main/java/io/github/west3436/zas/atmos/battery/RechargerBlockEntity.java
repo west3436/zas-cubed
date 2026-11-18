@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.battery;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
@@ -80,6 +81,12 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
 
     private int currentDraw() {
         return chargeable() ? AtmosServerConfig.get(AtmosServerConfig.RECHARGER_DRAW) : 0;
+    }
+
+    /** What a comparator reads (CONT-175): its battery's charge over its capacity; 0 with none. */
+    public int signal() {
+        int capacity = capacity();
+        return capacity <= 0 ? 0 : Comparators.fill((double) energy() / capacity);
     }
 
     @Override

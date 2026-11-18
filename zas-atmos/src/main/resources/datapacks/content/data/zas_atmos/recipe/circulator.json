@@ -1,0 +1,52 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circulator"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:micro_manipulator"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:pipe"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IMI",
+    "PFP",
+    "IBI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "M": {
+      "item": "zas_atmos:micro_manipulator"
+    },
+    "P": {
+      "item": "zas_atmos:pipe"
+    },
+    "F": {
+      "item": "zas_atmos:machine_frame"
+    },
+    "B": {
+      "item": "zas_atmos:circuit_board"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:circulator"
+  }
+}

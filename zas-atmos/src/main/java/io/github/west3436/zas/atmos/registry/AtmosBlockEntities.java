@@ -18,6 +18,7 @@ import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
+import io.github.west3436.zas.atmos.miner.GasMinerBlockEntity;
 import io.github.west3436.zas.atmos.mixer.MixerBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
@@ -32,7 +33,12 @@ import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlockEntity;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
+import io.github.west3436.zas.atmos.teg.CirculatorBlockEntity;
+import io.github.west3436.zas.atmos.teg.TegBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
+import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
@@ -222,6 +228,35 @@ public final class AtmosBlockEntities {
             () -> BlockEntityType.Builder.of(HeatExchangerBlockEntity::new, AtmosBlocks.HEAT_EXCHANGER.get())
                     .build(null));
 
+    // Power generators: the TEG and the gas turbine (CONT-157 to CONT-164).
+
+    public static final Supplier<BlockEntityType<TegBlockEntity>> TEG = BLOCK_ENTITIES.register(
+            "teg",
+            () -> BlockEntityType.Builder.of(TegBlockEntity::new, AtmosBlocks.TEG.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<CirculatorBlockEntity>> CIRCULATOR = BLOCK_ENTITIES.register(
+            "circulator",
+            () -> BlockEntityType.Builder.of(CirculatorBlockEntity::new, AtmosBlocks.CIRCULATOR.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<TurbineBlockEntity>> TURBINE = BLOCK_ENTITIES.register(
+            "turbine",
+            () -> BlockEntityType.Builder.of(TurbineBlockEntity::new, AtmosBlocks.TURBINE.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<CompressorBlockEntity>> COMPRESSOR = BLOCK_ENTITIES.register(
+            "compressor",
+            () -> BlockEntityType.Builder.of(CompressorBlockEntity::new, AtmosBlocks.COMPRESSOR.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<TurbineControllerBlockEntity>> TURBINE_CONTROLLER =
+            BLOCK_ENTITIES.register(
+                    "turbine_controller",
+                    () -> BlockEntityType.Builder.of(
+                                    TurbineControllerBlockEntity::new, AtmosBlocks.TURBINE_CONTROLLER.get())
+                            .build(null));
+
     // The tank transfer valve, placed (CONT-103, D-86).
 
     public static final Supplier<BlockEntityType<TransferValveBlockEntity>> TANK_TRANSFER_VALVE =
@@ -250,6 +285,13 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<GaugeBlockEntity>> GAUGE = BLOCK_ENTITIES.register(
             "gauge",
             () -> BlockEntityType.Builder.of(GaugeBlockEntity::new, AtmosBlocks.GAUGE.get())
+                    .build(null));
+
+    // The gas miner (CONT-180).
+
+    public static final Supplier<BlockEntityType<GasMinerBlockEntity>> GAS_MINER = BLOCK_ENTITIES.register(
+            "gas_miner",
+            () -> BlockEntityType.Builder.of(GasMinerBlockEntity::new, AtmosBlocks.GAS_MINER.get())
                     .build(null));
 
     private AtmosBlockEntities() {}

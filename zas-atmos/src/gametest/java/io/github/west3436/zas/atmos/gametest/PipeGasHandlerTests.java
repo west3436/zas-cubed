@@ -25,6 +25,7 @@ import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
+import io.github.west3436.zas.atmos.turbine.CompressorBlock;
 import io.github.west3436.zas.atmos.valve.ValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import java.util.EnumSet;
@@ -130,8 +131,8 @@ public final class PipeGasHandlerTests {
      * Each part offers it where a pipe would join it and nowhere else: a pipe on every face, in a wall
      * or not, a cap where it points, a
      * connector port below and not above, a vent, scrubber, passive vent and heat exchanger at the
-     * back, a valve on its two flanges, a radiator adaptor on its pipe end, a pump, filter, mixer and
-     * electrolyzer on each port, a large gas tank under its lower half. A canister and radiator pipe
+     * back, a valve on its two flanges, a radiator adaptor on its pipe end, a compressor at its back, a pump, filter, mixer,
+     * electrolyzer and circulator on each port, a large gas tank under its lower half. A canister and radiator pipe
      * offer none. Every pipe part the mod registers is covered.
      */
     @GameTest(template = "empty", batch = BATCH)
@@ -164,6 +165,10 @@ public final class PipeGasHandlerTests {
                         .defaultBlockState()
                         .setValue(RadiatorAdaptorBlock.FACING, Direction.EAST),
                 EnumSet.of(Direction.WEST));
+        // The gas turbine's compressor joins a pipe on its back (CONT-160).
+        expected.put(
+                AtmosBlocks.COMPRESSOR.get().defaultBlockState().setValue(CompressorBlock.FACING, Direction.EAST),
+                EnumSet.of(Direction.WEST));
         for (Block valve : new Block[] {AtmosBlocks.MANUAL_VALVE.get(), AtmosBlocks.REDSTONE_VALVE.get()}) {
             expected.put(
                     valve.defaultBlockState().setValue(ValveBlock.AXIS, Direction.Axis.X),
@@ -174,7 +179,8 @@ public final class PipeGasHandlerTests {
             AtmosBlocks.VOLUME_PUMP.get(),
             AtmosBlocks.FILTER.get(),
             AtmosBlocks.MIXER.get(),
-            AtmosBlocks.ELECTROLYZER.get()
+            AtmosBlocks.ELECTROLYZER.get(),
+            AtmosBlocks.CIRCULATOR.get()
         }) {
             BlockState state = ported.defaultBlockState();
             Set<Direction> ports = EnumSet.copyOf(((PortedBlock) ported).portFaces(state));

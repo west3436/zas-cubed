@@ -1,7 +1,10 @@
 package io.github.west3436.zas.atmos.config;
 
 import io.github.west3436.zas.api.gas.GasPurity;
+import io.github.west3436.zas.atmos.controller.Thermostat;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
+import io.github.west3436.zas.atmos.pipe.PipeBurst;
+import io.github.west3436.zas.atmos.pipe.PipeLeak;
 import io.github.west3436.zas.atmos.radiator.RadiatorMath;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
@@ -99,7 +102,67 @@ public final class AtmosServerConfig {
     public static final ModConfigSpec.IntValue GENERATOR_SECONDS_PER_FUEL;
 
     /** The pressure fall within one atmos tick that alarms a controller at once, in kPa (CONT-043). */
+    /** J per FE in the TEG and the turbine (CONT-158, CONT-162). */
+    public static final ModConfigSpec.DoubleValue JOULES_PER_FE;
+
+    /** The TEG's efficiency as a share of Carnot's (CONT-158). */
+    public static final ModConfigSpec.DoubleValue TEG_CARNOT_FRACTION;
+
+    /** The TEG's FE store (CONT-158). */
+    public static final ModConfigSpec.IntValue TEG_BUFFER;
+
+    /** The pressure difference a circulator keeps, kPa (CONT-157). */
+    public static final ModConfigSpec.DoubleValue CIRCULATOR_FRICTION_KPA;
+
+    /** A circulator's most flow, L/s (CONT-157). */
+    public static final ModConfigSpec.DoubleValue CIRCULATOR_MAX_FLOW;
+
+    /** The turbine's top speed, rpm (CONT-161). */
+    public static final ModConfigSpec.IntValue TURBINE_MAX_RPM;
+
+    /** The shaft's energy at top speed, kJ (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_SPIN_ENERGY_KJ;
+
+    /** The turbine's generator at top speed, FE/t (CONT-162). */
+    public static final ModConfigSpec.IntValue TURBINE_MAX_OUTPUT;
+
+    /** The turbine's share of ideal expansion work (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_EFFICIENCY;
+
+    /** The compressor's efficiency (CONT-160). */
+    public static final ModConfigSpec.DoubleValue COMPRESSOR_EFFICIENCY;
+
+    /** The most a turbine controller's burn rate may be set to, mol/s of fuel (CONT-160, CONT-163). */
+    public static final ModConfigSpec.DoubleValue TURBINE_MAX_BURN;
+
+    /** The oxidizer's share of the chamber the compressor keeps it at, at least (CONT-160). */
+    public static final ModConfigSpec.DoubleValue TURBINE_OXIDIZER_FRACTION;
+
+    /** The turbine's nozzle, a share per second (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_NOZZLE;
+
+    /** The turbine's most flow, L/s (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_MAX_FLOW;
+
+    /** The share of shaft energy lost per second (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_FRICTION;
+
+    /** The turbine controller's FE store (CONT-162). */
+    public static final ModConfigSpec.IntValue TURBINE_BUFFER;
+
     public static final ModConfigSpec.DoubleValue BREACH_DROP_KPA;
+
+    /** A thermostat's dead band, in K (CONT-165). */
+    public static final ModConfigSpec.DoubleValue THERMOSTAT_BAND;
+
+    /** A pipe network's burst pressure over a segment's cell, in kPa; 0 turns bursting off (CONT-005, CONT-108). */
+    public static final ModConfigSpec.DoubleValue PIPE_BURST_KPA;
+
+    /** A pipe network's leak pressure over a segment's cell, in kPa; 0 turns leaks off (CONT-005, CONT-168). */
+    public static final ModConfigSpec.DoubleValue PIPE_LEAK_KPA;
+
+    /** The share per second of what would even a leaking segment out with its cell that its leak lets out (CONT-168). */
+    public static final ModConfigSpec.DoubleValue PIPE_LEAK_RATE;
 
     /** The most power a tank's or canister's explosion can have (CONT-109). TNT is 4. */
     public static final ModConfigSpec.DoubleValue EXPLOSION_POWER_CAP;
@@ -115,6 +178,24 @@ public final class AtmosServerConfig {
 
     /** How pure a pipe's gas must be to leave for another mod's fluid pipe or tank (COMPAT-142). */
     public static final ModConfigSpec.DoubleValue FLUID_MIN_PURITY;
+
+    /** The most a gas miner adds, in mol/s (CONT-181). */
+    public static final ModConfigSpec.IntValue GAS_MINER_RATE;
+
+    /** The highest target a gas miner's window or a computer sets, in kPa (CONT-180). */
+    public static final ModConfigSpec.DoubleValue GAS_MINER_MAX_TARGET;
+
+    /** How long a gas miner whose gas went to the open air waits before it tries again, in s (CONT-181). */
+    public static final ModConfigSpec.IntValue GAS_MINER_OPEN_AIR_WAIT;
+
+    /** How far a remote signaler's signal reaches, in blocks; 0 is the whole dimension (CONT-186). */
+    public static final ModConfigSpec.IntValue SIGNALER_RANGE;
+
+    /** How long an armed proximity sensor waits before it watches, in s (CONT-187). */
+    public static final ModConfigSpec.IntValue PROXIMITY_ARMING_DELAY;
+
+    /** The widest range a proximity sensor's window sets, in blocks (CONT-187). */
+    public static final ModConfigSpec.IntValue PROXIMITY_MAX_RANGE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -179,11 +260,93 @@ public final class AtmosServerConfig {
                 .defineInRange("generator_seconds_per_fuel", 80, 1, 1_600);
         builder.pop();
 
+        builder.comment("The thermoelectric generator and the gas turbine (CONT-157 to CONT-164).")
+                .push("generators");
+        JOULES_PER_FE = builder.comment(
+                        "The work, in J, that makes one FE in the TEG and the turbine. Their heat and work",
+                        "are reckoned in J, so the energy that leaves the gas as FE is this many J each.")
+                .defineInRange("joules_per_fe", 4.0, 0.01, 1_000_000.0);
+        TEG_CARNOT_FRACTION = builder.comment(
+                        "The TEG's efficiency as a share of the Carnot efficiency of its two streams' inlet",
+                        "temperatures (CONT-158). It never turns more heat into work than the second law allows.")
+                .defineInRange("teg_carnot_fraction", 0.5, 0.0, 1.0);
+        TEG_BUFFER = builder.comment("The TEG's own FE store. It makes no FE while full.")
+                .defineInRange("teg_buffer", 100_000, 1_000, 10_000_000);
+        CIRCULATOR_FRICTION_KPA = builder.comment(
+                        "The pressure difference a circulator keeps across itself, in kPa: it moves gas only",
+                        "while its inlet is more than this above its outlet (CONT-157)")
+                .defineInRange("circulator_friction_kpa", 5.0, 0.0, 1_000.0);
+        CIRCULATOR_MAX_FLOW = builder.comment(
+                        "The most a circulator moves per second, in L at its inlet's conditions (CONT-157)")
+                .defineInRange("circulator_max_flow", 500.0, 1.0, 100_000.0);
+        TURBINE_MAX_RPM = builder.comment("The gas turbine's top speed, in rpm (CONT-161)")
+                .defineInRange("turbine_max_rpm", 10_000, 100, 1_000_000);
+        TURBINE_SPIN_ENERGY_KJ = builder.comment(
+                        "The energy in the turbine's shaft at its top speed, in kJ: how long it takes to spin",
+                        "up and down (CONT-161)")
+                .defineInRange("turbine_spin_energy_kj", 500.0, 1.0, 1_000_000.0);
+        TURBINE_MAX_OUTPUT = builder.comment(
+                        "What the turbine's generator makes at top speed, in FE/t; it makes this times",
+                        "(rpm / top speed)^0.8, and never more than the shaft holds (CONT-162)")
+                .defineInRange("turbine_max_output", 1_000, 0, 1_000_000);
+        TURBINE_EFFICIENCY = builder.comment(
+                        "The share of an ideal expansion's work the turbine takes from the gas it lets out (CONT-161)")
+                .defineInRange("turbine_efficiency", 0.8, 0.0, 1.0);
+        COMPRESSOR_EFFICIENCY = builder.comment(
+                        "An ideal compression's work over what the compressor spends; the rest heats the gas too",
+                        "(CONT-160)")
+                .defineInRange("compressor_efficiency", 0.8, 0.05, 1.0);
+        TURBINE_MAX_BURN = builder.comment(
+                        "The most a turbine controller's burn rate may be set to, in mol of fuel per second",
+                        "(CONT-160, CONT-163)")
+                .defineInRange("turbine_max_burn", 1.0, 0.01, 100.0);
+        TURBINE_OXIDIZER_FRACTION = builder.comment(
+                        "The oxidizer's share of the turbine's chamber that its compressor keeps it at, at least,",
+                        "while it has oxidizer to give (CONT-160)")
+                .defineInRange("turbine_oxidizer_fraction", 0.2, 0.0, 1.0);
+        TURBINE_NOZZLE = builder.comment(
+                        "The share of the moles that would even out the chamber and the exhaust that the turbine",
+                        "lets out each second (CONT-161)")
+                .defineInRange("turbine_nozzle", 0.5, 0.0, 1.0);
+        TURBINE_MAX_FLOW = builder.comment(
+                        "The most the turbine lets out per second, in L at the chamber's conditions (CONT-161)")
+                .defineInRange("turbine_max_flow", 2_500.0, 0.0, 1_000_000.0);
+        TURBINE_FRICTION = builder.comment(
+                        "The share of its shaft's energy the turbine loses each second to friction, as heat",
+                        "into its chamber (CONT-161)")
+                .defineInRange("turbine_friction", 0.01, 0.0, 1.0);
+        TURBINE_BUFFER = builder.comment(
+                        "A turbine controller's FE store. Its turbine's generator makes no FE while it is full",
+                        "(CONT-162)")
+                .defineInRange("turbine_buffer", 100_000, 1_000, 10_000_000);
+        builder.pop();
+
         builder.comment("The area air controller (CONT-040, CONT-043).").push("controller");
         BREACH_DROP_KPA = builder.comment(
                         "A fall in its zone's pressure, in kPa within one atmos tick, that sends a controller to danger 2 at once, as a",
                         "breach does (CONT-043). Only for presets with a pressure min2 above 0, and only while the pressure is below min1. 0 turns it off.")
                 .defineInRange("breach_drop_kpa", 10.0, 0.0, 1_000.0);
+        THERMOSTAT_BAND = builder.comment(
+                        "How far, in K, its zone may drift from a controller's target temperature before its vents start",
+                        "heating or its scrubbers start cooling (CONT-165). Each stops at the target.")
+                .defineInRange("thermostat_band_k", Thermostat.DEFAULT_BAND, 0.0, 100.0);
+        builder.pop();
+
+        builder.comment("Pipe overpressure (CONT-005, CONT-108, CONT-168).").push("pipes");
+        PIPE_BURST_KPA = builder.comment(
+                        "A network more than this over a segment's cell, in kPa, bursts one such segment: it is destroyed",
+                        "and the network's gas goes into its cell (CONT-108). 10,132.5 is 100 atm. 0 turns bursting off.")
+                .defineInRange("burst_kpa", PipeBurst.THRESHOLD_KPA, 0.0, 1_000_000.0);
+        PIPE_LEAK_KPA = builder.comment(
+                        "A network more than this over a segment's cell, in kPa, and not bursting, leaks there: one such",
+                        "segment, chosen at random, lets gas into its cell until the network is back under (CONT-168).",
+                        "0 turns leaks off. 7,599 is 75 atm.")
+                .defineInRange("leak_kpa", 0.0, 0.0, 1_000_000.0);
+        PIPE_LEAK_RATE = builder.comment(
+                        "The share per second of what would even the leaking segment's network out with its cell that a",
+                        "leak lets out, so it leaks faster the higher the pressure difference (CONT-168). An open pipe end",
+                        "is 0.163.")
+                .defineInRange("leak_rate", PipeLeak.DEFAULT_RATE, 0.0, 1.0);
         builder.pop();
 
         builder.comment("The central atmospherics controller (CONT-116, CONT-122).")
@@ -229,6 +392,30 @@ public final class AtmosServerConfig {
                         "share. At 0.99 a pipe of air gives nothing and a pipe of oxygen gives all of it. 0 turns",
                         "the rule off: each gas then leaves on its own, as a filter would take it.")
                 .defineInRange("min_purity", GasPurity.DEFAULT_MIN_SHARE, 0.0, 1.0);
+        builder.pop();
+        builder.comment("The creative gas miner (CONT-180, CONT-181).").push("gas_miner");
+        GAS_MINER_RATE = builder.comment(
+                        "The most gas a miner adds to the room in front of it, in mol/s. It adds less as the",
+                        "room nears its target.")
+                .defineInRange("rate", 1_000, 1, 100_000);
+        GAS_MINER_MAX_TARGET = builder.comment("The highest target pressure a miner can be set to, in kPa")
+                .defineInRange("max_target", 10_000.0, 1.0, 30_000.0);
+        GAS_MINER_OPEN_AIR_WAIT = builder.comment(
+                        "How long a miner whose gas went to the open air waits before it tries again, in seconds")
+                .defineInRange("open_air_wait", 10, 1, 600);
+        builder.pop();
+
+        builder.comment("A tank transfer valve's remote signaler and proximity sensor (CONT-186, CONT-187).")
+                .push("ttv_triggers");
+        SIGNALER_RANGE = builder.comment(
+                        "How far a remote signaler's signal reaches, in blocks, within its dimension and its",
+                        "loaded chunks. 0 is the whole dimension.")
+                .defineInRange("signaler_range", 128, 0, 30_000_000);
+        PROXIMITY_ARMING_DELAY = builder.comment(
+                        "How long a primed TTV with a proximity sensor waits before it watches, in seconds")
+                .defineInRange("proximity_arming_delay", 5, 0, 60);
+        PROXIMITY_MAX_RANGE = builder.comment("The widest range a proximity sensor can be set to, in blocks")
+                .defineInRange("proximity_max_range", 5, 1, 16);
         builder.pop();
         SPEC = builder.build();
     }

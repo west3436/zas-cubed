@@ -1,0 +1,59 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:compressor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:micro_manipulator"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:plasteel_sheet"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SMS",
+    "IFI",
+    "WBW"
+  ],
+  "key": {
+    "S": {
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    "M": {
+      "item": "zas_atmos:micro_manipulator"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "F": {
+      "item": "zas_atmos:machine_frame"
+    },
+    "W": {
+      "item": "zas_atmos:cable_coil"
+    },
+    "B": {
+      "item": "zas_atmos:circuit_board"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:compressor"
+  }
+}

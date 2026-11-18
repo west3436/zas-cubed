@@ -19,6 +19,7 @@ import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.holder.TankHolderBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
+import io.github.west3436.zas.atmos.miner.GasMinerBlock;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
 import io.github.west3436.zas.atmos.pipe.EncasedPipeBlock;
 import io.github.west3436.zas.atmos.pipe.FloorGrilleBlock;
@@ -35,7 +36,12 @@ import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
+import io.github.west3436.zas.atmos.teg.CirculatorBlock;
+import io.github.west3436.zas.atmos.teg.TegBlock;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlock;
+import io.github.west3436.zas.atmos.turbine.CompressorBlock;
+import io.github.west3436.zas.atmos.turbine.TurbineBlock;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
@@ -253,6 +259,27 @@ public final class AtmosBlocks {
     public static final DeferredBlock<HeatExchangerBlock> HEAT_EXCHANGER =
             BLOCKS.registerBlock("heat_exchanger", HeatExchangerBlock::new, metal());
 
+    // ---- Power generators: the TEG and the gas turbine (CONT-157 to CONT-164) ----
+
+    /** The thermoelectric generator's core (CONT-158). */
+    public static final DeferredBlock<TegBlock> TEG = BLOCKS.registerBlock("teg", TegBlock::new, metal());
+
+    /** A circulator, one of the TEG's two sides (CONT-157). */
+    public static final DeferredBlock<CirculatorBlock> CIRCULATOR =
+            BLOCKS.registerBlock("circulator", CirculatorBlock::new, metal());
+
+    /** The gas turbine's compressor (CONT-160). */
+    public static final DeferredBlock<CompressorBlock> COMPRESSOR =
+            BLOCKS.registerBlock("compressor", CompressorBlock::new, metal());
+
+    /** The gas turbine (CONT-161). */
+    public static final DeferredBlock<TurbineBlock> TURBINE =
+            BLOCKS.registerBlock("turbine", TurbineBlock::new, metal());
+
+    /** The gas turbine's controller, which drives it and holds its FE (CONT-163, CONT-190). */
+    public static final DeferredBlock<TurbineControllerBlock> TURBINE_CONTROLLER =
+            BLOCKS.registerBlock("turbine_controller", TurbineControllerBlock::new, metal());
+
     // ---- The tank transfer valve, placed (CONT-103, D-86) ----
 
     /**
@@ -287,6 +314,22 @@ public final class AtmosBlocks {
     /** A gauge, a dial on a face of a pipe, a pipe part, a canister or a large tank. As hard as the air sensor. */
     public static final DeferredBlock<GaugeBlock> GAUGE = BLOCKS.registerBlock(
             "gauge", GaugeBlock::new, metal().strength(1.5f, 4.8f).noOcclusion().pushReaction(PushReaction.DESTROY));
+
+    // ---- The gas miner (CONT-180 to CONT-182) ----
+
+    /**
+     * The creative gas miner: no recipe, no drops, and as hard as bedrock, so only a creative player
+     * breaks it.
+     */
+    public static final DeferredBlock<GasMinerBlock> GAS_MINER = BLOCKS.registerBlock(
+            "gas_miner",
+            GasMinerBlock::new,
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(-1.0f, 3_600_000.0f)
+                    .noLootTable()
+                    .sound(SoundType.METAL)
+                    .pushReaction(PushReaction.BLOCK));
 
     private AtmosBlocks() {}
 

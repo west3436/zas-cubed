@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import net.minecraft.world.entity.player.Inventory;
  */
 final class ScrubberScreen extends TguiScreen<ScrubberMenu> {
     private static final int WIDTH = 216;
-    private static final int TOP_HEIGHT = 2 + Ui.BUTTON_ROW + 2 * Ui.ROW + 2;
+    private static final int TOP_HEIGHT = 2 + 2 * Ui.BUTTON_ROW + 2 * Ui.ROW + 2;
     private static final int GAS_COLUMNS = 2;
     private static final int GAS_ROWS = (ScrubberMenu.GASES.size() + GAS_COLUMNS - 1) / GAS_COLUMNS;
     private static final int GASES_HEIGHT = 14 + GAS_ROWS * Ui.ROW + 2;
@@ -72,7 +73,15 @@ final class ScrubberScreen extends TguiScreen<ScrubberMenu> {
                 free ? i -> press(ScrubberMenu.SET_MODE + i) : null);
         row += Ui.BUTTON_ROW;
         DeviceParts.label(ui, "state", labelX, row, Ui.ROW);
-        DeviceParts.status(ui, Component.translatable(menu.status().key()), statusColour(), valueX, row, Ui.ROW);
+        boolean held = menu.mode() != ScrubberMode.OFF && RedstoneControl.holds(menu.redstone());
+        DeviceParts.status(
+                ui,
+                held ? DeviceParts.held() : Component.translatable(menu.status().key()),
+                held ? Ui.AVERAGE : statusColour(),
+                valueX,
+                row,
+                Ui.ROW);
+        DeviceParts.heat(ui, x + w - Ui.PAD, row, Ui.ROW, menu.value(ScrubberMenu.DATA_COOLING), false);
         row += Ui.ROW;
         DeviceParts.label(ui, "network", labelX, row, Ui.ROW);
         ui.line(
@@ -82,6 +91,8 @@ final class ScrubberScreen extends TguiScreen<ScrubberMenu> {
                 Ui.ROW,
                 Ui.WHITE,
                 Face.BODY);
+        row += Ui.ROW;
+        DeviceParts.redstone(ui, x, row, w, menu.redstone(), this::press);
 
         y += TOP_HEIGHT + Ui.PAD;
         row = ui.section(x, y, w, GASES_HEIGHT, DeviceParts.text("gases"));

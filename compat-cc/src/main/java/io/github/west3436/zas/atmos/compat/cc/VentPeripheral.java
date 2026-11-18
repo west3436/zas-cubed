@@ -9,9 +9,9 @@ import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A vent: its mode, its two bounds, what it is doing and its network's pressure. Its settings go
- * through the vent's own hand setter, as the window's do, so a controller's orders win over a
- * computer's as they do over a player's (CONT-074).
+ * A vent: its mode, its two bounds, what it is doing, the heat its heater adds and its network's
+ * pressure. Its settings go through the vent's own hand setter, as the window's do, so a
+ * controller's orders win over a computer's as they do over a player's (CONT-074).
  */
 public final class VentPeripheral extends DevicePeripheral<VentBlockEntity> {
     VentPeripheral(VentBlockEntity vent) {
@@ -34,6 +34,12 @@ public final class VentPeripheral extends DevicePeripheral<VentBlockEntity> {
     @LuaFunction(mainThread = true)
     public String getState() throws LuaException {
         return Lua.word(device().status());
+    }
+
+    /** The heat its heater added at its last step, W: 0 unless its controller's thermostat is heating (CONT-166). */
+    @LuaFunction(mainThread = true)
+    public double getHeatingPower() throws LuaException {
+        return device().heatWatts();
     }
 
     /** Its pipe network's pressure, kPa. */
@@ -77,6 +83,17 @@ public final class VentPeripheral extends DevicePeripheral<VentBlockEntity> {
     @LuaFunction(mainThread = true)
     public boolean isPowered() throws LuaException {
         return device().power().isPowered();
+    }
+
+    /** Its redstone setting (COMPAT-023): {@code ignored}, {@code high} or {@code low}. */
+    @LuaFunction(mainThread = true)
+    public final String getRedstoneMode() throws LuaException {
+        return Lua.redstoneMode(device());
+    }
+
+    @LuaFunction(mainThread = true)
+    public final void setRedstoneMode(String mode) throws LuaException {
+        Lua.setRedstoneMode(device(), mode);
     }
 
     /** Whether an area air controller orders it, so its settings can't be changed here. */

@@ -43,6 +43,7 @@ public final class PipeNetwork {
     private final Set<LevelChunk> chunks = Collections.newSetFromMap(new IdentityHashMap<>());
     private final boolean builtAway;
     private boolean valid = true;
+    private PipeLeak.Spot leak;
 
     private PipeNetwork(List<PipeNode> members, GasStore gas) {
         this.members = members;
@@ -147,6 +148,15 @@ public final class PipeNetwork {
      */
     public List<PipeNode> radiators() {
         return radiators;
+    }
+
+    /** Where the network leaks (CONT-168), or null: never saved, as it is found again after a rebuild. */
+    PipeLeak.Spot leak() {
+        return leak;
+    }
+
+    void leak(PipeLeak.Spot spot) {
+        leak = spot;
     }
 
     /** Whether the network is still in use: false once it has dissolved. */
