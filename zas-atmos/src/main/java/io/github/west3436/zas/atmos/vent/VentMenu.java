@@ -55,8 +55,10 @@ public class VentMenu extends AbstractContainerMenu implements LabelledMenu {
     public static final int DATA_NETWORK = 10;
     /** The {@link VentStatus}'s ordinal. */
     public static final int DATA_STATUS = 11;
+    /** The heat its heater added at its last step, W, rounded and capped at 32,767 (CONT-166). */
+    public static final int DATA_HEAT = 12;
 
-    public static final int DATA_COUNT = 12;
+    public static final int DATA_COUNT = 13;
 
     private static final double[] STEPS = {-100, -10, 10, 100};
 

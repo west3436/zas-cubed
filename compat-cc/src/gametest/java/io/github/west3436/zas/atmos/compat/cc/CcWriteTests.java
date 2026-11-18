@@ -508,6 +508,54 @@ public final class CcWriteTests {
     }
 
     /**
+     * An area air controller's thermostat takes a target from a computer as from its window: from
+     * the lowest to the highest the window's buttons reach, refused beyond them, and off with nil, as
+     * the window's switch (CONT-165).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_165_an_area_air_controller_takes_a_target_temperature(GameTestHelper h)
+            throws LuaException {
+        Spot s = new Spot(h, 5720);
+        Devices.clear(s);
+        Player player = player(h);
+        AreaAirControllerBlockEntity controller = Devices.areaAirController(s, 2, 2, 2);
+        AreaAirControllerPeripheral p = s.peripheral(2, 2, 2, AreaAirControllerPeripheral.class);
+        ControllerMenu window = new ControllerMenu(1, player.getInventory(), controller);
+        h.assertValueEqual(p.getThermostat(), "off", "a new controller's thermostat");
+        h.assertTrue(p.getTargetTemperature() == null, "an off thermostat has a target");
+
+        h.assertTrue(window.clickMenuButton(player, ControllerMenu.THERMOSTAT), "the window's switch");
+        h.assertValueEqual(p.getTargetTemperature(), controller.target(), "the target the window's switch set");
+        h.assertValueEqual(p.getThermostat(), "idle", "a thermostat switched on");
+        DoubleSupplier target = controller::target;
+        double low = pressed(s, window, player, ControllerMenu.TARGET, target);
+        double high = pressed(s, window, player, ControllerMenu.TARGET + 3, target);
+        String range = "target temperature must be " + Lua.number(low) + " to " + Lua.number(high) + " K";
+        p.setTargetTemperature(Optional.of(low));
+        h.assertValueEqual(controller.target(), low, "the target at the window's lowest");
+        p.setTargetTemperature(Optional.of(high));
+        h.assertValueEqual(controller.target(), high, "the target at the window's highest");
+        p.setTargetTemperature(Optional.of(300.5));
+        h.assertValueEqual(controller.target(), 300.5, "the target set");
+        h.assertValueEqual(window.sync().target(), 300.5, "the window's target");
+        for (double beyond : new double[] {high + 0.001, low - 0.001, -1, Double.NaN, Double.POSITIVE_INFINITY}) {
+            h.assertValueEqual(
+                    s.refused(() -> p.setTargetTemperature(Optional.of(beyond)), "a target of " + beyond),
+                    range,
+                    "a target of " + beyond);
+        }
+        h.assertValueEqual(controller.target(), 300.5, "the target after the refusals");
+
+        p.setTargetTemperature(Optional.empty());
+        h.assertTrue(Double.isNaN(controller.target()), "nil left the thermostat on");
+        h.assertValueEqual(p.getThermostat(), "off", "the thermostat turned off");
+        h.assertValueEqual(window.sync().thermostat(), 0, "the window's thermostat");
+        h.assertFalse(window.clickMenuButton(player, ControllerMenu.TARGET + 3), "the window stepped an off target");
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /**
      * A central atmospherics controller takes a range and a zone's priority from a computer as from
      * its window, and refuses a range the window can't reach and a controller it hasn't claimed.
      */

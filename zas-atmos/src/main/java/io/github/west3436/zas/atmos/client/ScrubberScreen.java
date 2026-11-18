@@ -73,6 +73,7 @@ final class ScrubberScreen extends TguiScreen<ScrubberMenu> {
         row += Ui.BUTTON_ROW;
         DeviceParts.label(ui, "state", labelX, row, Ui.ROW);
         DeviceParts.status(ui, Component.translatable(menu.status().key()), statusColour(), valueX, row, Ui.ROW);
+        DeviceParts.heat(ui, x + w - Ui.PAD, row, Ui.ROW, menu.value(ScrubberMenu.DATA_COOLING), false);
         row += Ui.ROW;
         DeviceParts.label(ui, "network", labelX, row, Ui.ROW);
         ui.line(

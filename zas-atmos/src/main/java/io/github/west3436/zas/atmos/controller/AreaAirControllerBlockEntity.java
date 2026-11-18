@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -17,6 +18,9 @@ import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZoneIndex;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockLogic;
+import io.github.west3436.zas.atmos.heater.AirConditionerMath;
+import io.github.west3436.zas.atmos.heater.HeaterMath;
+import io.github.west3436.zas.atmos.heater.ThermoCoil;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.DevicePower;
@@ -65,7 +69,10 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  *       2 at once ({@link BreachAlarm}, CONT-043), and so is a triggered fire alarm it covers
  *       ({@link FireAlarmBlockEntity}, CONT-044).
  *   <li>Finds the parts in its zone and those linked to it (CONT-042), powers them in priority order
- *       (CONT-064, CONT-068) and commands its vents and scrubbers for its mode (CONT-041).
+ *       (CONT-064, CONT-068) and commands its vents and scrubbers for its mode (CONT-041). With a
+ *       target temperature, its thermostat orders the heaters of the vents in its zone, or the air
+ *       conditioners of its scrubbers there, from what is left once they are paid, and pays for
+ *       that heat ({@link Thermostat}, CONT-165).
  *   <li>When it reaches danger 2, steps the firelocks it covers at once, so they close in the same
  *       atmos tick (CONT-043).
  * </ol>
@@ -88,6 +95,10 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     private final Set<BlockPos> links = new LinkedHashSet<>();
     private ControllerPreset preset = ControllerPreset.HUMAN;
     private ControllerMode mode = ControllerMode.SCRUBBING;
+    /** The thermostat's target, K; NaN is off, the default (CONT-165). */
+    private double target = Double.NaN;
+
+    private Thermostat.State thermostat = Thermostat.State.OFF;
     private boolean powered;
     private long demand;
     private ControllerStatus status = ControllerStatus.UNPOWERED;
@@ -166,6 +177,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             breachCheck.reset();
             breach = false;
             fire = false;
+            thermostat = Double.isNaN(target) ? Thermostat.State.OFF : Thermostat.State.IDLE;
             parts = describe(covered, new boolean[covered.size()]);
             setStatus(level, ControllerStatus.UNPOWERED);
             return;
@@ -199,7 +211,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         }
 
         // Orders first, then the bill: a part's draw follows its order (a vent draws nothing while
-        // off), so paying first would let the tick a part is switched on run free.
+        // off), so paying first would let the tick a part is switched on run free. Heat comes after
+        // the bill, from what is left (CONT-166, CONT-167).
         VentOrder vent = mode.vent(preset).from(getBlockPos());
         ScrubberOrder scrubber = mode.scrubber(preset).from(getBlockPos());
         for (PoweredDevice d : covered) {
@@ -211,6 +224,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             }
         }
         boolean[] supplied = feed(covered, own);
+        demand += thermostat(level, covered);
         parts = describe(covered, supplied);
         setStatus(level, ControllerStatus.of(danger.level()));
         if (!wasAlarming && alarming()) {
@@ -386,7 +400,74 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return cost;
     }
 
-    /** Powers the covered parts from the buffer, in priority order (CONT-064, CONT-068). */
+    /**
+     * The thermostat's step (CONT-165 to CONT-167), after the parts are paid for: reads its zone's
+     * temperature, decides whether to heat or cool, and orders the coils of the vents or scrubbers in
+     * its zone that would move heat an even share of what brings the zone to the target, paying each
+     * order's cost from its buffer as it orders. Heat comes last: it spends only what is left once
+     * every part's own draw is paid, so a thermostat never leaves a vent without power to blow, and
+     * each order is at most what its share of that pays for. Only the parts it powers move heat for
+     * it, and only those in its zone: parts linked from another room don't, the reading being of this
+     * zone. A coil still holding an order, not yet moved, isn't ordered again.
+     *
+     * @return the FE it spent
+     */
+    private long thermostat(ServerLevel level, List<PoweredDevice> covered) {
+        double temperature = sample.state() == AtmosphereState.ZONED ? sample.temperature() : Double.NaN;
+        thermostat = Thermostat.next(
+                thermostat, temperature, target, AtmosServerConfig.get(AtmosServerConfig.THERMOSTAT_BAND));
+        Optional<ZoneId> zone = sample.zone();
+        if ((thermostat != Thermostat.State.HEATING && thermostat != Thermostat.State.COOLING) || zone.isEmpty()) {
+            return 0;
+        }
+        ThermoCoil.Kind kind = thermostat == Thermostat.State.HEATING ? ThermoCoil.Kind.HEATS : ThermoCoil.Kind.COOLS;
+        List<ThermoCoil> coils = new ArrayList<>();
+        double c = GasProperties.heatCapacity(sample.mixture().moles());
+        double need = kind == ThermoCoil.Kind.HEATS
+                ? HeaterMath.heat(c, temperature, target, AtmosTicks.SECONDS, Double.MAX_VALUE)
+                : AirConditionerMath.cool(c, temperature, target, AtmosTicks.SECONDS, Double.MAX_VALUE);
+        for (PoweredDevice d : covered) {
+            if (d instanceof ThermostatControl t
+                    && t.coil().kind() == kind
+                    && t.thermostatReady()
+                    && d.power().source() == this
+                    && d.power().isPowered()
+                    && ZoneIndex.inZone(level, d, zone.get())) {
+                ThermoCoil coil = t.coil();
+                // Sent and not in this reading yet, or ordered and not sent: either is on its way.
+                need -= coil.inFlight() + coil.ordered();
+                if (coil.ordered() == 0) {
+                    coils.add(coil);
+                }
+            }
+        }
+        if (coils.isEmpty() || need <= 0) {
+            return 0;
+        }
+        long spent = 0;
+        for (int i = 0; i < coils.size(); i++) {
+            ThermoCoil coil = coils.get(i);
+            int left = coils.size() - i;
+            long spare = buffer.getEnergyStored() / left;
+            double most = Math.min(coil.mostPerStep(), coil.joulesFor(spare));
+            double joules = Thermostat.share(need, left, most);
+            coil.order(joules);
+            long cost = (long) coil.draw() * AtmosTicks.PERIOD;
+            if (!buffer.take(cost)) {
+                coil.order(0); // can't happen: joulesFor keeps the cost within the share
+                continue;
+            }
+            spent += cost;
+            need -= coil.ordered();
+        }
+        return spent;
+    }
+
+    /**
+     * Powers the covered parts from the buffer, in priority order (CONT-064, CONT-068).
+     *
+     * @return for each part, whether it is paid for this atmos tick
+     */
     private boolean[] feed(List<PoweredDevice> covered, long own) {
         List<PowerFeed.Demand> demands = new ArrayList<>();
         List<Integer> unpaid = new ArrayList<>();
@@ -482,6 +563,34 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return preset;
     }
 
+    /** The thermostat's target, K; NaN while it is off (CONT-165). */
+    public double target() {
+        return target;
+    }
+
+    /**
+     * Sets the thermostat's target, clamped to 73–573 K, or turns it off with NaN (CONT-165).
+     *
+     * @param kelvin the target, or NaN
+     */
+    public void setTarget(double kelvin) {
+        double next = Thermostat.clampTarget(kelvin);
+        if (Double.compare(next, target) != 0) {
+            target = next;
+            if (Double.isNaN(next)) {
+                thermostat = Thermostat.State.OFF;
+            } else if (thermostat == Thermostat.State.OFF) {
+                thermostat = Thermostat.State.IDLE;
+            }
+            setChanged();
+        }
+    }
+
+    /** What the thermostat did at its last step (CONT-165). */
+    public Thermostat.State thermostat() {
+        return thermostat;
+    }
+
     public void setPreset(ControllerPreset preset) {
         this.preset = preset;
         values = new double[0];
@@ -563,6 +672,9 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         tag.putInt("Energy", buffer.getEnergyStored());
         tag.putString("Mode", mode.key());
         tag.put("Preset", preset.save());
+        if (!Double.isNaN(target)) {
+            tag.putDouble("Target", target);
+        }
         tag.putInt("Danger", danger.level());
         tag.putInt("DangerLower", danger.lowerReadings());
         tag.putInt("DangerLowerMax", danger.highestLower());
@@ -575,6 +687,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         buffer.set(tag.getInt("Energy"));
         mode = ControllerMode.byKey(tag.getString("Mode"));
         preset = tag.contains("Preset") ? ControllerPreset.load(tag.getCompound("Preset")) : ControllerPreset.HUMAN;
+        target = tag.contains("Target") ? Thermostat.clampTarget(tag.getDouble("Target")) : Double.NaN;
+        thermostat = Double.isNaN(target) ? Thermostat.State.OFF : Thermostat.State.IDLE;
         danger.restore(tag.getInt("Danger"), tag.getInt("DangerLower"), tag.getInt("DangerLowerMax"));
         links.clear();
         for (long p : tag.getLongArray("Links")) {

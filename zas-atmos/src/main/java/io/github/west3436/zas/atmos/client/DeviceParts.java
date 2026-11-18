@@ -64,6 +64,19 @@ final class DeviceParts {
         ui.line(Component.literal("● ").append(word), x, y, height, colour, Face.BODY);
     }
 
+    /**
+     * The heat a vent's heater or a scrubber's air conditioner moved at its last step, ending at {@code
+     * right}: an arrow up for heating or down for cooling, and the power (CONT-166, CONT-167). Nothing
+     * when it moved none.
+     */
+    static void heat(Ui ui, int right, int y, int height, int watts, boolean heating) {
+        if (watts <= 0) {
+            return;
+        }
+        Component shown = text(heating ? "heating" : "cooling", String.format(java.util.Locale.ROOT, "%,d", watts));
+        ui.lineRight(shown, right, y, height, heating ? Ui.ORANGE : Ui.BLUE, Face.BODY);
+    }
+
     /** The switch, ending at {@code right}. */
     static void onOff(Ui ui, int right, int y, boolean on, Runnable toggle) {
         Component label = text(on ? "on" : "off");

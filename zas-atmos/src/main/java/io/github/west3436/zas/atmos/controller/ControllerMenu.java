@@ -38,6 +38,8 @@ import org.jetbrains.annotations.Nullable;
  *   <li>{@code 30}–{@code 35}: change the selected bound by −10, −1, −0.1, +0.1, +1 or +10;
  *   <li>{@code 36}: turn the selected bound off, or back on;
  *   <li>{@code 40}: opened from a central controller, go back to its GUI;
+ *   <li>{@code 50}: turn the thermostat on, at the preset's middle temperature, or off (CONT-165);
+ *   <li>{@code 51}–{@code 54}: change the thermostat's target by −10, −1, +1 or +10 K;
  *   <li>{@code 100} and up: select a bound for editing, {@code 100 + reading * 4 + bound}.
  * </ul>
  */
@@ -46,10 +48,15 @@ public class ControllerMenu extends AbstractContainerMenu implements LabelledMen
     public static final int ADJUST = 30;
     public static final int TOGGLE_BOUND = 36;
     public static final int BACK = 40;
+    public static final int THERMOSTAT = 50;
+    public static final int TARGET = 51;
     public static final int SELECT_BOUND = 100;
 
     /** The steps of buttons {@code 30} to {@code 35}. */
     public static final double[] STEPS = {-10, -1, -0.1, 0.1, 1, 10};
+
+    /** The steps of buttons {@code 51} to {@code 54}, K. */
+    public static final double[] TARGET_STEPS = {-10, -1, 1, 10};
 
     private static final int SYNC_TICKS = 10;
 
@@ -159,6 +166,13 @@ public class ControllerMenu extends AbstractContainerMenu implements LabelledMen
             double now = t.bound(bound);
             double next = now == Thresholds.OFF ? defaultBound(t) : Thresholds.OFF;
             controller.setPreset(preset.with(reading, t.with(bound, next)));
+        } else if (id == THERMOSTAT) {
+            controller.setTarget(Double.isNaN(controller.target()) ? Thermostat.startingTarget(preset) : Double.NaN);
+        } else if (id >= TARGET && id < TARGET + TARGET_STEPS.length) {
+            if (Double.isNaN(controller.target())) {
+                return false; // an off thermostat has no target to change; turn it on first
+            }
+            controller.setTarget(controller.target() + TARGET_STEPS[id - TARGET]);
         } else if (id == BACK) {
             return back(player);
         } else {
@@ -235,6 +249,8 @@ public class ControllerMenu extends AbstractContainerMenu implements LabelledMen
                 controller.lastPin() == null ? "" : controller.lastPin().name(),
                 controller.breach(),
                 controller.fire(),
+                controller.target(),
+                controller.thermostat().ordinal(),
                 central,
                 central == null ? "" : Labels.of(controller.getLevel(), central));
     }

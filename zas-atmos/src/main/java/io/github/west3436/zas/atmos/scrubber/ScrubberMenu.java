@@ -76,8 +76,10 @@ public class ScrubberMenu extends AbstractContainerMenu implements LabelledMenu 
     public static final int DATA_NETWORK = 9;
     /** The {@link ScrubberStatus}'s ordinal. */
     public static final int DATA_STATUS = 10;
+    /** The heat its air conditioner took at its last step, W, rounded and capped at 32,767 (CONT-167). */
+    public static final int DATA_COOLING = 11;
 
-    public static final int DATA_COUNT = 11;
+    public static final int DATA_COUNT = 12;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;

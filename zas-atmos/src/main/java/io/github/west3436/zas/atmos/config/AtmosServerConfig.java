@@ -1,7 +1,10 @@
 package io.github.west3436.zas.atmos.config;
 
 import io.github.west3436.zas.api.gas.GasPurity;
+import io.github.west3436.zas.atmos.controller.Thermostat;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
+import io.github.west3436.zas.atmos.pipe.PipeBurst;
+import io.github.west3436.zas.atmos.pipe.PipeLeak;
 import io.github.west3436.zas.atmos.radiator.RadiatorMath;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
@@ -101,6 +104,18 @@ public final class AtmosServerConfig {
     /** The pressure fall within one atmos tick that alarms a controller at once, in kPa (CONT-043). */
     public static final ModConfigSpec.DoubleValue BREACH_DROP_KPA;
 
+    /** A thermostat's dead band, in K (CONT-165). */
+    public static final ModConfigSpec.DoubleValue THERMOSTAT_BAND;
+
+    /** A pipe network's burst pressure over a segment's cell, in kPa; 0 turns bursting off (CONT-005, CONT-108). */
+    public static final ModConfigSpec.DoubleValue PIPE_BURST_KPA;
+
+    /** A pipe network's leak pressure over a segment's cell, in kPa; 0 turns leaks off (CONT-005, CONT-168). */
+    public static final ModConfigSpec.DoubleValue PIPE_LEAK_KPA;
+
+    /** The share per second of what would even a leaking segment out with its cell that its leak lets out (CONT-168). */
+    public static final ModConfigSpec.DoubleValue PIPE_LEAK_RATE;
+
     /** The most power a tank's or canister's explosion can have (CONT-109). TNT is 4. */
     public static final ModConfigSpec.DoubleValue EXPLOSION_POWER_CAP;
 
@@ -184,6 +199,27 @@ public final class AtmosServerConfig {
                         "A fall in its zone's pressure, in kPa within one atmos tick, that sends a controller to danger 2 at once, as a",
                         "breach does (CONT-043). Only for presets with a pressure min2 above 0, and only while the pressure is below min1. 0 turns it off.")
                 .defineInRange("breach_drop_kpa", 10.0, 0.0, 1_000.0);
+        THERMOSTAT_BAND = builder.comment(
+                        "How far, in K, its zone may drift from a controller's target temperature before its vents start",
+                        "heating or its scrubbers start cooling (CONT-165). Each stops at the target.")
+                .defineInRange("thermostat_band_k", Thermostat.DEFAULT_BAND, 0.0, 100.0);
+        builder.pop();
+
+        builder.comment("Pipe overpressure (CONT-005, CONT-108, CONT-168).").push("pipes");
+        PIPE_BURST_KPA = builder.comment(
+                        "A network more than this over a segment's cell, in kPa, bursts one such segment: it is destroyed",
+                        "and the network's gas goes into its cell (CONT-108). 10,132.5 is 100 atm. 0 turns bursting off.")
+                .defineInRange("burst_kpa", PipeBurst.THRESHOLD_KPA, 0.0, 1_000_000.0);
+        PIPE_LEAK_KPA = builder.comment(
+                        "A network more than this over a segment's cell, in kPa, and not bursting, leaks there: one such",
+                        "segment, chosen at random, lets gas into its cell until the network is back under (CONT-168).",
+                        "0 turns leaks off. 7,599 is 75 atm.")
+                .defineInRange("leak_kpa", 0.0, 0.0, 1_000_000.0);
+        PIPE_LEAK_RATE = builder.comment(
+                        "The share per second of what would even the leaking segment's network out with its cell that a",
+                        "leak lets out, so it leaks faster the higher the pressure difference (CONT-168). An open pipe end",
+                        "is 0.163.")
+                .defineInRange("leak_rate", PipeLeak.DEFAULT_RATE, 0.0, 1.0);
         builder.pop();
 
         builder.comment("The central atmospherics controller (CONT-116, CONT-122).")
