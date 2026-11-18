@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.device;
 
+import io.github.west3436.zas.api.relocation.Relocations;
 import it.unimi.dsi.fastutil.longs.Long2ByteMap;
 import it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -35,7 +36,9 @@ import org.jetbrains.annotations.Nullable;
  * {@value #RANGE} blocks that is new or has changed, and an idle or removed one it knew of. One that
  * it knew of stays listed out to {@value #FORGET_RANGE} blocks, so a
  * player walking along the edge doesn't keep being told. Nothing changed means nothing is sent, so a
- * station that has settled costs nothing, however big it is.
+ * station that has settled costs nothing, however big it is. Distances are to where the world shows a
+ * device (API-068), so a player on a Sable ship is told of the devices on board, not of those in the
+ * ship's far-off plot.
  *
  * <p>A device's level is a lease too. A device that hasn't finished a step for {@value #STALE_TICKS}
  * game ticks reads as idle, whatever it last reported, so one whose chunk has left full status, or
@@ -143,6 +146,16 @@ public final class DeviceActivitySync {
         w.step = now;
     }
 
+    /**
+     * For GameTests: a device's level after a step, as {@link AtmosDevice} reports it, for a block
+     * the test doesn't step, such as one on a Sable ship. {@link DeviceActivity#IDLE} forgets it.
+     *
+     * @param now the game tick, as {@link AtmosTicks#now}
+     */
+    public static void reportForTest(ServerLevel level, BlockPos pos, int activity, long now) {
+        report(level, pos, activity, now);
+    }
+
     /** A device has gone: removed, or its chunk unloaded. */
     static void remove(ServerLevel level, BlockPos pos) {
         Long2ObjectOpenHashMap<Working> working = WORKING.get(level.dimension());
@@ -173,10 +186,11 @@ public final class DeviceActivitySync {
             return null;
         }
         List<DeviceActivityPayload.Change> changes = new ArrayList<>();
+        ServerLevel level = player.serverLevel();
         Vec3 at = player.position();
-        forgetGone(told, working, at, now, changes);
+        forgetGone(level, told, working, at, now, changes);
         if (working != null) {
-            tellChanged(told, working, at, now, changes);
+            tellChanged(level, told, working, at, now, changes);
         }
         if (changes.isEmpty()) {
             return null;
@@ -189,6 +203,7 @@ public final class DeviceActivitySync {
 
     /** First, so a loop that should stop is never held up by others starting. */
     private static void forgetGone(
+            Level level,
             Told told,
             @Nullable Long2ObjectOpenHashMap<Working> working,
             Vec3 at,
@@ -198,7 +213,7 @@ public final class DeviceActivitySync {
         while (it.hasNext() && changes.size() < DeviceActivityPayload.MAX_CHANGES) {
             long pos = it.next().getLongKey();
             Working w = working == null ? null : working.get(pos);
-            if (w == null || stale(w, now) || !within(pos, at, FORGET_RANGE)) {
+            if (w == null || stale(w, now) || !within(level, pos, at, FORGET_RANGE)) {
                 changes.add(new DeviceActivityPayload.Change(pos, DeviceActivity.IDLE));
                 it.remove();
             }
@@ -206,6 +221,7 @@ public final class DeviceActivitySync {
     }
 
     private static void tellChanged(
+            Level level,
             Told told,
             Long2ObjectOpenHashMap<Working> working,
             Vec3 at,
@@ -218,18 +234,17 @@ public final class DeviceActivitySync {
             long pos = e.getLongKey();
             Working w = e.getValue();
             byte known = told.known.get(pos);
-            if (known != w.level && !stale(w, now) && (known != 0 || within(pos, at, RANGE))) {
+            if (known != w.level && !stale(w, now) && (known != 0 || within(level, pos, at, RANGE))) {
                 changes.add(new DeviceActivityPayload.Change(pos, w.level));
                 told.known.put(pos, (byte) w.level);
             }
         }
     }
 
-    private static boolean within(long pos, Vec3 at, int range) {
-        double dx = BlockPos.getX(pos) + 0.5 - at.x;
-        double dy = BlockPos.getY(pos) + 0.5 - at.y;
-        double dz = BlockPos.getZ(pos) + 0.5 - at.z;
-        return dx * dx + dy * dy + dz * dz <= range * range;
+    /** Whether a device's middle, where the world shows it, is within a range of a point. */
+    private static boolean within(Level level, long pos, Vec3 at, int range) {
+        Vec3 middle = new Vec3(BlockPos.getX(pos) + 0.5, BlockPos.getY(pos) + 0.5, BlockPos.getZ(pos) + 0.5);
+        return Relocations.shownAt(level, middle).distanceToSqr(at) <= range * range;
     }
 
     private static void send(ServerPlayer player, DeviceActivityPayload payload) {

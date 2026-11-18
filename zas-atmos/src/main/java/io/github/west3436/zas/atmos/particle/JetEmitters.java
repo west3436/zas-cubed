@@ -35,6 +35,13 @@ public final class JetEmitters {
     /** A source further than this from the camera makes nothing, in blocks: vanilla's particle limit. */
     public static final double RANGE = 32;
 
+    /**
+     * The most a moving source's particles are carried by its own move, blocks per game tick: a source
+     * that went further than this since the last tick jumped, as a ship teleported does, and carries
+     * none.
+     */
+    static final double MAX_CARRIED = 5;
+
     private static final double[] NO_OFFSET = {0, 0, 0};
 
     /** Makes one particle. */
@@ -59,9 +66,12 @@ public final class JetEmitters {
     private record Key(GasJetKind kind, double x, double y, double z) {}
 
     private static final class Source {
-        final double x;
-        final double y;
-        final double z;
+        double x;
+        double y;
+        double z;
+        double vx;
+        double vy;
+        double vz;
         double ax;
         double ay;
         double az;
@@ -77,7 +87,7 @@ public final class JetEmitters {
         }
     }
 
-    private final Map<Key, Source> sources = new LinkedHashMap<>();
+    private final Map<Object, Source> sources = new LinkedHashMap<>();
     private final RandomGenerator random;
 
     /** @param random the source of each particle's direction */
@@ -98,14 +108,54 @@ public final class JetEmitters {
      * @param amount its amount, as {@code kind} says
      */
     public void add(GasJetKind kind, double x, double y, double z, double dx, double dy, double dz, double amount) {
-        Key key = new Key(kind, x, y, z);
-        Source source = sources.get(key);
+        add(new Key(kind, x, y, z), kind, x, y, z, dx, dy, dz, amount);
+    }
+
+    /**
+     * Starts a jet, or takes over from the jet of the same name, wherever it is now: for one that
+     * moves, as a vent on a Sable ship does (COMPAT-101). One renewed each tick keeps its source, so its
+     * share of particles builds up as a still one's does, and its particles are carried by how far it
+     * moved since the last tick, so they keep up with the ship.
+     *
+     * @param name what names it, with {@code equals}: not a {@link GasJetKind} and place, which
+     *     {@link #add(GasJetKind, double, double, double, double, double, double, double)} uses
+     * @param kind what it is
+     * @param x where it comes from now
+     * @param y as {@code x}
+     * @param z as {@code x}
+     * @param dx its direction; all zero means every direction
+     * @param dy as {@code dx}
+     * @param dz as {@code dx}
+     * @param amount its amount, as {@code kind} says
+     */
+    public void add(
+            Object name,
+            GasJetKind kind,
+            double x,
+            double y,
+            double z,
+            double dx,
+            double dy,
+            double dz,
+            double amount) {
+        Source source = sources.get(name);
         if (source == null) {
             if (sources.size() >= MAX_SOURCES) {
                 return;
             }
             source = new Source(x, y, z);
-            sources.put(key, source);
+            sources.put(name, source);
+        } else {
+            double mx = x - source.x;
+            double my = y - source.y;
+            double mz = z - source.z;
+            boolean carried = mx * mx + my * my + mz * mz <= MAX_CARRIED * MAX_CARRIED;
+            source.vx = carried ? mx : 0;
+            source.vy = carried ? my : 0;
+            source.vz = carried ? mz : 0;
+            source.x = x;
+            source.y = y;
+            source.z = z;
         }
         double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
         boolean aimed = len > 1e-6 && len < Double.POSITIVE_INFINITY;
@@ -177,9 +227,9 @@ public final class JetEmitters {
                 s.x + at[0] + d[0] * out,
                 s.y + at[1] + d[1] * out,
                 s.z + at[2] + d[2] * out,
-                d[0] * way,
-                d[1] * way,
-                d[2] * way,
+                d[0] * way + s.vx,
+                d[1] * way + s.vy,
+                d[2] * way + s.vz,
                 plan.lifetime(),
                 plan.shade(),
                 plan.size());

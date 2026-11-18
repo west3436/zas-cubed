@@ -12,6 +12,17 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.relocation.Relocations;
+import io.github.west3436.zas.atmos.client.DeviceLoops;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.ClientDeviceActivity;
+import io.github.west3436.zas.atmos.device.DeviceActivity;
+import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
+import io.github.west3436.zas.atmos.device.DeviceActivitySync;
+import io.github.west3436.zas.atmos.particle.DeviceJets;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
+import io.github.west3436.zas.atmos.particle.JetEmitters;
+import io.github.west3436.zas.atmos.particle.ParticleDensity;
+import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.config.AirflowConfig;
 import io.github.west3436.zas.engine.flow.FlowField;
 import io.github.west3436.zas.hotspot.GasFireScan;
@@ -24,9 +35,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -37,7 +50,8 @@ import org.joml.Vector3d;
 /**
  * What a player sees, hears and reads of a sub-level is where the world shows it, not in its plot
  * (COMPAT-101, COMPAT-102, API-068): a breach on board hisses, puffs and pushes at the hole on the
- * ship, the way the ship turns it, and coordinates on board are on the ship.
+ * ship, the way the ship turns it, its hull is in the way of a player the flow carries, devices on
+ * board are heard there and their vents puff there, and coordinates on board are on the ship.
  */
 @GameTestHolder(SableGateTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
@@ -238,6 +252,198 @@ public final class SableShownTests {
             d.level.setBlock(ground, Deck.AIR, Block.UPDATE_CLIENTS);
             d.level.setBlock(burning, Deck.AIR, Block.UPDATE_CLIENTS);
         }
+        h.succeed();
+    }
+
+    /**
+     * A player the flow carries towards a hole one block high in a flying, turned ship's hull is put
+     * in the swimming pose, as on the ground, and stays down inside the hole (FLOW-019). Carried at the
+     * hull where it has no hole, it isn't. A hole on the ground still works with Sable there. Before,
+     * the crawl check looked only where the world keeps blocks, which is empty sky by the cabin.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void flow_019_a_player_carried_into_a_low_hole_on_a_flying_ship_crawls(GameTestHelper h) {
+        Deck d = new Deck(h, h.getLevel(), 9);
+        d.box();
+        ServerSubLevel sub = d.assemble();
+        fly(d, sub);
+        // A hole one block high in the east wall, level with the cabin's floor.
+        BlockPos hole = Deck.onBoard(sub, 4, 1, 2);
+        d.level.setBlockAndUpdate(hole, Deck.AIR);
+        // The plot's east, the way the ship turns it, as the flow out of the hole is.
+        Vector3d east = sub.logicalPose().orientation().transform(new Vector3d(1, 0, 0));
+        Vec3 out = new Vec3(east.x, east.y, east.z);
+
+        // The cabin's world space is empty sky: the level alone sees no wall by the hole.
+        Vec3 byHole = shown(sub, new Vec3(hole.getX() - 0.5, hole.getY(), hole.getZ() + 0.5));
+        FakePlayer probe = d.player(byHole);
+        h.assertTrue(
+                d.level.noCollision(
+                        probe, probe.getDimensions(Pose.STANDING).makeBoundingBox(byHole.add(out.scale(0.5)))),
+                "the level sees the hull where the world shows it");
+
+        FakePlayer player = d.player(byHole);
+        h.assertTrue(Airflow.crawl(player, out, false, 1.5), "the player by the hole on board didn't crawl");
+        h.assertValueEqual(player.getForcedPose(), Pose.SWIMMING, "the forced pose by the hole");
+
+        // Inside the hole, it stays down with no flow.
+        player.moveTo(shown(sub, new Vec3(hole.getX() + 0.5, hole.getY(), hole.getZ() + 0.5)));
+        h.assertTrue(Airflow.crawl(player, null, true, 1.5), "the player stood up in the hole on board");
+
+        // Carried at the west wall, which has no hole: it can't crawl into stone.
+        Vector3d west = sub.logicalPose().orientation().transform(new Vector3d(-1, 0, 0));
+        FakePlayer atWall = d.player(shown(sub, new Vec3(hole.getX() - 2.5, hole.getY(), hole.getZ() + 0.5)));
+        h.assertFalse(
+                Airflow.crawl(atWall, new Vec3(west.x, west.y, west.z), false, 1.5),
+                "the player crawled into the ship's solid wall");
+        h.assertTrue(atWall.getForcedPose() == null, "a forced pose at the solid wall");
+
+        // A hole one block high in a wall on the ground, by where the ship was built.
+        BlockPos ground = d.abs(10, 0, 2);
+        for (int y = 1; y <= 3; y++) {
+            d.level.setBlockAndUpdate(ground.above(y), Deck.STONE);
+        }
+        try {
+            FakePlayer onTheGround = d.player(new Vec3(ground.getX() - 0.5, ground.getY(), ground.getZ() + 0.5));
+            h.assertTrue(
+                    Airflow.crawl(onTheGround, new Vec3(1, 0, 0), false, 1.5),
+                    "the player by a hole on the ground didn't crawl");
+        } finally {
+            for (int y = 1; y <= 3; y++) {
+                d.level.setBlockAndUpdate(ground.above(y), Deck.AIR);
+            }
+        }
+        h.succeed();
+    }
+
+    /**
+     * A device working on a flying, turned ship (CONT-125, CONT-127): the server tells a player in the
+     * cabin, where the world shows it, about it, and the client hears it there, at the device where
+     * the ship shows it. As the ship flies on, each tick's look places it where the ship is then. A
+     * device on the ground is heard where it is. Before, both measured to the device in the ship's
+     * plot, millions of blocks off, so devices on board were silent.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void cont_125_a_device_on_a_flying_ship_is_heard_where_the_ship_shows_it(GameTestHelper h) {
+        Deck d = new Deck(h, h.getLevel(), 10);
+        d.box();
+        ServerSubLevel sub = d.assemble();
+        fly(d, sub);
+        BlockPos device = Deck.onBoard(sub, 2, 1, 3);
+        Vec3 shownDevice = shown(sub, Vec3.atCenterOf(device));
+        Vec3 ear = shown(sub, Vec3.atCenterOf(Deck.onBoard(sub, 2, 2, 1)));
+        long now = AtmosTicks.now(d.level);
+        DeviceActivitySync.reportForTest(d.level, device, DeviceActivity.HARD, now);
+        try {
+            // The server tells the player in the cabin.
+            FakePlayer player = d.player(ear.subtract(0, 1.62, 0));
+            List<DeviceActivityPayload> sent = new ArrayList<>();
+            DeviceActivitySync.syncAt(player, now, sent::add);
+            h.assertValueEqual(sent.size(), 1, "messages to the player on board");
+            h.assertValueEqual(
+                    sent.get(0).changes(),
+                    List.of(new DeviceActivityPayload.Change(device.asLong(), DeviceActivity.HARD)),
+                    "what the player on board was told");
+
+            // Its client hears the device where the ship shows it.
+            ClientDeviceActivity table = new ClientDeviceActivity();
+            table.accept(sent.get(0));
+            List<Vec3> heard = new ArrayList<>();
+            table.forEachHeard(d.level, ear, DeviceLoops.RANGE, (pos, level, at) -> heard.add(at));
+            h.assertValueEqual(heard.size(), 1, "devices heard in the cabin");
+            double off = heard.get(0).distanceTo(shownDevice);
+            h.assertTrue(off < 1e-6, "the device is heard " + off + " blocks from where the ship shows it");
+
+            // The ship flies on and turns: the next tick's look follows it.
+            fly(d, sub);
+            Vec3 moved = shown(sub, Vec3.atCenterOf(device));
+            h.assertTrue(moved.distanceTo(shownDevice) > 10, "the device didn't move with the ship");
+            Vec3 earNow = shown(sub, Vec3.atCenterOf(Deck.onBoard(sub, 2, 2, 1)));
+            heard.clear();
+            table.forEachHeard(d.level, earNow, DeviceLoops.RANGE, (pos, level, at) -> heard.add(at));
+            h.assertValueEqual(heard.size(), 1, "devices heard in the cabin after it flew on");
+            off = heard.get(0).distanceTo(moved);
+            h.assertTrue(off < 1e-6, "the device is heard " + off + " blocks from the ship after it flew on");
+            heard.clear();
+            table.forEachHeard(d.level, ear, DeviceLoops.RANGE, (pos, level, at) -> heard.add(at));
+            h.assertTrue(heard.isEmpty(), "the device is heard where the ship was");
+
+            // A device on the ground is heard where it is.
+            BlockPos onTheGround = d.abs(2, 8, 2);
+            ClientDeviceActivity ground = new ClientDeviceActivity();
+            ground.accept(new DeviceActivityPayload(
+                    List.of(new DeviceActivityPayload.Change(onTheGround.asLong(), DeviceActivity.WORKING))));
+            Vec3 by = Vec3.atCenterOf(onTheGround).add(3, 0, 0);
+            ground.forEachHeard(d.level, by, DeviceLoops.RANGE, (pos, level, at) -> heard.add(at));
+            h.assertValueEqual(heard, List.of(Vec3.atCenterOf(onTheGround)), "where the device on the ground is heard");
+        } finally {
+            DeviceActivitySync.reportForTest(d.level, device, DeviceActivity.IDLE, now);
+        }
+        h.succeed();
+    }
+
+    /**
+     * A vent blowing on a flying, turned ship (CLIENT-019): its jet starts at its grille where the ship
+     * shows it, and its puffs go out the way the ship turns the vent. A vent on the ground blows from
+     * its grille the way it faces, as before. Before, the client measured to the vent in the ship's
+     * plot, so it showed nothing.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void client_019_a_vent_on_a_flying_ship_puffs_from_its_grille_the_way_the_ship_turns_it(
+            GameTestHelper h) {
+        Deck d = new Deck(h, h.getLevel(), 11);
+        d.box();
+        ServerSubLevel sub = d.assemble();
+        fly(d, sub);
+        BlockPos vent = Deck.onBoard(sub, 2, 1, 3);
+        Vec3 grille = shown(sub, Vec3.atCenterOf(vent).add(0, 0, -DeviceJets.MOUTH));
+        Vector3d turned = sub.logicalPose().orientation().transform(new Vector3d(0, 0, -1));
+        Vec3 out = new Vec3(turned.x, turned.y, turned.z);
+
+        DeviceJets.Placed jet = DeviceJets.place(d.level, vent, Direction.NORTH);
+        h.assertTrue(
+                jet.mouth().distanceTo(grille) < 1e-6,
+                "the jet starts at " + jet.mouth() + ", the grille shows at " + grille);
+        h.assertTrue(
+                jet.way().subtract(out).length() < 1e-6, "the jet points " + jet.way() + ", the vent faces " + out);
+
+        // The puffs, from a camera in the cabin.
+        Vec3 camera = shown(sub, Vec3.atCenterOf(Deck.onBoard(sub, 2, 2, 1)));
+        JetEmitters emitters = new JetEmitters(new Random(3));
+        List<double[]> puffs = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            emitters.add(
+                    "vent",
+                    GasJetKind.DEVICE,
+                    jet.mouth().x,
+                    jet.mouth().y,
+                    jet.mouth().z,
+                    jet.way().x,
+                    jet.way().y,
+                    jet.way().z,
+                    DeviceJets.vent(VentMode.BLOW, DeviceActivity.HARD));
+            emitters.tick(
+                    camera.x,
+                    camera.y,
+                    camera.z,
+                    ParticleDensity.ALL,
+                    (x, y, z, vx, vy, vz, lifetime, shade, size) -> puffs.add(new double[] {x, y, z, vx, vy, vz}));
+        }
+        h.assertFalse(puffs.isEmpty(), "no puffs");
+        for (double[] p : puffs) {
+            double off = grille.distanceTo(new Vec3(p[0], p[1], p[2]));
+            h.assertTrue(off < 1.5, "a puff starts " + off + " blocks from the grille");
+            double speed = Math.sqrt(p[3] * p[3] + p[4] * p[4] + p[5] * p[5]);
+            double along = (p[3] * out.x + p[4] * out.y + p[5] * out.z) / speed;
+            h.assertTrue(along > 0.8, "a puff goes " + along + " of its speed out of the grille");
+        }
+
+        // A vent on the ground blows from its grille the way it faces.
+        BlockPos ground = d.abs(2, 8, 2);
+        DeviceJets.Placed still = DeviceJets.place(d.level, ground, Direction.UP);
+        h.assertValueEqual(
+                still.mouth(), Vec3.atCenterOf(ground).add(0, DeviceJets.MOUTH, 0), "the ground vent's mouth");
+        h.assertValueEqual(still.way(), new Vec3(0, 1, 0), "the ground vent's way");
         h.succeed();
     }
 
