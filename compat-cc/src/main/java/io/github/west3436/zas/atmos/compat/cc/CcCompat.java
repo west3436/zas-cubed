@@ -97,6 +97,7 @@ public final class CcCompat {
                     return tank == null ? null : new LargeTankPeripheral(tank);
                 },
                 AtmosBlocks.LARGE_GAS_TANK.get());
+        device(event, AtmosBlockEntities.GAS_MINER, GasMinerPeripheral::new);
         // The console is four blocks with one block entity, in its lower left block: any of them is
         // the peripheral, as any of them opens its window.
         event.registerBlock(

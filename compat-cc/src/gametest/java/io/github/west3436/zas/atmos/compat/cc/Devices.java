@@ -213,6 +213,20 @@ final class Devices {
                         "getPower",
                         "getEnergy",
                         "getEnergyCapacity"));
+        surface.put(
+                "zas_gas_miner",
+                List.of(
+                        "isOn",
+                        "setOn",
+                        "getState",
+                        "getGas",
+                        "setGas",
+                        "getGases",
+                        "getTargetPressure",
+                        "setTargetPressure",
+                        "getTemperature",
+                        "setTemperature",
+                        "getRoomPressure"));
         return surface;
     }
 
@@ -355,6 +369,7 @@ final class Devices {
             case "zas_generator" -> AtmosBlocks.GENERATOR.get();
             case "zas_teg" -> AtmosBlocks.TEG.get();
             case "zas_turbine" -> AtmosBlocks.TURBINE.get();
+            case "zas_gas_miner" -> AtmosBlocks.GAS_MINER.get();
             default -> throw new GameTestAssertException("no block for " + type);
         };
     }

@@ -176,6 +176,24 @@ public final class AtmosServerConfig {
     /** How pure a pipe's gas must be to leave for another mod's fluid pipe or tank (COMPAT-142). */
     public static final ModConfigSpec.DoubleValue FLUID_MIN_PURITY;
 
+    /** The most a gas miner adds, in mol/s (CONT-181). */
+    public static final ModConfigSpec.IntValue GAS_MINER_RATE;
+
+    /** The highest target a gas miner's window or a computer sets, in kPa (CONT-180). */
+    public static final ModConfigSpec.DoubleValue GAS_MINER_MAX_TARGET;
+
+    /** How long a gas miner whose gas went to the open air waits before it tries again, in s (CONT-181). */
+    public static final ModConfigSpec.IntValue GAS_MINER_OPEN_AIR_WAIT;
+
+    /** How far a remote signaler's signal reaches, in blocks; 0 is the whole dimension (CONT-186). */
+    public static final ModConfigSpec.IntValue SIGNALER_RANGE;
+
+    /** How long an armed proximity sensor waits before it watches, in s (CONT-187). */
+    public static final ModConfigSpec.IntValue PROXIMITY_ARMING_DELAY;
+
+    /** The widest range a proximity sensor's window sets, in blocks (CONT-187). */
+    public static final ModConfigSpec.IntValue PROXIMITY_MAX_RANGE;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("Power: what each device draws while it runs, in FE/t (CONT-065), and the power sources.")
@@ -365,6 +383,30 @@ public final class AtmosServerConfig {
                         "share. At 0.99 a pipe of air gives nothing and a pipe of oxygen gives all of it. 0 turns",
                         "the rule off: each gas then leaves on its own, as a filter would take it.")
                 .defineInRange("min_purity", GasPurity.DEFAULT_MIN_SHARE, 0.0, 1.0);
+        builder.pop();
+        builder.comment("The creative gas miner (CONT-180, CONT-181).").push("gas_miner");
+        GAS_MINER_RATE = builder.comment(
+                        "The most gas a miner adds to the room in front of it, in mol/s. It adds less as the",
+                        "room nears its target.")
+                .defineInRange("rate", 1_000, 1, 100_000);
+        GAS_MINER_MAX_TARGET = builder.comment("The highest target pressure a miner can be set to, in kPa")
+                .defineInRange("max_target", 10_000.0, 1.0, 30_000.0);
+        GAS_MINER_OPEN_AIR_WAIT = builder.comment(
+                        "How long a miner whose gas went to the open air waits before it tries again, in seconds")
+                .defineInRange("open_air_wait", 10, 1, 600);
+        builder.pop();
+
+        builder.comment("A tank transfer valve's remote signaler and proximity sensor (CONT-186, CONT-187).")
+                .push("ttv_triggers");
+        SIGNALER_RANGE = builder.comment(
+                        "How far a remote signaler's signal reaches, in blocks, within its dimension and its",
+                        "loaded chunks. 0 is the whole dimension.")
+                .defineInRange("signaler_range", 128, 0, 30_000_000);
+        PROXIMITY_ARMING_DELAY = builder.comment(
+                        "How long a primed TTV with a proximity sensor waits before it watches, in seconds")
+                .defineInRange("proximity_arming_delay", 5, 0, 60);
+        PROXIMITY_MAX_RANGE = builder.comment("The widest range a proximity sensor can be set to, in blocks")
+                .defineInRange("proximity_max_range", 5, 1, 16);
         builder.pop();
         SPEC = builder.build();
     }

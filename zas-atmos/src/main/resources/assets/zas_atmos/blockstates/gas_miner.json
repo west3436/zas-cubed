@@ -1,0 +1,50 @@
+{
+  "variants": {
+    "facing=north,on=false": {
+      "model": "zas_atmos:block/gas_miner"
+    },
+    "facing=north,on=true": {
+      "model": "zas_atmos:block/gas_miner_on"
+    },
+    "facing=east,on=false": {
+      "model": "zas_atmos:block/gas_miner",
+      "y": 90
+    },
+    "facing=east,on=true": {
+      "model": "zas_atmos:block/gas_miner_on",
+      "y": 90
+    },
+    "facing=south,on=false": {
+      "model": "zas_atmos:block/gas_miner",
+      "y": 180
+    },
+    "facing=south,on=true": {
+      "model": "zas_atmos:block/gas_miner_on",
+      "y": 180
+    },
+    "facing=west,on=false": {
+      "model": "zas_atmos:block/gas_miner",
+      "y": 270
+    },
+    "facing=west,on=true": {
+      "model": "zas_atmos:block/gas_miner_on",
+      "y": 270
+    },
+    "facing=up,on=false": {
+      "model": "zas_atmos:block/gas_miner",
+      "x": 270
+    },
+    "facing=up,on=true": {
+      "model": "zas_atmos:block/gas_miner_on",
+      "x": 270
+    },
+    "facing=down,on=false": {
+      "model": "zas_atmos:block/gas_miner",
+      "x": 90
+    },
+    "facing=down,on=true": {
+      "model": "zas_atmos:block/gas_miner_on",
+      "x": 90
+    }
+  }
+}

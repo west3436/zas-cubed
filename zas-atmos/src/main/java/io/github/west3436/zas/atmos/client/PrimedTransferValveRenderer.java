@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
+import io.github.west3436.zas.atmos.ttv.TtvTrigger;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -24,7 +25,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * Draws a primed TTV with its block models: no tanks, one or two, with the timer
- * running or the valve open. Each tank's faces carry a tint index, 1 for the first tank and 2 for the
+ * running or the valve open, and the box of a trigger fitted in its timer's place. Each tank's faces carry a tint index, 1 for the first tank and 2 for the
  * second, and are tinted by the tank's kind.
  */
 final class PrimedTransferValveRenderer extends EntityRenderer<PrimedTransferValve> {
@@ -33,6 +34,13 @@ final class PrimedTransferValveRenderer extends EntityRenderer<PrimedTransferVal
 
     /** Each model, which the client entry point has the game load: [tanks][open]. */
     static final ModelResourceLocation[][] MODELS = models();
+
+    /** The box of what is fitted in its timer's place, by {@link TtvTrigger}: none for its timer (CONT-184). */
+    static final ModelResourceLocation[] TRIGGERS = {
+        null,
+        ModelResourceLocation.standalone(ZasAtmosMod.id("block/tank_transfer_valve_signaler")),
+        ModelResourceLocation.standalone(ZasAtmosMod.id("block/tank_transfer_valve_proximity"))
+    };
 
     PrimedTransferValveRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -75,6 +83,14 @@ final class PrimedTransferValveRenderer extends EntityRenderer<PrimedTransferVal
             quads(model.getQuads(null, face, random, ModelData.EMPTY, null), pose, out, tintOne, tintTwo, light);
         }
         quads(model.getQuads(null, null, random, ModelData.EMPTY, null), pose, out, tintOne, tintTwo, light);
+        ModelResourceLocation trigger = TRIGGERS[valve.shownTrigger().ordinal()];
+        if (trigger != null) {
+            BakedModel box = Minecraft.getInstance().getModelManager().getModel(trigger);
+            for (Direction face : FACES) {
+                quads(box.getQuads(null, face, random, ModelData.EMPTY, null), pose, out, tintOne, tintTwo, light);
+            }
+            quads(box.getQuads(null, null, random, ModelData.EMPTY, null), pose, out, tintOne, tintTwo, light);
+        }
         pose.popPose();
         super.render(valve, yaw, partialTick, pose, buffers, light);
     }

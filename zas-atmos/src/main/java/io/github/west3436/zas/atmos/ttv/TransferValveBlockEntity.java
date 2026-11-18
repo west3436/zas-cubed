@@ -27,10 +27,11 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A placed tank transfer valve's tanks, valve and timer (CONT-103, D-86). They are held as the item
- * holds them, in a TTV stack's {@link AtmosComponents#TTV_TANKS}, {@link AtmosComponents#TTV_OPEN}
- * and {@link AtmosComponents#TTV_TIMER}, so the item's rules and its screen work on both, and placing
- * the item and breaking the block carry them across unchanged.
+ * A placed tank transfer valve's tanks, valve, timer and trigger (CONT-103, CONT-184, D-86). They are
+ * held as the item holds them, in a TTV stack's {@link AtmosComponents#TTV_TANKS}, {@link
+ * AtmosComponents#TTV_OPEN}, {@link AtmosComponents#TTV_TIMER} and {@link
+ * AtmosComponents#TTV_TRIGGER}, so the item's rules and its screen work on both, and placing the item
+ * and breaking the block carry them across unchanged.
  *
  * <p>Its tanks' gas reacts every atmos tick (CONT-100) and fails as an item's does (CONT-038): a tank
  * that leaks stays on, one that ruptures leaves its place empty, and one that explodes takes the TTV
@@ -44,6 +45,7 @@ public class TransferValveBlockEntity extends AtmosDevice {
     private static final String TANKS_KEY = "Tanks";
     private static final String OPEN_KEY = "Open";
     private static final String TIMER_KEY = "Timer";
+    private static final String TRIGGER_KEY = "Trigger";
     private static final String KINDS_KEY = "Kinds";
     private static final TankKind[] KINDS = TankKind.values();
 
@@ -83,6 +85,20 @@ public class TransferValveBlockEntity extends AtmosDevice {
      */
     public boolean fit(ItemStack tank) {
         if (!TransferValveItem.fit(ttv, tank)) {
+            return false;
+        }
+        changed();
+        return true;
+    }
+
+    /**
+     * Fits a signaler or proximity sensor in its timer's place, as using one on it does (CONT-184).
+     *
+     * @param trigger the item, which the caller takes away
+     * @return whether it went on: not if one is fitted already
+     */
+    public boolean fitTrigger(ItemStack trigger) {
+        if (!TransferValveItem.fitTrigger(ttv, trigger)) {
             return false;
         }
         changed();
@@ -165,6 +181,7 @@ public class TransferValveBlockEntity extends AtmosDevice {
         apply(input, AtmosComponents.TTV_TANKS.get());
         apply(input, AtmosComponents.TTV_OPEN.get());
         apply(input, AtmosComponents.TTV_TIMER.get());
+        apply(input, AtmosComponents.TTV_TRIGGER.get());
     }
 
     private <T> void apply(DataComponentInput input, DataComponentType<T> type) {
@@ -177,6 +194,7 @@ public class TransferValveBlockEntity extends AtmosDevice {
         collect(components, AtmosComponents.TTV_TANKS.get());
         collect(components, AtmosComponents.TTV_OPEN.get());
         collect(components, AtmosComponents.TTV_TIMER.get());
+        collect(components, AtmosComponents.TTV_TRIGGER.get());
     }
 
     private <T> void collect(DataComponentMap.Builder components, DataComponentType<T> type) {
@@ -193,6 +211,7 @@ public class TransferValveBlockEntity extends AtmosDevice {
         tag.remove(TANKS_KEY);
         tag.remove(OPEN_KEY);
         tag.remove(TIMER_KEY);
+        tag.remove(TRIGGER_KEY);
     }
 
     // ---- Saving -----------------------------------------------------------------------------
@@ -205,6 +224,7 @@ public class TransferValveBlockEntity extends AtmosDevice {
         write(tag, ops, TANKS_KEY, AtmosComponents.TTV_TANKS.get());
         write(tag, ops, OPEN_KEY, AtmosComponents.TTV_OPEN.get());
         write(tag, ops, TIMER_KEY, AtmosComponents.TTV_TIMER.get());
+        write(tag, ops, TRIGGER_KEY, AtmosComponents.TTV_TRIGGER.get());
     }
 
     private <T> void write(CompoundTag tag, RegistryOps<Tag> ops, String key, DataComponentType<T> type) {
@@ -221,6 +241,7 @@ public class TransferValveBlockEntity extends AtmosDevice {
         read(tag, ops, TANKS_KEY, AtmosComponents.TTV_TANKS.get());
         read(tag, ops, OPEN_KEY, AtmosComponents.TTV_OPEN.get());
         read(tag, ops, TIMER_KEY, AtmosComponents.TTV_TIMER.get());
+        read(tag, ops, TRIGGER_KEY, AtmosComponents.TTV_TRIGGER.get());
         Integer timer = ttv.get(AtmosComponents.TTV_TIMER.get());
         if (timer != null) {
             TransferValveItem.setTimer(ttv, timer);

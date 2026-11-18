@@ -57,8 +57,14 @@ public class TransferValveMenu extends AbstractContainerMenu {
     public static final int DEFAULT = 4;
     /** Opens a closed valve or closes an open one, by hand. */
     public static final int VALVE = 5;
-    /** Starts the timer, which primes the TTV. */
+    /** Starts the timer, which primes the TTV; with a trigger fitted, arms it (CONT-184). */
     public static final int START = 6;
+
+    /** Narrows a fitted proximity sensor's range by a block (CONT-187). */
+    public static final int RANGE_DOWN = 7;
+
+    /** Widens it by a block. */
+    public static final int RANGE_UP = 8;
 
     /** How wide its panel is. */
     public static final int WIDTH = 212;
@@ -68,6 +74,11 @@ public class TransferValveMenu extends AbstractContainerMenu {
 
     public static final int FIRST_Y = 22;
     public static final int SECOND_Y = 45;
+
+    /** Where the trigger slot is drawn (CONT-184): right of the tanks, between them. */
+    public static final int TRIGGER_X = WIDTH - 8 - 16;
+
+    public static final int TRIGGER_Y = (22 + 45) / 2;
 
     /** Where the player's inventory starts. */
     public static final int INVENTORY_X = 25;
@@ -92,6 +103,9 @@ public class TransferValveMenu extends AbstractContainerMenu {
     private final Inventory inventory;
     private final int valveIndex;
     private final int valveSlot;
+
+    /** The trigger slot's index: after every other, so the others keep theirs. */
+    private final int triggerSlot;
 
     /** The stack this menu was opened on. Null on the client, whose stacks are replaced as they sync. */
     @Nullable
@@ -158,6 +172,8 @@ public class TransferValveMenu extends AbstractContainerMenu {
         if (valveIndex == PLACED) {
             addSlot(new PlacedSlot());
         }
+        triggerSlot = slots.size();
+        addSlot(new TriggerSlot());
     }
 
     private static int indexOf(Inventory inventory, InteractionHand hand) {
@@ -208,6 +224,16 @@ public class TransferValveMenu extends AbstractContainerMenu {
     /** The TTV's timer, s. */
     public int timer() {
         return TransferValveItem.timer(stack());
+    }
+
+    /** The item fitted in the TTV's timer's place, as a copy, or an empty stack (CONT-184). */
+    public ItemStack trigger() {
+        return TransferValveItem.trigger(stack());
+    }
+
+    /** The index in this menu of the trigger slot. */
+    public int triggerSlot() {
+        return triggerSlot;
     }
 
     /** The index in this menu of the slot the TTV itself is in: on a placed TTV, the hidden one. */
@@ -279,7 +305,7 @@ public class TransferValveMenu extends AbstractContainerMenu {
         }
         return switch (type) {
             case SWAP -> !isPlaced() && button == valveIndex;
-            case CLONE -> isTank(slotId);
+            case CLONE -> isTank(slotId) || slotId == triggerSlot;
             default -> false;
         };
     }
@@ -345,12 +371,25 @@ public class TransferValveMenu extends AbstractContainerMenu {
                 yield moved;
             }
             case START -> start(player);
+            case RANGE_DOWN -> range(stack, -1);
+            case RANGE_UP -> range(stack, 1);
             default -> false;
         };
     }
 
     private static boolean setTimer(ItemStack stack, int seconds) {
         TransferValveItem.setTimer(stack, seconds);
+        return true;
+    }
+
+    /** Changes a fitted proximity sensor's range, which the sensor keeps; refused without one. */
+    private static boolean range(ItemStack stack, int by) {
+        ItemStack sensor = TransferValveItem.trigger(stack);
+        if (!(sensor.getItem() instanceof ProximitySensorItem)) {
+            return false;
+        }
+        ProximitySensorItem.setRange(sensor, ProximitySensorItem.range(sensor) + by);
+        TransferValveItem.setTrigger(stack, sensor);
         return true;
     }
 
@@ -377,6 +416,16 @@ public class TransferValveMenu extends AbstractContainerMenu {
         Slot slot = slots.get(index);
         if (!slot.hasItem() || !slot.mayPickup(player)) {
             return ItemStack.EMPTY;
+        }
+        if (index == triggerSlot) {
+            ItemStack trigger = TransferValveItem.trigger(stack());
+            ItemStack moved = trigger.copy();
+            if (!moveItemStackTo(trigger, TANKS, INVENTORY_END, true)) {
+                return ItemStack.EMPTY;
+            }
+            TransferValveItem.setTrigger(stack(), ItemStack.EMPTY);
+            TransferValveItem.sound(player, false);
+            return moved;
         }
         if (isTank(index)) {
             // The valve is a working copy, so a full inventory leaves it as it was: open, if it was.
@@ -412,7 +461,7 @@ public class TransferValveMenu extends AbstractContainerMenu {
     }
 
     private boolean isOrdinary(Slot slot) {
-        return !isTank(slot.index) && slot.index != valveSlot;
+        return !isTank(slot.index) && slot.index != valveSlot && slot.index != triggerSlot;
     }
 
     /** The slot the TTV itself is in: drawn, so a player can see it, and otherwise out of reach. */
@@ -481,6 +530,59 @@ public class TransferValveMenu extends AbstractContainerMenu {
         @Override
         public boolean isHighlightable() {
             return false;
+        }
+    }
+
+    /**
+     * The timer's place as a slot (CONT-184): a remote signaler or proximity sensor fitted there
+     * replaces the timer, and taking it off gives the timer back. As a tank slot, all it holds is what
+     * the stack's own data says it holds.
+     */
+    private final class TriggerSlot extends Slot {
+        TriggerSlot() {
+            super(NO_CONTAINER, 0, TRIGGER_X, TRIGGER_Y);
+        }
+
+        @Override
+        public ItemStack getItem() {
+            return TransferValveItem.trigger(stack());
+        }
+
+        /** As a tank slot's: how a client hears what the server's stack holds. */
+        @Override
+        public void set(ItemStack trigger) {
+            ItemStack stack = stack();
+            if (stack.getItem() instanceof TransferValveItem) {
+                TransferValveItem.setTrigger(stack, trigger);
+            }
+        }
+
+        @Override
+        public ItemStack remove(int amount) {
+            return amount > 0 ? TransferValveItem.takeTrigger(stack()) : ItemStack.EMPTY;
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            return stillValid(player);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack trigger) {
+            return stillValid(inventory.player) && TtvTrigger.fits(trigger);
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
+
+        @Override
+        public void setByPlayer(ItemStack now, ItemStack was) {
+            super.setByPlayer(now, was);
+            if (!ItemStack.matches(now, was)) {
+                TransferValveItem.sound(inventory.player, !now.isEmpty());
+            }
         }
     }
 

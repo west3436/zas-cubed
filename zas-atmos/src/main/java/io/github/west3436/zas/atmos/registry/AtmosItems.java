@@ -20,6 +20,8 @@ import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.tool.WrenchItem;
+import io.github.west3436.zas.atmos.ttv.ProximitySensorItem;
+import io.github.west3436.zas.atmos.ttv.RemoteSignalerItem;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import java.util.List;
 import java.util.Map;
@@ -350,6 +352,20 @@ public final class AtmosItems {
     // The bike horn (CONT-154, D-87): an easter egg with no recipe, found in dungeon and stronghold chests.
 
     public static final DeferredItem<BikeHornItem> BIKE_HORN = ITEMS.registerItem("bike_horn", BikeHornItem::new);
+
+    // The gas miner (CONT-182): creative only, with no recipe.
+
+    public static final DeferredItem<BlockItem> GAS_MINER = ITEMS.registerSimpleBlockItem(AtmosBlocks.GAS_MINER);
+
+    // A tank transfer valve's triggers (CONT-184 to CONT-187), each fitted in place of its timer.
+
+    /** Sends a signal on its frequency and code, which a TTV fitted with a signaler set the same hears. */
+    public static final DeferredItem<RemoteSignalerItem> REMOTE_SIGNALER =
+            ITEMS.registerItem("remote_signaler", RemoteSignalerItem::new);
+
+    /** Opens a primed TTV it is fitted to when something living comes within its range. */
+    public static final DeferredItem<ProximitySensorItem> PROXIMITY_SENSOR =
+            ITEMS.registerItem("proximity_sensor", ProximitySensorItem::new);
 
     private AtmosItems() {}
 

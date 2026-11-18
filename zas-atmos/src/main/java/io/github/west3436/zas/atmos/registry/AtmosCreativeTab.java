@@ -110,6 +110,8 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.WRENCH.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());
         out.accept(AtmosItems.TANK_TRANSFER_VALVE.get());
+        out.accept(AtmosItems.REMOTE_SIGNALER.get());
+        out.accept(AtmosItems.PROXIMITY_SENSOR.get());
         out.accept(AtmosItems.OXYGEN_TANK.get());
         out.accept(AtmosItems.AIR_TANK.get());
         out.accept(AtmosItems.EMPTY_TANK.get());
@@ -121,6 +123,8 @@ public final class AtmosCreativeTab {
         AtmosItems.components().forEach(c -> out.accept(c.get()));
         // The bike horn (CONT-154): only chests have it in survival.
         out.accept(AtmosItems.BIKE_HORN.get());
+        // The gas miner (CONT-182): only here, as it has no recipe.
+        out.accept(AtmosItems.GAS_MINER.get());
     }
 
     public static void register(IEventBus modBus) {
