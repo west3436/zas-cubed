@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "zas_atmos:block/turbine_controller_front",
+    "side": "zas_atmos:block/turbine_controller_side",
+    "top": "zas_atmos:block/turbine_controller_top"
+  }
+}

@@ -15,8 +15,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The gas turbine (CONT-161, CONT-162): it lets the combustion chamber's gas out to the cell in front
  * of it, taking work from the gas into the shaft it shares with its {@linkplain CompressorBlock
- * compressor}, and its generator turns the shaft's energy into FE. Its block entity does the work of
- * the pair, and its redstone setting reads the signal at this block (CONT-170).
+ * compressor}, and its generator turns the shaft's energy into FE in its {@linkplain
+ * TurbineControllerBlockEntity controller}'s store. Its block entity runs the shaft.
  */
 public class TurbineBlock extends TurbinePartBlock implements EntityBlock {
     public static final MapCodec<TurbineBlock> CODEC = simpleCodec(TurbineBlock::new);
@@ -36,17 +36,6 @@ public class TurbineBlock extends TurbinePartBlock implements EntityBlock {
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
-        return true;
-    }
-
-    /** How full its FE store is (CONT-175). The compressor, which holds nothing, gives none. */
-    @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
-        return level.getBlockEntity(pos) instanceof TurbineBlockEntity turbine ? turbine.signal() : 0;
-    }
-
-    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TurbineBlockEntity(pos, state);
     }
@@ -55,11 +44,9 @@ public class TurbineBlock extends TurbinePartBlock implements EntityBlock {
     @SuppressWarnings("unchecked")
     public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(
             Level level, BlockState state, BlockEntityType<T> type) {
-        if (type != AtmosBlockEntities.TURBINE.get()) {
+        if (!level.isClientSide || type != AtmosBlockEntities.TURBINE.get()) {
             return null;
         }
-        return level.isClientSide
-                ? (l, p, s, be) -> TurbineBlockEntity.clientTick(s, p)
-                : (l, p, s, be) -> ((TurbineBlockEntity) be).serverTick();
+        return (l, p, s, be) -> TurbineBlockEntity.clientTick(s, p);
     }
 }

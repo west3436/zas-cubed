@@ -109,24 +109,62 @@ public final class TurbineMath {
     }
 
     /**
-     * The moles the compressor draws in an atmos tick (CONT-160): its draw at full speed times the
-     * shaft's share of its top speed, at the intake's conditions, and at most a quarter of what a
-     * zoned intake holds.
-     *
-     * @param speed the shaft's share of its top speed, 0 to 1
-     * @param litres what it draws at top speed, L
-     * @param intakeP the intake's pressure, kPa
-     * @param intakeT its temperature, K
-     * @param intakeMoles its moles, or infinite for the open air
-     * @return the moles, at least 0
+     * The most oxidizer the compressor releases in an atmos tick to make up a shortfall, as a multiple
+     * of what the fuel it is set to burn in that tick takes (CONT-160).
      */
-    public static double compressorMoles(
-            double speed, double litres, double intakeP, double intakeT, double intakeMoles) {
-        if (!(speed > 0) || !(litres > 0) || !(intakeP > 0) || !(intakeT > 0)) {
-            return 0;
+    public static final double OXIDIZER_CATCH_UP = 4;
+
+    /**
+     * What the compressor releases from its buffer into the chamber in an atmos tick (CONT-160), each
+     * gas on its own, so a buffer holding both feeds only what the chamber lacks:
+     *
+     * <ul>
+     *   <li><b>Fuel</b> at the set rate, unless the chamber is rich (it holds more fuel than its
+     *       oxidizer burns at the reaction's ratio) or is primed (not burning, but it would if
+     *       sparked): then none.
+     *   <li><b>Oxidizer</b> to bring the chamber up to {@code fraction} of it, or to burn the fuel it
+     *       holds if that is more, never more than {@link #OXIDIZER_CATCH_UP} times what the fuel
+     *       takes. A lean chamber, already holding that much, gets none.
+     * </ul>
+     *
+     * Neither is more than the buffer holds.
+     *
+     * @param fuel the fuel the burn rate sets for the tick, mol
+     * @param ratio mol of oxidizer a mol of fuel burns with, above 0
+     * @param chamberFuel the chamber's fuel, mol
+     * @param chamberOxidizer its oxidizer, mol
+     * @param chamberMoles all its gas, mol
+     * @param fraction the oxidizer's mole fraction it keeps the chamber at, 0 to 1
+     * @param primed whether the chamber isn't burning but would if sparked
+     * @param bufferFuel the buffer's fuel, mol
+     * @param bufferOxidizer its oxidizer, mol
+     * @return {fuel, oxidizer}, mol, each at least 0
+     */
+    public static double[] release(
+            double fuel,
+            double ratio,
+            double chamberFuel,
+            double chamberOxidizer,
+            double chamberMoles,
+            double fraction,
+            boolean primed,
+            double bufferFuel,
+            double bufferOxidizer) {
+        if (!(fuel > 0) || !(ratio > 0) || !Double.isFinite(ratio)) {
+            return new double[] {0, 0};
         }
-        double n = Math.min(1, speed) * litres * intakeP / (GasMixture.GAS_CONSTANT * intakeT);
-        return Math.max(0, Math.min(n, intakeMoles / 4));
+        chamberFuel = Math.max(0, chamberFuel);
+        chamberOxidizer = Math.max(0, chamberOxidizer);
+        chamberMoles = Math.max(chamberMoles, chamberFuel + chamberOxidizer);
+        boolean rich = chamberFuel * ratio > chamberOxidizer;
+        double f = rich || primed ? 0 : fuel;
+        double x = Math.max(0, Math.min(0.99, fraction));
+        double toFraction = (x * chamberMoles - chamberOxidizer) / (1 - x);
+        double toBurn = chamberFuel * ratio - chamberOxidizer;
+        double o = Math.min(Math.max(0, Math.max(toFraction, toBurn)), OXIDIZER_CATCH_UP * ratio * fuel);
+        return new double[] {
+            Math.max(0, Math.min(f, Math.max(0, bufferFuel))), Math.max(0, Math.min(o, Math.max(0, bufferOxidizer)))
+        };
     }
 
     /**

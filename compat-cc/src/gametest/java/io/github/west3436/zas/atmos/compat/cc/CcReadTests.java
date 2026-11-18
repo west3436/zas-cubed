@@ -53,8 +53,12 @@ import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.teg.TegBlockEntity;
 import io.github.west3436.zas.atmos.teg.TegMenu;
+import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
 import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
-import io.github.west3436.zas.atmos.turbine.TurbineMenu;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity.Part;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerMenu;
+import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
@@ -69,12 +73,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -705,8 +711,9 @@ public final class CcReadTests {
     }
 
     /**
-     * A TEG core and a gas turbine read as their windows do (CONT-158, CONT-161): their switches,
-     * states, FE and buffers, the core's two streams and the turbine's chamber and top speed.
+     * A TEG core and a gas turbine controller read as their windows do (CONT-158, CONT-163): their
+     * switches, states, FE and stores, the core's two streams, and the controller's links, chamber,
+     * buffer, top speed, burn rate and the gases it offers.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_158_the_teg_and_the_turbine_read_as_their_windows_do(GameTestHelper h) throws LuaException {
@@ -736,18 +743,51 @@ public final class CcReadTests {
                     shown(stream.get("pressureOut")), tegWindow.pressure(side, false), "the window's pressure");
         }
 
-        TurbineBlockEntity turbine = (TurbineBlockEntity) Devices.place(s, "zas_turbine", 4, 1, 1);
-        TurbinePeripheral up = s.peripheral(4, 1, 1, TurbinePeripheral.class);
-        TurbineMenu turbineWindow = (TurbineMenu) turbine.createMenu(1, player.getInventory(), player);
-        h.assertValueEqual(up.getType(), "zas_turbine", "the turbine's type");
-        h.assertValueEqual(up.isOn(), turbineWindow.on(), "its switch");
-        h.assertValueEqual(up.getState(), Lua.word(turbineWindow.status()), "its state");
+        TurbineControllerBlockEntity controller =
+                (TurbineControllerBlockEntity) Devices.place(s, "zas_turbine_controller", 4, 1, 1);
+        TurbineControllerPeripheral up = s.peripheral(4, 1, 1, TurbineControllerPeripheral.class);
+        TurbineControllerMenu window = (TurbineControllerMenu) controller.createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(up.getType(), "zas_turbine_controller", "the controller's type");
+        h.assertValueEqual(
+                up.getLinks(), Map.of("turbine", false, "compressor", false, "igniter", false), "a new one's links");
+        h.assertTrue(up.getChamber() == null, "a chamber with no turbine");
+        h.assertTrue(up.getBuffer() == null, "a buffer with no compressor");
+        h.assertTrue(up.getFuel() == null && up.getOxidizer() == null, "a new one's gases");
+        TurbineBlockEntity turbine = s.place(6, 1, 1, part(AtmosBlocks.TURBINE.get()), TurbineBlockEntity.class);
+        s.place(8, 1, 1, part(AtmosBlocks.COMPRESSOR.get()), CompressorBlockEntity.class);
+        controller.toggleLink(s.level, turbine.getBlockPos());
+        controller.toggleLink(s.level, s.abs(8, 1, 1));
+        for (Part part : Part.values()) {
+            h.assertValueEqual(
+                    up.getLinks().get(Lua.word(part)), window.linked(part), "its " + Lua.word(part) + " link");
+        }
+        h.assertTrue(window.linked(Part.TURBINE) && window.linked(Part.COMPRESSOR), "the window's links");
+        h.assertValueEqual(up.isOn(), window.on(), "its switch");
+        h.assertValueEqual(up.getState(), Lua.word(window.status()), "its state");
         h.assertValueEqual(up.getRpm(), 0.0, "a still shaft's speed");
-        h.assertValueEqual(up.getMaxRpm(), turbineWindow.value(TurbineMenu.DATA_TOP_RPM), "its top speed");
+        h.assertValueEqual(up.getMaxRpm(), window.value(TurbineControllerMenu.DATA_TOP_RPM), "its top speed");
         h.assertValueEqual(up.getChamber().keySet(), java.util.Set.of("pressure", "temperature"), "the chamber's keys");
-        h.assertValueEqual(up.getEnergy(), turbineWindow.energy(), "its FE");
-        h.assertValueEqual(up.getEnergyCapacity(), turbineWindow.capacity(), "its buffer");
+        h.assertValueEqual(
+                up.getBuffer().keySet(), java.util.Set.of("pressure", "temperature", "contents"), "the buffer's keys");
+        h.assertValueEqual(
+                (int) Math.round(up.getBurnRate() * 100),
+                window.value(TurbineControllerMenu.DATA_RATE),
+                "its burn rate");
+        h.assertValueEqual(up.isAutoIgnite(), window.value(TurbineControllerMenu.DATA_AUTO) != 0, "its auto relight");
+        h.assertValueEqual(up.getFuels(), names(window.fuels()), "the fuels it offers");
+        h.assertValueEqual(up.getOxidizers(), names(window.oxidizers()), "the oxidizers it offers");
+        h.assertValueEqual(up.getEnergy(), window.energy(), "its FE");
+        h.assertValueEqual(up.getEnergyCapacity(), window.capacity(), "its store");
         Devices.clear(s);
         h.succeed();
+    }
+
+    /** A turbine part facing east. */
+    private static BlockState part(Block block) {
+        return block.defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST);
+    }
+
+    private static List<String> names(List<ResourceLocation> gases) {
+        return gases.stream().map(ResourceLocation::toString).toList();
     }
 }

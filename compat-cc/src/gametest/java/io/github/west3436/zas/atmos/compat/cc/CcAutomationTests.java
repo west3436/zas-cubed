@@ -143,9 +143,9 @@ public final class CcAutomationTests {
         TegPeripheral tp = s.peripheral(x, 1, 1, TegPeripheral.class);
         redstone(s, "a TEG core", teg, tp::getRedstoneMode, tp::setRedstoneMode);
         x += 2;
-        RedstoneControlled turbine = (RedstoneControlled) Devices.place(s, "zas_turbine", x, 1, 1);
-        TurbinePeripheral t = s.peripheral(x, 1, 1, TurbinePeripheral.class);
-        redstone(s, "a gas turbine", turbine, t::getRedstoneMode, t::setRedstoneMode);
+        RedstoneControlled turbine = (RedstoneControlled) Devices.place(s, "zas_turbine_controller", x, 1, 1);
+        TurbineControllerPeripheral t = s.peripheral(x, 1, 1, TurbineControllerPeripheral.class);
+        redstone(s, "a turbine controller", turbine, t::getRedstoneMode, t::setRedstoneMode);
         x += 2;
         RedstoneControlled miner = (RedstoneControlled) Devices.place(s, "zas_gas_miner", x, 1, 1);
         GasMinerPeripheral gm = s.peripheral(x, 1, 1, GasMinerPeripheral.class);

@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.turbine;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -12,6 +13,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -29,10 +31,11 @@ import org.jetbrains.annotations.Nullable;
  *           -- facing --&gt;                            -- facing --&gt;
  * </pre>
  *
- * The compressor draws air from the cell behind it into the chamber, gas burns there with ZAS³'s own
- * fire, lit by an igniter, and the turbine lets the chamber's gas out to the cell in front of it. The
- * two share a shaft along the line between them, so every cell between them must be open: no full
- * block.
+ * The compressor feeds the chamber fuel and oxidizer from the pipe network on its back, gas burns
+ * there with ZAS³'s own fire, lit by an igniter, and the turbine lets the chamber's gas out to the
+ * cell in front of it. The two share a shaft along the line between them, so every cell between them
+ * must be open: no full block. A {@linkplain TurbineControllerBlockEntity turbine controller} linked
+ * to both drives them.
  *
  * <p>Its {@link #SPIN} shows how fast the shaft turns, for its blades' texture.
  */
@@ -115,25 +118,32 @@ public abstract class TurbinePartBlock extends HorizontalDirectionalBlock {
         return null;
     }
 
-    /** The turbine of a pair this block is in, if any: itself, or the compressor's partner. */
-    public static @Nullable TurbineBlockEntity turbineOf(Level level, BlockPos pos, BlockState state) {
-        if (state.getBlock() instanceof TurbineBlock) {
-            return level.getBlockEntity(pos) instanceof TurbineBlockEntity t ? t : null;
+    /**
+     * The controller this block is linked to, if it is loaded and agrees: its turbine's or its
+     * compressor's.
+     */
+    public static @Nullable TurbineControllerBlockEntity controllerOf(Level level, BlockPos pos) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TurbineBlockEntity t) {
+            return t.controller();
         }
-        BlockPos at = partner(level, pos, state);
-        return at != null && level.getBlockEntity(at) instanceof TurbineBlockEntity t ? t : null;
+        return be instanceof CompressorBlockEntity c ? c.controller() : null;
     }
 
-    /** Opens the pair's window, from either block. */
+    /**
+     * Opens its controller's window, from either block (CONT-163). Unlinked, it says so and opens
+     * nothing.
+     */
     @Override
     protected InteractionResult useWithoutItem(
             BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
-            TurbineBlockEntity turbine = turbineOf(level, pos, state);
-            if (turbine == null) {
-                return InteractionResult.PASS;
+            TurbineControllerBlockEntity controller = controllerOf(level, pos);
+            if (controller == null) {
+                sp.displayClientMessage(Component.translatable("block.zas_atmos.turbine_controller.unlinked"), true);
+            } else {
+                sp.openMenu(controller, controller::writeMenu);
             }
-            sp.openMenu(turbine);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

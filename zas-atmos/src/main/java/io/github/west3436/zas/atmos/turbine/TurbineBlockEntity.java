@@ -18,111 +18,82 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
-import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.WorkToFe;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.UnaryOperator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The gas turbine's block entity, which does the work of the pair (CONT-160 to CONT-164).
+ * The gas turbine's block entity, which runs the engine's shaft (CONT-161, CONT-162).
  *
- * <p><b>Each atmos tick</b>, while it is switched on, let run by its redstone setting (CONT-170),
- * paired with a compressor and its chamber is a zone:
- * <ul>
- *   <li>The turbine lets out {@code turbine_nozzle} of what would even out the chamber and the
- *       exhaust, the cell in front of it ({@link TurbineMath#turbineMoles}). When that gas arrives,
- *       the shaft takes its expansion work ({@link TurbineMath#expansionWork}), never past top
- *       speed, and the gas is that much cooler. It goes into the exhaust at the next atmos tick.
- *   <li>The compressor draws from its intake, the cell behind it, in proportion to the shaft's speed
- *       ({@link TurbineMath#compressorMoles}), no more than the shaft can pay to compress. When that
- *       gas arrives, the shaft pays its compression work ({@link TurbineMath#compressionWork}) and the
- *       gas is that much warmer. It goes into the chamber at the next atmos tick.
- * </ul>
- * Whether on or not, the generator then takes its share of the shaft's energy as FE ({@link
- * TurbineMath#generatorJoules}), and friction takes {@code turbine_friction} of it each second, as
- * heat into the chamber. So with nothing burning, the shaft only slows. Held by its redstone setting,
- * which reads the signal at the turbine's block, it is as if switched off: it moves no gas, and the
- * shaft runs down.
+ * <p><b>Each atmos tick</b>, while its {@linkplain TurbineControllerBlockEntity controller} is on,
+ * links it and its compressor, the compressor is its partner and its chamber is a zone, the turbine
+ * lets out {@code turbine_nozzle} of what would even out the chamber and the exhaust, the cell in front
+ * of it ({@link TurbineMath#turbineMoles}). When that gas arrives, the shaft takes its expansion work
+ * ({@link TurbineMath#expansionWork}), never past top speed, and the gas is that much cooler. It goes
+ * into the exhaust at the next atmos tick. The {@linkplain CompressorBlockEntity compressor} feeds the
+ * chamber, and the shaft pays for any compression it needs ({@link #payCompression}).
+ *
+ * <p>Whether on or not, the generator then takes its share of the shaft's energy as FE into its
+ * controller's store ({@link TurbineMath#generatorJoules}), none with no controller, and friction
+ * takes {@code turbine_friction} of it each second, as heat into the chamber. So with nothing burning,
+ * the shaft only slows. The turbine has no FE store of its own and offers FE to no one: its controller
+ * is the engine's one output (CONT-162).
  *
  * <p><b>Conservation.</b> Every change to a zone goes through the API's mutations, each port with at
  * most one outstanding (CONT-071, CONT-072), as {@link #SOURCE}. Gas on its way between a removal and
- * an addition is held here and saved, and released into its cells if the turbine is broken. The
- * gas's thermal energy, the shaft's energy, the FE made and the friction's heat always sum to the same
+ * an addition is held here and saved, and released into its cell if the turbine is broken. The gas's
+ * thermal energy, the shaft's energy, the FE made and the friction's heat always sum to the same
  * ({@link TurbineMath}).
- *
- * <p>For a redstone or computer reading: {@link #on()}, {@link #status()}, {@link #rpm()} (how hard)
- * and {@link #energy()} (how full); a comparator at the turbine reads its store's fill ({@link
- * #signal()}, CONT-175).
  */
-public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, RedstoneControlled {
-    /** Who the turbine's changes to zones are made by. */
+public class TurbineBlockEntity extends AtmosDevice {
+    /** Who the gas turbine's changes to zones are made by: the turbine and its compressor. */
     public static final SourceId SOURCE = SourceId.of(ZasAtmosMod.MOD_ID, "gas_turbine");
 
-    private static final String ON = "On";
+    private static final String CONTROLLER = "Controller";
     private static final String SHAFT = "Shaft";
-    private static final String ENERGY = "Energy";
-    private static final String TO_CHAMBER = "ToChamber";
     private static final String TO_EXHAUST = "ToExhaust";
 
     /** How far its running loop is heard, in blocks: as far as any device's. */
     private static final double LOOP_RANGE = 8;
 
-    private final EnergyStore energy = new EnergyStore(
-            () -> AtmosServerConfig.get(AtmosServerConfig.TURBINE_BUFFER), false, true, this::setChanged);
     private final WorkToFe work = new WorkToFe();
-    private final RedstoneControl redstone = new RedstoneControl(this);
 
-    private final ZonePort intakePort = new ZonePort(SOURCE);
-    private final ZonePort chamberAddPort = new ZonePort(SOURCE);
     private final ZonePort chamberTakePort = new ZonePort(SOURCE);
     private final ZonePort exhaustPort = new ZonePort(SOURCE);
-    private final CellWatch intakeWatch = new CellWatch();
     private final CellWatch chamberWatch = new CellWatch();
     private final CellWatch exhaustWatch = new CellWatch();
 
-    private boolean on;
+    /** The controller it is linked to, as it was told; the controller's own link decides. */
+    private @Nullable BlockPos controller;
 
     /** The shaft's energy, J. */
     private double shaft;
-
-    /** Compression work expected for gas still on its way from the intake, J. */
-    private double reserved;
-
-    /** Compressed gas on its way into the chamber. */
-    private GasParcel toChamber = GasParcel.EMPTY;
 
     /** Expanded gas on its way into the exhaust. */
     private GasParcel toExhaust = GasParcel.EMPTY;
 
     private boolean unloading;
-    private TurbineStatus status = TurbineStatus.OFF;
+    private TurbineStatus status = TurbineStatus.UNLINKED;
 
     /** The last atmos tick's readings. */
     private double chamberPressure;
@@ -131,22 +102,8 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
     private double powerPerTick;
     private double lastTurbineWork;
     private double lastCompressorWork;
+    private double compressorWorkSince;
     private double lastFriction;
-
-    private final ContainerData data = new ContainerData() {
-        @Override
-        public int get(int index) {
-            return dataValue(index);
-        }
-
-        @Override
-        public void set(int index, int value) {}
-
-        @Override
-        public int getCount() {
-            return TurbineMenu.DATA_COUNT;
-        }
-    };
 
     public TurbineBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.TURBINE.get(), pos, state);
@@ -158,7 +115,7 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         return getBlockState().getValue(TurbinePartBlock.FACING);
     }
 
-    /** Its paired compressor's block, or null. */
+    /** Its partner compressor's block, by where it stands, or null. */
     public @Nullable BlockPos compressor() {
         return level == null ? null : TurbinePartBlock.partner(level, worldPosition, getBlockState());
     }
@@ -173,20 +130,44 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         return Vec3.atCenterOf(worldPosition.relative(facing()));
     }
 
+    /** The controller that links it, if that controller is loaded and still has it as its turbine. */
+    public @Nullable TurbineControllerBlockEntity controller() {
+        return TurbineControllerBlockEntity.linked(level, controller, worldPosition);
+    }
+
+    /** Where it was told its controller is. */
+    public @Nullable BlockPos controllerPos() {
+        return controller;
+    }
+
+    /** Told by a controller that links or unlinks it. */
+    void setController(@Nullable BlockPos pos) {
+        controller = pos == null ? null : pos.immutable();
+        setChanged();
+    }
+
+    /** Its controller's position after a mover moved them (CONT-156). */
+    public void rebase(UnaryOperator<BlockPos> rebase) {
+        if (controller != null) {
+            controller = rebase.apply(controller);
+            setChanged();
+        }
+    }
+
     // ---- Its step ----------------------------------------------------------------------------
 
     @Override
     public boolean readyToStep() {
-        return !intakePort.busy() && !chamberAddPort.busy() && !chamberTakePort.busy() && !exhaustPort.busy();
+        return !chamberTakePort.busy() && !exhaustPort.busy();
     }
 
     @Override
     protected void atmosTick(ServerLevel level) {
-        intakeWatch.step();
         chamberWatch.step();
         exhaustWatch.step();
         deliver(level);
 
+        TurbineControllerBlockEntity c = controller();
         BlockPos comp = compressor();
         AtmosphereSample chamber = Atmospheres.at(level, chamberPoint());
         AtmosphereSample exhaust = Atmospheres.at(level, exhaustPoint());
@@ -197,34 +178,33 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         chamberTemperature =
                 chamber.state() == AtmosphereState.ZONED ? chamber.mixture().temperature() : 0;
         lastTurbineWork = 0;
-        lastCompressorWork = 0;
+        lastCompressorWork = compressorWorkSince;
+        compressorWorkSince = 0;
 
-        boolean allowed = redstone.read();
         TurbineStatus next;
-        if (!on || !allowed) {
+        if (c == null) {
+            next = TurbineStatus.UNLINKED;
+        } else if (!c.runs()) {
             next = TurbineStatus.OFF;
-        } else if (comp == null) {
+        } else if (comp == null || !comp.equals(c.compressorPos())) {
             next = TurbineStatus.NO_COMPRESSOR;
         } else if (!chamberOk || !exhaustOk) {
             next = TurbineStatus.CHAMBER_OPEN;
         } else {
             next = TurbineStatus.IDLE;
             letOut(level, chamber.mixture(), exhaust);
-            Vec3 intakePoint = Vec3.atCenterOf(comp.relative(facing().getOpposite()));
-            AtmosphereSample intake = Atmospheres.at(level, intakePoint);
-            if (intakeWatch.trust(intake)) {
-                drawIn(level, intakePoint, intake, chamber.mixture().pressure());
-            }
         }
 
         double jpf = AtmosServerConfig.get(AtmosServerConfig.JOULES_PER_FE);
-        double topEnergy = topEnergy();
-        double speed = Math.sqrt(Math.min(1, shaft / topEnergy));
+        double speed = speed();
         double topJoules =
                 AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_OUTPUT) * 20.0 * AtmosTicks.SECONDS * jpf;
-        double generated = TurbineMath.generatorJoules(shaft, speed, topJoules, work.room(energy, jpf));
-        shaft -= generated;
-        work.add(generated, energy, jpf);
+        double generated = 0;
+        if (c != null) {
+            generated = TurbineMath.generatorJoules(shaft, speed, topJoules, work.room(c.energy(), jpf));
+            shaft -= generated;
+            work.add(generated, c.energy(), jpf);
+        }
         powerPerTick = generated / jpf / (20.0 * AtmosTicks.SECONDS);
 
         double friction =
@@ -252,17 +232,12 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         setChanged();
     }
 
-    /** Puts gas it holds into its cells: compressed gas into the chamber, expanded gas into the exhaust. */
+    /** Puts expanded gas it holds into the exhaust. */
     private void deliver(ServerLevel level) {
-        if (!toChamber.isEmpty() && !chamberAddPort.busy()) {
-            GasParcel gas = toChamber;
-            toChamber = GasParcel.EMPTY;
-            chamberAddPort.add(level, chamberPoint(), gas, r -> keep(level, true, untaken(gas, r)));
-        }
         if (!toExhaust.isEmpty() && !exhaustPort.busy()) {
             GasParcel gas = toExhaust;
             toExhaust = GasParcel.EMPTY;
-            exhaustPort.add(level, exhaustPoint(), gas, r -> keep(level, false, untaken(gas, r)));
+            exhaustPort.add(level, exhaustPoint(), gas, r -> keep(level, untaken(gas, r)));
         }
     }
 
@@ -271,14 +246,12 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
     }
 
     /** Holds gas to deliver next atmos tick, or, once it is broken, releases it now. */
-    private void keep(ServerLevel level, boolean chamber, GasParcel gas) {
+    private void keep(ServerLevel level, GasParcel gas) {
         if (gas.isEmpty()) {
             return;
         }
         if (isRemoved()) {
-            GasMutations.add(level, chamber ? chamberPoint() : exhaustPoint(), gas, SOURCE);
-        } else if (chamber) {
-            toChamber = GasProperties.mix(toChamber, gas);
+            GasMutations.add(level, exhaustPoint(), gas, SOURCE);
         } else {
             toExhaust = GasProperties.mix(toExhaust, gas);
         }
@@ -328,60 +301,24 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
             shaft += w;
             lastTurbineWork += w;
         }
-        keep(level, false, w > 0 ? new GasParcel(gas.moles(), Math.max(0, gas.temperature() - w / c)) : gas);
+        keep(level, w > 0 ? new GasParcel(gas.moles(), Math.max(0, gas.temperature() - w / c)) : gas);
     }
 
-    /** The compressor's half: draws intake gas, as much as the shaft can pay to compress. */
-    private void drawIn(ServerLevel level, Vec3 point, AtmosphereSample intake, double chamberP) {
-        GasMixture air = intake.mixture();
-        double n = TurbineMath.compressorMoles(
-                speed(),
-                AtmosServerConfig.get(AtmosServerConfig.COMPRESSOR_DRAW) * AtmosTicks.SECONDS,
-                air.pressure(),
-                air.temperature(),
-                intake.state() == AtmosphereState.AMBIENT ? Double.POSITIVE_INFINITY : air.totalMoles());
-        if (n < PipeBlockEntity.MIN_FLOW || air.totalMoles() <= 0) {
-            return;
+    /**
+     * Pays compression work for its compressor out of the shaft (CONT-160): as much of it as the shaft
+     * holds.
+     *
+     * @param joules what the compression costs, J
+     * @return what the shaft paid, J, at most {@code joules}
+     */
+    public double payCompression(double joules) {
+        double paid = Math.max(0, Math.min(Double.isFinite(joules) ? joules : 0, shaft));
+        if (paid > 0) {
+            shaft -= paid;
+            compressorWorkSince += paid;
+            setChanged();
         }
-        double c = GasProperties.heatCapacity(air.moles()) * n / air.totalMoles();
-        double eff = AtmosServerConfig.get(AtmosServerConfig.COMPRESSOR_EFFICIENCY);
-        double w = TurbineMath.compressionWork(c, n, air.temperature(), air.pressure(), chamberP, eff);
-        double free = Math.max(0, shaft - reserved);
-        if (w > free) {
-            n *= free / w; // the work is in proportion to the moles
-            w = free;
-        }
-        if (n < PipeBlockEntity.MIN_FLOW) {
-            return;
-        }
-        double expected = w;
-        reserved += expected;
-        double from = air.pressure();
-        intakePort.remove(level, point, share(air, n), r -> compressed(level, r.moved(), from, chamberP, expected));
-        reportMoved(n);
-    }
-
-    /** Intake gas has arrived: the shaft pays to compress it, and it waits for the chamber. */
-    private void compressed(ServerLevel level, GasParcel gas, double from, double to, double expected) {
-        reserved = Math.max(0, reserved - expected);
-        if (gas.isEmpty()) {
-            return;
-        }
-        double c = GasProperties.heatCapacity(gas);
-        double w = 0;
-        if (!isRemoved()) {
-            w = TurbineMath.compressionWork(
-                    c,
-                    gas.totalMoles(),
-                    gas.temperature(),
-                    from,
-                    to,
-                    AtmosServerConfig.get(AtmosServerConfig.COMPRESSOR_EFFICIENCY));
-            w = Math.max(0, Math.min(w, shaft));
-            shaft -= w;
-            lastCompressorWork += w;
-        }
-        keep(level, true, w > 0 ? new GasParcel(gas.moles(), gas.temperature() + w / c) : gas);
+        return paid;
     }
 
     /** A mixture's gases in proportion, n moles in all. */
@@ -411,13 +348,6 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         }
     }
 
-    /** One game tick: gives its FE to the blocks next to it that take it. */
-    void serverTick() {
-        if (level instanceof ServerLevel server && energy.getEnergyStored() > 0) {
-            WorkToFe.push(server, worldPosition, energy);
-        }
-    }
-
     /**
      * One game tick on a client: its running loop while its blades turn, higher the faster they do
      * (CONT-164). A block entity that has unloaded or been broken has no ticker, so its loop fades.
@@ -442,36 +372,6 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
 
     private static double topEnergy() {
         return AtmosServerConfig.get(AtmosServerConfig.TURBINE_SPIN_ENERGY_KJ) * 1000;
-    }
-
-    /** Whether it is switched on. */
-    public boolean on() {
-        return on;
-    }
-
-    @Override
-    public RedstoneControl redstone() {
-        return redstone;
-    }
-
-    /** What a comparator reads (CONT-175): its store over its capacity. A change saves, which tells it. */
-    public int signal() {
-        int capacity = energy.getMaxEnergyStored();
-        return capacity <= 0 ? 0 : Comparators.fill((double) energy.getEnergyStored() / capacity);
-    }
-
-    /**
-     * Switches the pair on or off, with a click. Off, it lets nothing out and its compressor draws
-     * nothing, and its shaft runs down. Server side.
-     */
-    public void setOn(boolean on) {
-        if (on != this.on) {
-            this.on = on;
-            setChanged();
-            if (level != null) {
-                AtmosSounds.play(level, worldPosition, on ? AtmosSounds.TURBINE_ON : AtmosSounds.TURBINE_OFF);
-            }
-        }
     }
 
     /** What it did at its last atmos tick. */
@@ -520,7 +420,7 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         return lastTurbineWork;
     }
 
-    /** Work the compressor paid for gas that arrived since its last step began, J. */
+    /** Work the shaft paid for its compressor between its last two steps, J. */
     public double compressorWork() {
         return lastCompressorWork;
     }
@@ -530,9 +430,9 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         return lastFriction;
     }
 
-    /** Gas it holds on its way into the chamber and the exhaust, together. */
+    /** Gas it holds on its way into the exhaust. */
     public GasParcel held() {
-        return GasProperties.mix(toChamber, toExhaust);
+        return toExhaust;
     }
 
     /** Work kept toward the next FE, J. */
@@ -540,40 +440,9 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         return work.carry();
     }
 
-    /** Its FE store. */
-    public EnergyStore energy() {
-        return energy;
-    }
-
-    // ---- Its window --------------------------------------------------------------------------
-
-    private int dataValue(int index) {
-        return switch (index) {
-            case TurbineMenu.DATA_ON -> on ? 1 : 0;
-            case TurbineMenu.DATA_STATUS -> status.ordinal();
-            case TurbineMenu.DATA_RPM -> TurbineMenu.shortOf(Math.round(rpm()));
-            case TurbineMenu.DATA_CHAMBER_PRESSURE -> TurbineMenu.shortOf(Math.round(chamberPressure));
-            case TurbineMenu.DATA_CHAMBER_TEMPERATURE -> TurbineMenu.shortOf(Math.round(chamberTemperature));
-            case TurbineMenu.DATA_POWER -> TurbineMenu.shortOf(Math.round(powerPerTick));
-            case TurbineMenu.DATA_STORED_HIGH -> energy.getEnergyStored() >>> 16;
-            case TurbineMenu.DATA_STORED_LOW -> energy.getEnergyStored() & 0xFFFF;
-            case TurbineMenu.DATA_CAPACITY_HIGH -> energy.getMaxEnergyStored() >>> 16;
-            case TurbineMenu.DATA_CAPACITY_LOW -> energy.getMaxEnergyStored() & 0xFFFF;
-            case TurbineMenu.DATA_TOP_RPM ->
-                TurbineMenu.shortOf(AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_RPM));
-            case TurbineMenu.DATA_REDSTONE -> redstone.data();
-            default -> 0;
-        };
-    }
-
-    @Override
-    public Component getDisplayName() {
-        return Component.translatable("block.zas_atmos.turbine");
-    }
-
-    @Override
-    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-        return new TurbineMenu(id, this, data);
+    /** Whether a level has a turbine at a position: for a controller's links. */
+    static boolean isTurbine(Level level, BlockPos pos) {
+        return level.getBlockState(pos).getBlock() instanceof TurbineBlock;
     }
 
     // ---- Its life ----------------------------------------------------------------------------
@@ -582,7 +451,6 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
     public void onLoad() {
         super.onLoad();
         unloading = false;
-        intakeWatch.reset();
         chamberWatch.reset();
         exhaustWatch.reset();
     }
@@ -593,19 +461,15 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
         super.onChunkUnloaded();
     }
 
-    /** Broken, it releases the gas it holds into the chamber and the exhaust (CONT-009). */
+    /** Broken, it releases the gas it holds into the exhaust (CONT-009). */
     @Override
     public void setRemoved() {
         if (!unloading
                 && level instanceof ServerLevel server
                 && !Relocations.isMoving(server, worldPosition)) { // a mover carries it (CONT-156)
-            if (!toChamber.isEmpty()) {
-                GasMutations.add(server, chamberPoint(), toChamber, SOURCE);
-            }
             if (!toExhaust.isEmpty()) {
                 GasMutations.add(server, exhaustPoint(), toExhaust, SOURCE);
             }
-            toChamber = GasParcel.EMPTY;
             toExhaust = GasParcel.EMPTY;
         }
         super.setRemoved();
@@ -614,14 +478,11 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putBoolean(ON, on);
-        tag.putDouble(SHAFT, shaft);
-        tag.putInt(ENERGY, energy.getEnergyStored());
-        work.save(tag);
-        redstone.save(tag);
-        if (!toChamber.isEmpty()) {
-            tag.put(TO_CHAMBER, GasStore.save(toChamber));
+        if (controller != null) {
+            tag.putLong(CONTROLLER, controller.asLong());
         }
+        tag.putDouble(SHAFT, shaft);
+        work.save(tag);
         if (!toExhaust.isEmpty()) {
             tag.put(TO_EXHAUST, GasStore.save(toExhaust));
         }
@@ -630,13 +491,10 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider, Red
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        on = tag.getBoolean(ON);
+        controller = tag.contains(CONTROLLER) ? BlockPos.of(tag.getLong(CONTROLLER)) : null;
         double saved = tag.getDouble(SHAFT);
         shaft = Double.isFinite(saved) ? Math.max(0, Math.min(saved, topEnergy())) : 0;
-        energy.set(tag.getInt(ENERGY));
         work.load(tag);
-        redstone.load(tag);
-        toChamber = tag.contains(TO_CHAMBER) ? GasStore.parcel(tag.getCompound(TO_CHAMBER)) : GasParcel.EMPTY;
         toExhaust = tag.contains(TO_EXHAUST) ? GasStore.parcel(tag.getCompound(TO_EXHAUST)) : GasParcel.EMPTY;
     }
 }

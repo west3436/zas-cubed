@@ -3,10 +3,7 @@ package io.github.west3436.zas.atmos.gametest;
 import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.STONE;
 
-import io.github.west3436.zas.api.atmosphere.ZoneInfo;
-import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
-import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.CellWatch;
@@ -24,9 +21,8 @@ import io.github.west3436.zas.atmos.teg.TegBlock;
 import io.github.west3436.zas.atmos.teg.TegBlockEntity;
 import io.github.west3436.zas.atmos.teg.TegMenu;
 import io.github.west3436.zas.atmos.teg.TegStatus;
-import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
-import io.github.west3436.zas.atmos.turbine.TurbineMenu;
-import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineControllerMenu;
 import io.github.west3436.zas.atmos.turbine.TurbineStatus;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.heat.HeatSettings;
@@ -49,8 +45,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * The redstone setting and comparator output of the round's new devices (CONT-170, CONT-173,
- * CONT-175): the TEG core, the gas turbine and the gas miner. Circulators are passive and have
- * neither. Each test builds in its own {@link Area}, 6000 on, and steps the devices itself, but for
+ * CONT-175): the TEG core, the gas turbine's controller and the gas miner. Circulators, the turbine
+ * and its compressor have neither: the controller has the engine's. Each test builds in its own {@link Area}, 6000 on, and steps the devices itself, but for
  * the one that waits for a real comparator.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
@@ -121,62 +117,6 @@ public final class NewDeviceAutomationTests {
     private static double work(TegBlockEntity teg) {
         return teg.energy().getEnergyStored() * AtmosServerConfig.get(AtmosServerConfig.JOULES_PER_FE)
                 + teg.workCarry();
-    }
-
-    /**
-     * The gas turbine's three rooms and its two blocks, as {@link TurbineTests} builds them, with a
-     * redstone block in the wall above the turbine, where it seals as the stone did.
-     */
-    private static TurbineBlockEntity turbine(Area a) {
-        a.box(0, 0, 12, 4);
-        for (int x : new int[] {4, 8}) {
-            for (int y = 1; y <= 3; y++) {
-                for (int z = 1; z <= 3; z++) {
-                    a.set(x, y, z, STONE);
-                }
-            }
-        }
-        a.set(8, 3, 2, SIGNAL);
-        a.place(4, 2, 2, part(true));
-        a.place(8, 2, 2, part(false));
-        for (int x : new int[] {2, 6, 10}) {
-            a.fill(x, 2, 2, Map.of(N2, 1.0));
-        }
-        return a.entity(8, 2, 2);
-    }
-
-    private static BlockState part(boolean compressor) {
-        return (compressor ? AtmosBlocks.COMPRESSOR : AtmosBlocks.TURBINE)
-                .get()
-                .defaultBlockState()
-                .setValue(TurbinePartBlock.FACING, Direction.EAST);
-    }
-
-    /** Raises the turbine's chamber to a pressure with nitrogen. */
-    private static void pressurise(Area a, double kpa) {
-        ZoneInfo chamber = a.zone(6, 2, 2);
-        GasMixture m = chamber.mixture();
-        double extra = (kpa - m.pressure()) * m.volume() / (GasMixture.GAS_CONSTANT * m.temperature());
-        if (extra > 0) {
-            a.settle(GasMutations.add(
-                    a.level, a.point(6, 2, 2), new GasParcel(Map.of(N2, extra), m.temperature()), Area.SOURCE));
-        }
-    }
-
-    /** The intake's, the chamber's and the exhaust's moles. */
-    private static double[] rooms(Area a) {
-        double[] n = new double[3];
-        int i = 0;
-        for (int x : new int[] {2, 6, 10}) {
-            n[i++] = a.zone(x, 2, 2).mixture().totalMoles();
-        }
-        return n;
-    }
-
-    /** One round, the turbine's FE drawn off after, as a load would. */
-    private static void step(Area a, TurbineBlockEntity t) {
-        a.step();
-        t.energy().extractEnergy(Integer.MAX_VALUE, false);
     }
 
     /** A sealed 3 × 3 × 3 room of ambient air with a miner in its west wall facing in, as {@link GasMinerTests} builds. */
@@ -254,56 +194,63 @@ public final class NewDeviceAutomationTests {
     }
 
     /**
-     * CONT-170, CONT-171: a gas turbine's redstone setting, read at the turbine. Held, it is as if
-     * switched off: it lets nothing out of its chamber and its compressor draws nothing in, and its
-     * spinning shaft runs down to a stop. High with the signal, it runs, and ignoring it runs too.
-     * Its window, opened at the turbine or the compressor, sets the mode.
+     * CONT-170, CONT-171: a gas turbine's redstone setting, read at its controller. Held, the engine is
+     * as if switched off: the turbine lets nothing out of its chamber, the compressor releases nothing
+     * from its feed, and the spinning shaft runs down to a stop. High with the signal, it runs, and
+     * ignoring it runs too. The controller's window sets the mode; the turbine has no setting.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_170_a_held_turbine_moves_no_gas_and_spins_down(GameTestHelper h) {
         Area a = new Area(h, 6001);
         ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
         try {
-            TurbineBlockEntity t = turbine(a);
-            pressurise(a, 300);
-            t.setOn(true);
+            TurbineRig r = TurbineRig.build(a).link(false).burn(0.5, false);
+            h.assertFalse(r.turbine instanceof RedstoneControlled, "the turbine has a redstone setting");
+            a.set(6, 6, 2, SIGNAL); // on the controller
+            r.feed(20, 20);
+            r.pressurise(300);
             Player player = h.makeMockPlayer(GameType.SURVIVAL);
-            TurbineMenu window = (TurbineMenu) t.createMenu(1, player.getInventory(), player);
+            TurbineControllerMenu window =
+                    (TurbineControllerMenu) r.controller.createMenu(1, player.getInventory(), player);
             h.assertTrue(window.clickMenuButton(player, button(RedstoneControl.Mode.LOW)), "the low button");
             h.assertTrue(RedstoneControl.holds(window.redstone()), "the window doesn't show it held");
-            t.setShaftEnergy(AtmosServerConfig.get(AtmosServerConfig.TURBINE_SPIN_ENERGY_KJ) * 1000 / 4);
-            double[] before = rooms(a);
-            double last = t.shaftEnergy();
+            r.turbine.setShaftEnergy(AtmosServerConfig.get(AtmosServerConfig.TURBINE_SPIN_ENERGY_KJ) * 1000 / 4);
+            double chamber = r.chamber().mixture().totalMoles();
+            double exhaust = r.exhaust().mixture().totalMoles();
+            double fed = r.feedGas().totalMoles();
+            double last = r.turbine.shaftEnergy();
             int i = 0;
-            for (; i < 300 && t.rpm() > 0; i++) {
-                step(a, t);
-                h.assertTrue(t.shaftEnergy() <= last, "a held turbine's shaft sped up at round " + i);
-                last = t.shaftEnergy();
-                h.assertValueEqual(t.turbineWork(), 0.0, "a held turbine's work at round " + i);
-                h.assertValueEqual(t.compressorWork(), 0.0, "a held compressor's work at round " + i);
+            for (; i < 300 && r.turbine.rpm() > 0; i++) {
+                r.step();
+                h.assertTrue(r.turbine.shaftEnergy() <= last, "a held turbine's shaft sped up at round " + i);
+                last = r.turbine.shaftEnergy();
+                h.assertValueEqual(r.turbine.turbineWork(), 0.0, "a held turbine's work at round " + i);
+                h.assertValueEqual(r.turbine.compressorWork(), 0.0, "a held compressor's work at round " + i);
+                h.assertValueEqual(r.compressor.lastFuel(), 0.0, "a held compressor's fuel at round " + i);
             }
-            h.assertValueEqual(t.rpm(), 0.0, "a held turbine's shaft after " + i + " rounds");
-            h.assertValueEqual(t.status(), TurbineStatus.OFF, "a held turbine's status");
-            h.assertTrue(t.on(), "redstone switched the turbine off");
-            h.assertTrue(t.held().isEmpty(), "a held turbine holds gas on its way");
-            double[] after = rooms(a);
-            String[] names = {"intake", "chamber", "exhaust"};
-            for (int r = 0; r < 3; r++) {
-                a.close(after[r], before[r], "the " + names[r] + "'s moles past a held turbine");
-            }
-            h.assertValueEqual(a.get(8, 2, 2).getValue(TurbinePartBlock.SPIN), 0, "a held turbine's blades");
+            h.assertValueEqual(r.turbine.rpm(), 0.0, "a held turbine's shaft after " + i + " rounds");
+            h.assertValueEqual(r.turbine.status(), TurbineStatus.OFF, "a held turbine's status");
+            h.assertValueEqual(r.controller.status(), TurbineStatus.OFF, "a held controller's status");
+            h.assertTrue(r.controller.on(), "redstone switched the controller off");
+            h.assertTrue(r.turbine.held().isEmpty(), "a held turbine holds gas on its way");
+            a.close(r.chamber().mixture().totalMoles(), chamber, "the chamber's moles past a held turbine");
+            a.close(r.exhaust().mixture().totalMoles(), exhaust, "the exhaust's moles past a held turbine");
+            a.close(r.feedGas().totalMoles(), fed, "the feed of a held compressor");
+            h.assertValueEqual(r.spin(8), 0, "a held turbine's blades");
 
             for (RedstoneControl.Mode mode : List.of(RedstoneControl.Mode.HIGH, RedstoneControl.Mode.IGNORED)) {
-                t.redstone().set(mode);
-                pressurise(a, 300);
-                double chamberBefore = a.zone(6, 2, 2).mixture().totalMoles();
+                r.controller.redstone().set(mode);
+                r.pressurise(300);
+                double exhaustBefore = r.exhaust().mixture().totalMoles();
                 for (int j = 0; j < CellWatch.SETTLE_STEPS + 3; j++) {
-                    step(a, t);
+                    r.step();
                 }
                 h.assertTrue(
-                        a.zone(6, 2, 2).mixture().totalMoles() < chamberBefore - 1e-6,
+                        r.exhaust().mixture().totalMoles() > exhaustBefore + 1e-6,
                         "a turbine " + mode.word() + " with a signal let nothing out");
-                h.assertTrue(t.status() != TurbineStatus.OFF, "a turbine " + mode.word() + " with a signal is off");
+                h.assertTrue(
+                        r.controller.status() != TurbineStatus.OFF,
+                        "a controller " + mode.word() + " with a signal is off");
             }
         } finally {
             ZasServerConfig.overrideHeatForTest(null);
@@ -366,7 +313,7 @@ public final class NewDeviceAutomationTests {
         Area a = new Area(h, 6003);
         a.clear(0, 0, 8, 4);
         a.place(1, 1, 1, AtmosBlocks.TEG.get().defaultBlockState());
-        a.place(3, 1, 1, part(false));
+        a.place(3, 1, 1, AtmosBlocks.TURBINE_CONTROLLER.get().defaultBlockState());
         a.place(5, 1, 1, AtmosBlocks.GAS_MINER.get().defaultBlockState());
         for (int x : new int[] {1, 3, 5}) {
             BlockEntity device = a.level.getBlockEntity(a.abs(x, 1, 1));
@@ -389,37 +336,39 @@ public final class NewDeviceAutomationTests {
     // ---- What a comparator reads ------------------------------------------------------------------
 
     /**
-     * CONT-175: a TEG core and a gas turbine read their FE store's fill on the containers' scale; the
-     * compressor and a circulator, which hold nothing, read nothing. A gas miner reads its room's
-     * pressure over its target, 15 at it, and nothing while switched off.
+     * CONT-175: a TEG core and a gas turbine's controller read their FE store's fill on the containers'
+     * scale; the turbine, the compressor and a circulator, which hold nothing, read nothing. A gas miner
+     * reads its room's pressure over its target, 15 at it, and nothing while switched off.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_175_the_new_devices_comparator_readings(GameTestHelper h) {
         Area a = new Area(h, 6004);
-        a.clear(0, 0, 10, 4);
+        a.clear(0, 0, 12, 4);
         a.place(1, 1, 1, AtmosBlocks.TEG.get().defaultBlockState());
-        a.place(3, 1, 1, part(false));
-        a.place(5, 1, 1, part(true));
+        a.place(3, 1, 1, AtmosBlocks.TURBINE_CONTROLLER.get().defaultBlockState());
+        a.place(5, 1, 1, TurbineRig.part(true));
         a.place(7, 1, 1, AtmosBlocks.CIRCULATOR.get().defaultBlockState());
+        a.place(9, 1, 1, TurbineRig.part(false));
         TegBlockEntity teg = a.entity(1, 1, 1);
-        TurbineBlockEntity t = a.entity(3, 1, 1);
+        TurbineControllerBlockEntity t = a.entity(3, 1, 1);
         h.assertValueEqual(comparator(a, 1, 1, 1), 0, "an empty TEG core");
-        h.assertValueEqual(comparator(a, 3, 1, 1), 0, "an empty turbine");
+        h.assertValueEqual(comparator(a, 3, 1, 1), 0, "an empty turbine controller");
         int half = Comparators.fill(0.5);
         teg.energy().set(teg.energy().getMaxEnergyStored() / 2);
         t.energy().set(t.energy().getMaxEnergyStored() / 2);
         h.assertValueEqual(comparator(a, 1, 1, 1), half, "a TEG core half full");
-        h.assertValueEqual(comparator(a, 3, 1, 1), half, "a turbine half full");
+        h.assertValueEqual(comparator(a, 3, 1, 1), half, "a turbine controller half full");
         teg.energy().set(1);
         t.energy().set(1);
         h.assertValueEqual(comparator(a, 1, 1, 1), 1, "a TEG core with 1 FE");
-        h.assertValueEqual(comparator(a, 3, 1, 1), 1, "a turbine with 1 FE");
+        h.assertValueEqual(comparator(a, 3, 1, 1), 1, "a turbine controller with 1 FE");
         teg.energy().set(teg.energy().getMaxEnergyStored());
         t.energy().set(t.energy().getMaxEnergyStored());
         h.assertValueEqual(comparator(a, 1, 1, 1), 15, "a full TEG core");
-        h.assertValueEqual(comparator(a, 3, 1, 1), 15, "a full turbine");
+        h.assertValueEqual(comparator(a, 3, 1, 1), 15, "a full turbine controller");
         h.assertFalse(a.get(5, 1, 1).hasAnalogOutputSignal(), "a compressor gives a comparator reading");
         h.assertFalse(a.get(7, 1, 1).hasAnalogOutputSignal(), "a circulator gives a comparator reading");
+        h.assertFalse(a.get(9, 1, 1).hasAnalogOutputSignal(), "a turbine gives a comparator reading");
 
         Area b = new Area(h, 6005);
         GasMinerBlockEntity m = miner(b);
