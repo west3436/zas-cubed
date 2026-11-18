@@ -35,6 +35,12 @@ import net.minecraft.world.phys.Vec3;
  *       tick if you can. The zones go there; the future completes once they have arrived.
  * </ol>
  *
+ * <p><b>A move over several ticks.</b> If you take the blocks away and set them down a few at a
+ * time, name the destination when you begin ({@link #begin(ServerLevel, BoundingBox, Destination,
+ * SourceId)}) and complete with the same one. Then {@link #isMoving} holds both boxes from the begin,
+ * and a block that has arrived waits for the rest: a pipe keeps its gas while its neighbours are
+ * still on their way (CONT-157).
+ *
  * <p>Or {@link #cancel} instead of completing, if the move doesn't happen: the zones carry on where
  * they are. A ticket that is neither completed nor cancelled within the server's time limit (30 s
  * by default) is cancelled for you, and a server restart cancels every open ticket. Either way
@@ -92,6 +98,32 @@ public final class Relocations {
     }
 
     /**
+     * Starts a move whose destination is known (API-069): as {@link #begin(ServerLevel, BoundingBox,
+     * SourceId)}, and {@link #isMoving} holds the blocks where {@code destination} puts the box from now
+     * on, not only once {@link #complete} is called. A mover that sets its blocks down over several
+     * ticks begins this way, so what arrives first waits for the rest. Complete with the same
+     * destination.
+     *
+     * <p>Thread: server thread only.
+     *
+     * @param level the level the blocks leave
+     * @param box the blocks that move, both corners inside
+     * @param destination where they go
+     * @param mover who moves them
+     * @return the ticket, at once; its {@link RelocationTicket#begun()} completes on the server thread
+     * @throws IllegalStateException if called off the server thread
+     * @since 1.3.0
+     */
+    @ServerThread
+    public static RelocationTicket begin(ServerLevel level, BoundingBox box, Destination destination, SourceId mover) {
+        ServerThreads.require(level, "Relocations.begin");
+        ServerThreads.require(Objects.requireNonNull(destination, "destination").level(), "Relocations.begin");
+        return ZasApi.provider()
+                .beginRelocation(
+                        level, Objects.requireNonNull(box, "box"), destination, Objects.requireNonNull(mover, "mover"));
+    }
+
+    /**
      * Ends a move: the ticket's zones go to where {@code destination} puts their blocks (API-065).
      * Call it once the blocks are in place. If a chunk the box or its destination spans isn't
      * loaded, the result is {@link RelocationOutcome#UNLOADED} at once and the ticket stays open.
@@ -131,9 +163,11 @@ public final class Relocations {
 
     /**
      * Whether a block is being moved (API-067): it is inside the box of an open ticket, or where a
-     * completed move put blocks whose zones haven't arrived yet. A block entity that hands gas back
-     * to the world when it is removed should keep it instead while this is true, since the mover
-     * carries the block entity's data to the destination.
+     * completed move put blocks whose zones haven't arrived yet, or where an open ticket that named
+     * its destination at the begin is putting them (API-069). A block entity that hands gas back to
+     * the world when it is removed should keep it instead while this is true, since the mover carries
+     * the block entity's data to the destination. ZAS³'s devices don't step while it is true
+     * (CONT-157): a neighbour they would react to may be gone or not yet there.
      *
      * <p>Thread: server thread only.
      *

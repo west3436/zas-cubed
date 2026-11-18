@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.device;
 
+import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.DevicePower;
@@ -310,10 +311,18 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
      * chunk next to a loaded one that drops out of full status keeps its block entities in memory
      * without unloading them; a device there waits, since reading its own block would load the chunk
      * again.
+     *
+     * <p>A device whose block is being moved ({@link Relocations#isMoving}) waits too (CONT-157). A
+     * mover that takes a box away or sets it down over several ticks leaves the device beside air
+     * where a neighbour was or will be: a pipe would drop its arm on that side and vent the network
+     * through the open end it made. It steps again once the move is over, with its neighbours back.
      */
     @Override
     public final void step() {
-        if (!isRemoved() && level instanceof ServerLevel server && server.isLoaded(worldPosition)) {
+        if (!isRemoved()
+                && level instanceof ServerLevel server
+                && server.isLoaded(worldPosition)
+                && !Relocations.isMoving(server, worldPosition)) {
             ZoneIndex.mark(server, this);
             beforeAtmosTick(server);
             if (!isRemoved()) {
