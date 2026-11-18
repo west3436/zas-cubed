@@ -36,6 +36,11 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
+import io.github.west3436.zas.atmos.teg.TegBlockEntity;
+import io.github.west3436.zas.atmos.teg.TegMenu;
+import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineMenu;
+import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
@@ -52,6 +57,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -673,6 +679,52 @@ public final class CcWriteTests {
                 s.refused(() -> p.cycle("up"), "a side there isn't"), "side must be one of: inner, outer", "the sides");
         h.assertFalse(p.stop(), "stopping with no cycle");
         h.assertValueEqual(p.getState(), "idle", "its state after the refusals");
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /**
+     * A computer switches a TEG core and a gas turbine as their windows do, and a turbine's compressor
+     * is its turbine's peripheral; a compressor with no turbine is none (CONT-158, CONT-161).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_161_the_teg_and_the_turbine_switch_as_their_windows_do(GameTestHelper h)
+            throws LuaException {
+        Spot s = new Spot(h, 57);
+        Devices.clear(s);
+        Player player = player(h);
+
+        TegBlockEntity teg = (TegBlockEntity) Devices.place(s, "zas_teg", 1, 1, 1);
+        TegPeripheral tp = s.peripheral(1, 1, 1, TegPeripheral.class);
+        tp.setOn(true);
+        h.assertTrue(teg.on(), "the core didn't switch on");
+        h.assertTrue(
+                teg.createMenu(1, player.getInventory(), player).clickMenuButton(player, TegMenu.TOGGLE),
+                "the core's window refused its switch");
+        h.assertFalse(tp.isOn(), "the core is still on after the window's switch");
+
+        // Intake | compressor | two open cells | turbine | exhaust, all passing gas east.
+        BlockState compressor =
+                AtmosBlocks.COMPRESSOR.get().defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST);
+        s.set(4, 1, 1, compressor);
+        h.assertTrue(
+                s.peripheral(s.abs(4, 1, 1), Direction.NORTH) == null, "a compressor with no turbine is a peripheral");
+        TurbineBlockEntity turbine = s.place(
+                7,
+                1,
+                1,
+                AtmosBlocks.TURBINE.get().defaultBlockState().setValue(TurbinePartBlock.FACING, Direction.EAST),
+                TurbineBlockEntity.class);
+        TurbinePeripheral up = s.peripheral(7, 1, 1, TurbinePeripheral.class);
+        TurbinePeripheral viaCompressor = s.peripheral(4, 1, 1, TurbinePeripheral.class);
+        h.assertTrue(viaCompressor.getTarget() == turbine, "the compressor isn't its turbine's peripheral");
+        h.assertTrue(viaCompressor.equals(up), "the compressor's and the turbine's peripherals aren't equal");
+        viaCompressor.setOn(true);
+        h.assertTrue(turbine.on(), "the turbine didn't switch on through its compressor");
+        h.assertTrue(
+                turbine.createMenu(1, player.getInventory(), player).clickMenuButton(player, TurbineMenu.TOGGLE),
+                "the turbine's window refused its switch");
+        h.assertFalse(up.isOn(), "the turbine is still on after the window's switch");
         Devices.clear(s);
         h.succeed();
     }

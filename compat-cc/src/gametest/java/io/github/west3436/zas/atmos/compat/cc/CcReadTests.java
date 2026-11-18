@@ -51,6 +51,10 @@ import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
+import io.github.west3436.zas.atmos.teg.TegBlockEntity;
+import io.github.west3436.zas.atmos.teg.TegMenu;
+import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineMenu;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
@@ -112,7 +116,7 @@ public final class CcReadTests {
         int i = 0;
         for (String type : Devices.SURFACE.keySet()) {
             // Two rows, three blocks apart, so nothing joins and each wall panel has its stone.
-            BlockEntity device = Devices.place(s, type, 1 + 3 * (i % 8), 2, i < 8 ? 2 : 5);
+            BlockEntity device = Devices.place(s, type, 1 + 3 * (i % 11), 2, i < 11 ? 2 : 5);
             i++;
             for (Direction side : Direction.values()) {
                 IPeripheral found = s.peripheral(device.getBlockPos(), side);
@@ -696,6 +700,53 @@ public final class CcReadTests {
         h.assertTrue(
                 chamber == null ? Double.isNaN(controller.chamberKpa()) : chamber == controller.chamberKpa(),
                 "the chamber's pressure: " + chamber + ", the controller's " + controller.chamberKpa());
+        Devices.clear(s);
+        h.succeed();
+    }
+
+    /**
+     * A TEG core and a gas turbine read as their windows do (CONT-158, CONT-161): their switches,
+     * states, FE and buffers, the core's two streams and the turbine's chamber and top speed.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_158_the_teg_and_the_turbine_read_as_their_windows_do(GameTestHelper h) throws LuaException {
+        Spot s = new Spot(h, 56);
+        Devices.clear(s);
+        Player player = player(h);
+
+        TegBlockEntity teg = (TegBlockEntity) Devices.place(s, "zas_teg", 1, 1, 1);
+        TegPeripheral tp = s.peripheral(1, 1, 1, TegPeripheral.class);
+        TegMenu tegWindow = (TegMenu) teg.createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(tp.getType(), "zas_teg", "the core's type");
+        h.assertValueEqual(tp.isOn(), tegWindow.on(), "its switch");
+        h.assertValueEqual(tp.getState(), Lua.word(tegWindow.status()), "its state");
+        h.assertValueEqual(tp.getPower(), 0.0, "its power with no circulators");
+        h.assertValueEqual(tp.getEnergy(), tegWindow.energy(), "its FE");
+        h.assertValueEqual(tp.getEnergyCapacity(), tegWindow.capacity(), "its buffer");
+        h.assertTrue(tp.getEnergyCapacity() > 0, "its buffer has no size");
+        for (int side = 0; side < 2; side++) {
+            Map<String, Double> stream = side == 0 ? tp.getHot() : tp.getCold();
+            h.assertValueEqual(
+                    stream.keySet(),
+                    java.util.Set.of("temperatureIn", "temperatureOut", "pressureIn", "pressureOut"),
+                    "a stream's keys");
+            h.assertValueEqual(
+                    shown(stream.get("temperatureIn")), tegWindow.temperature(side, true), "the window's temperature");
+            h.assertValueEqual(
+                    shown(stream.get("pressureOut")), tegWindow.pressure(side, false), "the window's pressure");
+        }
+
+        TurbineBlockEntity turbine = (TurbineBlockEntity) Devices.place(s, "zas_turbine", 4, 1, 1);
+        TurbinePeripheral up = s.peripheral(4, 1, 1, TurbinePeripheral.class);
+        TurbineMenu turbineWindow = (TurbineMenu) turbine.createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(up.getType(), "zas_turbine", "the turbine's type");
+        h.assertValueEqual(up.isOn(), turbineWindow.on(), "its switch");
+        h.assertValueEqual(up.getState(), Lua.word(turbineWindow.status()), "its state");
+        h.assertValueEqual(up.getRpm(), 0.0, "a still shaft's speed");
+        h.assertValueEqual(up.getMaxRpm(), turbineWindow.value(TurbineMenu.DATA_TOP_RPM), "its top speed");
+        h.assertValueEqual(up.getChamber().keySet(), java.util.Set.of("pressure", "temperature"), "the chamber's keys");
+        h.assertValueEqual(up.getEnergy(), turbineWindow.energy(), "its FE");
+        h.assertValueEqual(up.getEnergyCapacity(), turbineWindow.capacity(), "its buffer");
         Devices.clear(s);
         h.succeed();
     }

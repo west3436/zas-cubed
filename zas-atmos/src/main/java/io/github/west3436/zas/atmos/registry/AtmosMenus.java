@@ -16,7 +16,9 @@ import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
+import io.github.west3436.zas.atmos.teg.TegMenu;
 import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
+import io.github.west3436.zas.atmos.turbine.TurbineMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -67,6 +69,14 @@ public final class AtmosMenus {
     /** A portable pump's switch, direction, target, battery and held tank (CONT-018). */
     public static final Supplier<MenuType<PortablePumpMenu>> PORTABLE_PUMP =
             MENUS.register("portable_pump", () -> new MenuType<>(PortablePumpMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** A TEG core's switch and readings (CONT-159). */
+    public static final Supplier<MenuType<TegMenu>> TEG =
+            MENUS.register("teg", () -> new MenuType<>(TegMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** A gas turbine's switch and readings (CONT-163). */
+    public static final Supplier<MenuType<TurbineMenu>> TURBINE =
+            MENUS.register("turbine", () -> new MenuType<>(TurbineMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     /** A pressure pump's switch and target (CONT-011). */
     public static final Supplier<MenuType<PumpMenu>> PRESSURE_PUMP = MENUS.register(

@@ -10,6 +10,8 @@ import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbinePartBlock;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.core.Direction;
@@ -69,6 +71,8 @@ public final class CcCompat {
         device(event, AtmosBlockEntities.PORTABLE_SCRUBBER, PortablePeripheral.Scrubber::new);
         device(event, AtmosBlockEntities.PORTABLE_PUMP, PortablePeripheral.Pump::new);
         device(event, AtmosBlockEntities.GENERATOR, GeneratorPeripheral::new);
+        device(event, AtmosBlockEntities.TEG, TegPeripheral::new);
+        device(event, AtmosBlockEntities.TURBINE, TurbinePeripheral::new);
         device(event, AtmosBlockEntities.AREA_AIR_CONTROLLER, AreaAirControllerPeripheral::new);
         device(event, AtmosBlockEntities.AIRLOCK_CONTROLLER, AirlockControllerPeripheral::new);
         device(event, AtmosBlockEntities.GAUGE, GaugePeripheral::new);
@@ -102,6 +106,14 @@ public final class CcCompat {
                     return central == null ? null : new CentralControllerPeripheral(central);
                 },
                 AtmosBlocks.CENTRAL_ATMOS_CONTROLLER.get());
+        // A gas turbine's compressor is its turbine's peripheral, as it opens its turbine's window.
+        event.registerBlock(
+                PeripheralCapability.get(),
+                (level, pos, state, blockEntity, side) -> {
+                    TurbineBlockEntity turbine = TurbinePartBlock.turbineOf(level, pos, state);
+                    return turbine == null ? null : new TurbinePeripheral(turbine);
+                },
+                AtmosBlocks.COMPRESSOR.get());
         ZoneEvents.register(NeoForge.EVENT_BUS);
         registered = true;
     }

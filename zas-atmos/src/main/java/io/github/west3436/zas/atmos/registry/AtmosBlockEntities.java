@@ -32,7 +32,10 @@ import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlockEntity;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
+import io.github.west3436.zas.atmos.teg.CirculatorBlockEntity;
+import io.github.west3436.zas.atmos.teg.TegBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
+import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
@@ -220,6 +223,23 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<HeatExchangerBlockEntity>> HEAT_EXCHANGER = BLOCK_ENTITIES.register(
             "heat_exchanger",
             () -> BlockEntityType.Builder.of(HeatExchangerBlockEntity::new, AtmosBlocks.HEAT_EXCHANGER.get())
+                    .build(null));
+
+    // Power generators: the TEG and the gas turbine (CONT-157 to CONT-164).
+
+    public static final Supplier<BlockEntityType<TegBlockEntity>> TEG = BLOCK_ENTITIES.register(
+            "teg",
+            () -> BlockEntityType.Builder.of(TegBlockEntity::new, AtmosBlocks.TEG.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<CirculatorBlockEntity>> CIRCULATOR = BLOCK_ENTITIES.register(
+            "circulator",
+            () -> BlockEntityType.Builder.of(CirculatorBlockEntity::new, AtmosBlocks.CIRCULATOR.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<TurbineBlockEntity>> TURBINE = BLOCK_ENTITIES.register(
+            "turbine",
+            () -> BlockEntityType.Builder.of(TurbineBlockEntity::new, AtmosBlocks.TURBINE.get())
                     .build(null));
 
     // The tank transfer valve, placed (CONT-103, D-86).

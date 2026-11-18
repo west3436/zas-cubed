@@ -81,6 +81,10 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.CENTRAL_ATMOS_CONTROLLER.get());
         out.accept(AtmosItems.FIRE_ALARM.get());
         out.accept(AtmosItems.GENERATOR.get());
+        out.accept(AtmosItems.TEG.get());
+        out.accept(AtmosItems.CIRCULATOR.get());
+        out.accept(AtmosItems.COMPRESSOR.get());
+        out.accept(AtmosItems.TURBINE.get());
         out.accept(AtmosItems.ELECTROLYZER.get());
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.AIR_CONDITIONER.get());

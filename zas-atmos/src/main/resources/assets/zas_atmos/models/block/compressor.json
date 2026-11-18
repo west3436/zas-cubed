@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "north": "zas_atmos:block/compressor_rotor",
+    "south": "zas_atmos:block/compressor_rotor",
+    "east": "zas_atmos:block/compressor_side_east",
+    "west": "zas_atmos:block/compressor_side_west",
+    "up": "zas_atmos:block/compressor_top",
+    "down": "zas_atmos:block/compressor_top",
+    "particle": "zas_atmos:block/compressor_side_east"
+  }
+}

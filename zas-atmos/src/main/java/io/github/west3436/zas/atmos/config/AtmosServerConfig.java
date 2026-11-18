@@ -102,6 +102,51 @@ public final class AtmosServerConfig {
     public static final ModConfigSpec.IntValue GENERATOR_SECONDS_PER_FUEL;
 
     /** The pressure fall within one atmos tick that alarms a controller at once, in kPa (CONT-043). */
+    /** J per FE in the TEG and the turbine (CONT-158, CONT-162). */
+    public static final ModConfigSpec.DoubleValue JOULES_PER_FE;
+
+    /** The TEG's efficiency as a share of Carnot's (CONT-158). */
+    public static final ModConfigSpec.DoubleValue TEG_CARNOT_FRACTION;
+
+    /** The TEG's FE store (CONT-158). */
+    public static final ModConfigSpec.IntValue TEG_BUFFER;
+
+    /** The pressure difference a circulator keeps, kPa (CONT-157). */
+    public static final ModConfigSpec.DoubleValue CIRCULATOR_FRICTION_KPA;
+
+    /** A circulator's most flow, L/s (CONT-157). */
+    public static final ModConfigSpec.DoubleValue CIRCULATOR_MAX_FLOW;
+
+    /** The turbine's top speed, rpm (CONT-161). */
+    public static final ModConfigSpec.IntValue TURBINE_MAX_RPM;
+
+    /** The shaft's energy at top speed, kJ (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_SPIN_ENERGY_KJ;
+
+    /** The turbine's generator at top speed, FE/t (CONT-162). */
+    public static final ModConfigSpec.IntValue TURBINE_MAX_OUTPUT;
+
+    /** The turbine's share of ideal expansion work (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_EFFICIENCY;
+
+    /** The compressor's efficiency (CONT-160). */
+    public static final ModConfigSpec.DoubleValue COMPRESSOR_EFFICIENCY;
+
+    /** The compressor's draw at top speed, L/s (CONT-160). */
+    public static final ModConfigSpec.DoubleValue COMPRESSOR_DRAW;
+
+    /** The turbine's nozzle, a share per second (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_NOZZLE;
+
+    /** The turbine's most flow, L/s (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_MAX_FLOW;
+
+    /** The share of shaft energy lost per second (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_FRICTION;
+
+    /** The turbine's FE store (CONT-162). */
+    public static final ModConfigSpec.IntValue TURBINE_BUFFER;
+
     public static final ModConfigSpec.DoubleValue BREACH_DROP_KPA;
 
     /** A thermostat's dead band, in K (CONT-165). */
@@ -192,6 +237,61 @@ public final class AtmosServerConfig {
                         "How long one coal burns in the generator, in seconds. Other furnace fuels burn",
                         "for this times their furnace burn time over coal's (CONT-066)")
                 .defineInRange("generator_seconds_per_fuel", 80, 1, 1_600);
+        builder.pop();
+
+        builder.comment("The thermoelectric generator and the gas turbine (CONT-157 to CONT-164).")
+                .push("generators");
+        JOULES_PER_FE = builder.comment(
+                        "The work, in J, that makes one FE in the TEG and the turbine. Their heat and work",
+                        "are reckoned in J, so the energy that leaves the gas as FE is this many J each.")
+                .defineInRange("joules_per_fe", 4.0, 0.01, 1_000_000.0);
+        TEG_CARNOT_FRACTION = builder.comment(
+                        "The TEG's efficiency as a share of the Carnot efficiency of its two streams' inlet",
+                        "temperatures (CONT-158). It never turns more heat into work than the second law allows.")
+                .defineInRange("teg_carnot_fraction", 0.5, 0.0, 1.0);
+        TEG_BUFFER = builder.comment("The TEG's own FE store. It makes no FE while full.")
+                .defineInRange("teg_buffer", 100_000, 1_000, 10_000_000);
+        CIRCULATOR_FRICTION_KPA = builder.comment(
+                        "The pressure difference a circulator keeps across itself, in kPa: it moves gas only",
+                        "while its inlet is more than this above its outlet (CONT-157)")
+                .defineInRange("circulator_friction_kpa", 5.0, 0.0, 1_000.0);
+        CIRCULATOR_MAX_FLOW = builder.comment(
+                        "The most a circulator moves per second, in L at its inlet's conditions (CONT-157)")
+                .defineInRange("circulator_max_flow", 500.0, 1.0, 100_000.0);
+        TURBINE_MAX_RPM = builder.comment("The gas turbine's top speed, in rpm (CONT-161)")
+                .defineInRange("turbine_max_rpm", 10_000, 100, 1_000_000);
+        TURBINE_SPIN_ENERGY_KJ = builder.comment(
+                        "The energy in the turbine's shaft at its top speed, in kJ: how long it takes to spin",
+                        "up and down (CONT-161)")
+                .defineInRange("turbine_spin_energy_kj", 500.0, 1.0, 1_000_000.0);
+        TURBINE_MAX_OUTPUT = builder.comment(
+                        "What the turbine's generator makes at top speed, in FE/t; it makes this times",
+                        "(rpm / top speed)^0.8, and never more than the shaft holds (CONT-162)")
+                .defineInRange("turbine_max_output", 1_000, 0, 1_000_000);
+        TURBINE_EFFICIENCY = builder.comment(
+                        "The share of an ideal expansion's work the turbine takes from the gas it lets out (CONT-161)")
+                .defineInRange("turbine_efficiency", 0.8, 0.0, 1.0);
+        COMPRESSOR_EFFICIENCY = builder.comment(
+                        "An ideal compression's work over what the compressor spends; the rest heats the gas too",
+                        "(CONT-160)")
+                .defineInRange("compressor_efficiency", 0.8, 0.05, 1.0);
+        COMPRESSOR_DRAW = builder.comment(
+                        "What the compressor draws per second at the turbine's top speed, in L at its intake's",
+                        "conditions; it draws in proportion to the speed (CONT-160)")
+                .defineInRange("compressor_draw", 250.0, 0.0, 100_000.0);
+        TURBINE_NOZZLE = builder.comment(
+                        "The share of the moles that would even out the chamber and the exhaust that the turbine",
+                        "lets out each second (CONT-161)")
+                .defineInRange("turbine_nozzle", 0.5, 0.0, 1.0);
+        TURBINE_MAX_FLOW = builder.comment(
+                        "The most the turbine lets out per second, in L at the chamber's conditions (CONT-161)")
+                .defineInRange("turbine_max_flow", 2_500.0, 0.0, 1_000_000.0);
+        TURBINE_FRICTION = builder.comment(
+                        "The share of its shaft's energy the turbine loses each second to friction, as heat",
+                        "into its chamber (CONT-161)")
+                .defineInRange("turbine_friction", 0.01, 0.0, 1.0);
+        TURBINE_BUFFER = builder.comment("The turbine's own FE store. Its generator makes no FE while full.")
+                .defineInRange("turbine_buffer", 100_000, 1_000, 10_000_000);
         builder.pop();
 
         builder.comment("The area air controller (CONT-040, CONT-043).").push("controller");

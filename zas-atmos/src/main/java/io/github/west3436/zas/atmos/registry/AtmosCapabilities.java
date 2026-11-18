@@ -55,6 +55,11 @@ public final class AtmosCapabilities {
                 Capabilities.EnergyStorage.BLOCK, AtmosBlockEntities.GENERATOR.get(), (be, side) -> be.energy());
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK, AtmosBlockEntities.GENERATOR.get(), (be, side) -> be.fuel());
+        // The TEG core and the turbine give FE as the generator does (CONT-158, CONT-162).
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK, AtmosBlockEntities.TEG.get(), (be, side) -> be.energy());
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK, AtmosBlockEntities.TURBINE.get(), (be, side) -> be.energy());
         event.registerBlockEntity(
                 Capabilities.EnergyStorage.BLOCK,
                 AtmosBlockEntities.AREA_AIR_CONTROLLER.get(),

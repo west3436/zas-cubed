@@ -1,0 +1,94 @@
+{
+  "variants": {
+    "facing=north,output=0": {
+      "model": "zas_atmos:block/teg_0"
+    },
+    "facing=north,output=1": {
+      "model": "zas_atmos:block/teg_1"
+    },
+    "facing=north,output=2": {
+      "model": "zas_atmos:block/teg_2"
+    },
+    "facing=north,output=3": {
+      "model": "zas_atmos:block/teg_3"
+    },
+    "facing=north,output=4": {
+      "model": "zas_atmos:block/teg_4"
+    },
+    "facing=north,output=5": {
+      "model": "zas_atmos:block/teg_5"
+    },
+    "facing=east,output=0": {
+      "model": "zas_atmos:block/teg_0",
+      "y": 90
+    },
+    "facing=east,output=1": {
+      "model": "zas_atmos:block/teg_1",
+      "y": 90
+    },
+    "facing=east,output=2": {
+      "model": "zas_atmos:block/teg_2",
+      "y": 90
+    },
+    "facing=east,output=3": {
+      "model": "zas_atmos:block/teg_3",
+      "y": 90
+    },
+    "facing=east,output=4": {
+      "model": "zas_atmos:block/teg_4",
+      "y": 90
+    },
+    "facing=east,output=5": {
+      "model": "zas_atmos:block/teg_5",
+      "y": 90
+    },
+    "facing=south,output=0": {
+      "model": "zas_atmos:block/teg_0",
+      "y": 180
+    },
+    "facing=south,output=1": {
+      "model": "zas_atmos:block/teg_1",
+      "y": 180
+    },
+    "facing=south,output=2": {
+      "model": "zas_atmos:block/teg_2",
+      "y": 180
+    },
+    "facing=south,output=3": {
+      "model": "zas_atmos:block/teg_3",
+      "y": 180
+    },
+    "facing=south,output=4": {
+      "model": "zas_atmos:block/teg_4",
+      "y": 180
+    },
+    "facing=south,output=5": {
+      "model": "zas_atmos:block/teg_5",
+      "y": 180
+    },
+    "facing=west,output=0": {
+      "model": "zas_atmos:block/teg_0",
+      "y": 270
+    },
+    "facing=west,output=1": {
+      "model": "zas_atmos:block/teg_1",
+      "y": 270
+    },
+    "facing=west,output=2": {
+      "model": "zas_atmos:block/teg_2",
+      "y": 270
+    },
+    "facing=west,output=3": {
+      "model": "zas_atmos:block/teg_3",
+      "y": 270
+    },
+    "facing=west,output=4": {
+      "model": "zas_atmos:block/teg_4",
+      "y": 270
+    },
+    "facing=west,output=5": {
+      "model": "zas_atmos:block/teg_5",
+      "y": 270
+    }
+  }
+}

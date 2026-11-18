@@ -35,7 +35,11 @@ import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
+import io.github.west3436.zas.atmos.teg.CirculatorBlock;
+import io.github.west3436.zas.atmos.teg.TegBlock;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlock;
+import io.github.west3436.zas.atmos.turbine.CompressorBlock;
+import io.github.west3436.zas.atmos.turbine.TurbineBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
@@ -252,6 +256,23 @@ public final class AtmosBlocks {
     /** The heat exchanger, which works in pairs (CONT-147, HEAT-022). */
     public static final DeferredBlock<HeatExchangerBlock> HEAT_EXCHANGER =
             BLOCKS.registerBlock("heat_exchanger", HeatExchangerBlock::new, metal());
+
+    // ---- Power generators: the TEG and the gas turbine (CONT-157 to CONT-164) ----
+
+    /** The thermoelectric generator's core (CONT-158). */
+    public static final DeferredBlock<TegBlock> TEG = BLOCKS.registerBlock("teg", TegBlock::new, metal());
+
+    /** A circulator, one of the TEG's two sides (CONT-157). */
+    public static final DeferredBlock<CirculatorBlock> CIRCULATOR =
+            BLOCKS.registerBlock("circulator", CirculatorBlock::new, metal());
+
+    /** The gas turbine's compressor (CONT-160). */
+    public static final DeferredBlock<CompressorBlock> COMPRESSOR =
+            BLOCKS.registerBlock("compressor", CompressorBlock::new, metal());
+
+    /** The gas turbine (CONT-161). */
+    public static final DeferredBlock<TurbineBlock> TURBINE =
+            BLOCKS.registerBlock("turbine", TurbineBlock::new, metal());
 
     // ---- The tank transfer valve, placed (CONT-103, D-86) ----
 

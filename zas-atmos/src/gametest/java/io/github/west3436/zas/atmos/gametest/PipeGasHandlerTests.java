@@ -130,8 +130,8 @@ public final class PipeGasHandlerTests {
      * Each part offers it where a pipe would join it and nowhere else: a pipe on every face, in a wall
      * or not, a cap where it points, a
      * connector port below and not above, a vent, scrubber, passive vent and heat exchanger at the
-     * back, a valve on its two flanges, a radiator adaptor on its pipe end, a pump, filter, mixer and
-     * electrolyzer on each port, a large gas tank under its lower half. A canister and radiator pipe
+     * back, a valve on its two flanges, a radiator adaptor on its pipe end, a pump, filter, mixer,
+     * electrolyzer and circulator on each port, a large gas tank under its lower half. A canister and radiator pipe
      * offer none. Every pipe part the mod registers is covered.
      */
     @GameTest(template = "empty", batch = BATCH)
@@ -174,7 +174,8 @@ public final class PipeGasHandlerTests {
             AtmosBlocks.VOLUME_PUMP.get(),
             AtmosBlocks.FILTER.get(),
             AtmosBlocks.MIXER.get(),
-            AtmosBlocks.ELECTROLYZER.get()
+            AtmosBlocks.ELECTROLYZER.get(),
+            AtmosBlocks.CIRCULATOR.get()
         }) {
             BlockState state = ported.defaultBlockState();
             Set<Direction> ports = EnumSet.copyOf(((PortedBlock) ported).portFaces(state));
