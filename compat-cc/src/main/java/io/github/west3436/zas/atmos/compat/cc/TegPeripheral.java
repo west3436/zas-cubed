@@ -8,7 +8,7 @@ import java.util.Map;
 
 /**
  * A thermoelectric generator's core (CONT-158): its switch, what it is doing, its two streams as its
- * window shows them, and its FE.
+ * window shows them, its FE, and its redstone setting (COMPAT-023).
  */
 public final class TegPeripheral extends DevicePeripheral<TegBlockEntity> {
     TegPeripheral(TegBlockEntity core) {
@@ -69,5 +69,16 @@ public final class TegPeripheral extends DevicePeripheral<TegBlockEntity> {
         table.put("pressureIn", core.pressure(side, true));
         table.put("pressureOut", core.pressure(side, false));
         return table;
+    }
+
+    /** Its redstone setting (COMPAT-023): {@code ignored}, {@code high} or {@code low}. */
+    @LuaFunction(mainThread = true)
+    public final String getRedstoneMode() throws LuaException {
+        return Lua.redstoneMode(device());
+    }
+
+    @LuaFunction(mainThread = true)
+    public final void setRedstoneMode(String mode) throws LuaException {
+        Lua.setRedstoneMode(device(), mode);
     }
 }

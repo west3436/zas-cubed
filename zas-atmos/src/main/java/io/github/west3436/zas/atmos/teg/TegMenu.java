@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.teg;
 
+import io.github.west3436.zas.atmos.device.RedstoneControl;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -12,8 +13,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A TEG core's window (CONT-159): its switch and state, each stream's temperatures in and out and its
- * two networks' pressures, what it makes and what it has stored. The client sends only the switch.
- * Menu data syncs as shorts, so the store's FE comes in two halves.
+ * two networks' pressures, what it makes and what it has stored, and its redstone setting (CONT-170).
+ * The client sends only the switch and the redstone setting's buttons. Menu data syncs as shorts, so
+ * the store's FE comes in two halves.
  */
 public class TegMenu extends AbstractContainerMenu {
     /** Switches it on or off. */
@@ -36,7 +38,10 @@ public class TegMenu extends AbstractContainerMenu {
     /** Hot inlet, hot outlet, cold inlet, cold outlet networks, kPa, rounded. */
     public static final int DATA_PRESSURE = DATA_TEMPERATURE + 4;
 
-    public static final int DATA_COUNT = DATA_PRESSURE + 4;
+    /** Its {@linkplain RedstoneControl#data() redstone setting and signal} (CONT-170). */
+    public static final int DATA_REDSTONE = DATA_PRESSURE + 4;
+
+    public static final int DATA_COUNT = DATA_REDSTONE + 1;
 
     private final ContainerData data;
     private final @Nullable TegBlockEntity core;
@@ -96,6 +101,11 @@ public class TegMenu extends AbstractContainerMenu {
         return ((data.get(high) & 0xFFFF) << 16) | (data.get(high + 1) & 0xFFFF);
     }
 
+    /** Its redstone setting and signal, as synced: read with {@link RedstoneControl#mode(int)} and the rest. */
+    public int redstone() {
+        return data.get(DATA_REDSTONE);
+    }
+
     /** A stream's temperature, K: side 0 hot, 1 cold. */
     public int temperature(int side, boolean in) {
         return data.get(DATA_TEMPERATURE + 2 * side + (in ? 0 : 1));
@@ -108,7 +118,13 @@ public class TegMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (core == null || core.isRemoved() || id != TOGGLE) {
+        if (core == null || core.isRemoved()) {
+            return false;
+        }
+        if (RedstoneControl.isButton(id)) {
+            return core.redstone().button(id);
+        }
+        if (id != TOGGLE) {
             return false;
         }
         core.setOn(!core.on());

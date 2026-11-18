@@ -4,7 +4,7 @@ import java.util.Locale;
 
 /** What a TEG core did at its last atmos tick, for its window and a computer (CONT-159). */
 public enum TegStatus {
-    /** Switched off: its circulators pass gas on their own. */
+    /** Switched off, or held by its redstone setting: its circulators pass gas on their own. */
     OFF,
     /** It hasn't a circulator on each side. */
     NO_CIRCULATORS,

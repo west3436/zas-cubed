@@ -25,9 +25,10 @@ import net.minecraft.world.phys.BlockHitResult;
  * The creative gas miner (CONT-180, CONT-182): a full block that makes gas in the cell in front of its
  * face, which turns toward whoever places it, up, down or level, as a dispenser's does. It is for
  * creative play and map makers: it has no recipe, drops nothing, and can't be broken in survival.
- * Using it opens its window. Redstone does nothing to it.
+ * Using it opens its window. Its redstone setting can hold it (CONT-170), and a comparator reads how
+ * near its room is to its target (CONT-175).
  *
- * <p>{@link #ON} is its switch, which lights its lamp. The lamp takes the colour of the gas it makes,
+ * <p>{@link #ON} lights its lamp: on while it is switched on and redstone doesn't hold it. The lamp takes the colour of the gas it makes,
  * which its block entity sends to clients.
  */
 public class GasMinerBlock extends BaseEntityBlock {
@@ -36,7 +37,7 @@ public class GasMinerBlock extends BaseEntityBlock {
     /** The way its face, where its gas comes out, faces. */
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
-    /** Whether it is switched on. */
+    /** Whether its lamp is lit: switched on, and not held by redstone. */
     public static final BooleanProperty ON = BooleanProperty.create("on");
 
     public GasMinerBlock(Properties properties) {
@@ -84,6 +85,17 @@ public class GasMinerBlock extends BaseEntityBlock {
             server.openMenu(miner, miner::writeMenu);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    /** Its room's pressure as a share of its target (CONT-175). */
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof GasMinerBlockEntity miner ? miner.signal() : 0;
     }
 
     @Override

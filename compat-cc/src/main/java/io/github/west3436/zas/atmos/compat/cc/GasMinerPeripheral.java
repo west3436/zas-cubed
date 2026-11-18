@@ -8,9 +8,9 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A creative gas miner (CONT-188): its switch, its gas, target and temperature, what it is doing and
- * the room's pressure. What its window sets, a computer sets, over the same ranges, and a gas the
- * server doesn't define is refused, as the window offers none.
+ * A creative gas miner (CONT-188): its switch, its gas, target and temperature, what it is doing,
+ * the room's pressure, and its redstone setting (COMPAT-023). What its window sets, a computer sets,
+ * over the same ranges, and a gas the server doesn't define is refused, as the window offers none.
  */
 public final class GasMinerPeripheral extends DevicePeripheral<GasMinerBlockEntity> {
     GasMinerPeripheral(GasMinerBlockEntity miner) {
@@ -82,5 +82,16 @@ public final class GasMinerPeripheral extends DevicePeripheral<GasMinerBlockEnti
     @LuaFunction(mainThread = true)
     public @Nullable Double getRoomPressure() throws LuaException {
         return Lua.orNil(device().roomPressure());
+    }
+
+    /** Its redstone setting (COMPAT-023): {@code ignored}, {@code high} or {@code low}. */
+    @LuaFunction(mainThread = true)
+    public final String getRedstoneMode() throws LuaException {
+        return Lua.redstoneMode(device());
+    }
+
+    @LuaFunction(mainThread = true)
+    public final void setRedstoneMode(String mode) throws LuaException {
+        Lua.setRedstoneMode(device(), mode);
     }
 }

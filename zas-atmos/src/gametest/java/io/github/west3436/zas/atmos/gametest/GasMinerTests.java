@@ -191,9 +191,10 @@ public final class GasMinerTests {
         h.assertValueEqual(gases, GasMinerBlockEntity.gases(), "the gases it offers");
         h.assertTrue(gases.contains(N2) && gases.contains(O2), "it offers " + gases);
 
-        h.assertTrue(menu.clickMenuButton(p, GasMinerMenu.GAS + gases.indexOf(N2)), "N2's button was refused");
+        h.assertTrue(menu.clickMenuButton(p, GasMinerMenu.gasButton(gases.indexOf(N2))), "N2's button was refused");
         h.assertValueEqual(m.gas(), N2, "its gas after N2's button");
-        h.assertFalse(menu.clickMenuButton(p, GasMinerMenu.GAS + gases.size()), "a button past the list was taken");
+        h.assertFalse(
+                menu.clickMenuButton(p, GasMinerMenu.gasButton(gases.size())), "a button past the list was taken");
         h.assertTrue(menu.clickMenuButton(p, GasMinerMenu.TARGET_DOWN_100 + 3), "+100 kPa was refused");
         a.close(m.target(), GasMinerBlockEntity.DEFAULT_TARGET + 100, "its target after +100 kPa");
         h.assertTrue(menu.clickMenuButton(p, GasMinerMenu.TARGET_DEFAULT), "Default was refused");

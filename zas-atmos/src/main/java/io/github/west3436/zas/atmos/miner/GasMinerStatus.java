@@ -7,7 +7,7 @@ import java.util.Locale;
  * idle and why. Decided on the server each atmos tick and synced by its ordinal.
  */
 public enum GasMinerStatus {
-    /** Switched off. */
+    /** Switched off, or held by its redstone setting. */
     OFF,
     /** Added gas to the room in front. */
     FILLING,
