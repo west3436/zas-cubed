@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.tool;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
+import io.github.west3436.zas.atmos.inline.SidePortBlock;
 import io.github.west3436.zas.atmos.pipe.EncasedPipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
@@ -109,8 +110,9 @@ public class WrenchItem extends Item {
      */
     public static BlockState turned(BlockState state, Direction face) {
         if (state.hasProperty(BlockStateProperties.FACING)) {
-            return state.setValue(
+            BlockState out = state.setValue(
                     BlockStateProperties.FACING, turned(state.getValue(BlockStateProperties.FACING), face));
+            return out.getBlock() instanceof SidePortBlock ? SidePortBlock.settled(out) : out;
         }
         if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
             Direction way = state.getValue(BlockStateProperties.HORIZONTAL_FACING);

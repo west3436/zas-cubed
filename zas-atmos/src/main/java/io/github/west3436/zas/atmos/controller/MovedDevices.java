@@ -28,7 +28,9 @@ import net.neoforged.bus.api.IEventBus;
  * controller keeps the area air controllers it had in the same way. Pipes, devices and portable
  * devices keep their gas while they are moved ({@link
  * io.github.west3436.zas.api.relocation.Relocations#isMoving}), since the mover carries it in their
- * data.
+ * data. A part the mover turns faces where it turned it, its pipe faces, a pipe's arms and a side
+ * port with it, so it still joins the pipes that moved with it ({@link
+ * io.github.west3436.zas.atmos.device.BlockTurns}).
  */
 public final class MovedDevices {
     private MovedDevices() {}
