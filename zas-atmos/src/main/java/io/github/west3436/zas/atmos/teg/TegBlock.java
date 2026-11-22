@@ -94,8 +94,8 @@ public class TegBlock extends HorizontalDirectionalBlock implements EntityBlock 
 
     /**
      * The core a circulator serves: a core beside it that has the circulator on one of its sides, with
-     * neither of the circulator's ports facing it. The first such, in the order of {@link
-     * Direction#values()}.
+     * neither of the circulator's ports facing it. The first such: north, east, south, then west
+     * ({@link #coreSide}).
      *
      * @param level the level
      * @param pos the circulator's block
@@ -103,19 +103,33 @@ public class TegBlock extends HorizontalDirectionalBlock implements EntityBlock 
      * @return the core's block entity, or null if it serves none
      */
     public static @Nullable TegBlockEntity coreOf(Level level, BlockPos pos, BlockState state) {
+        Direction d = coreSide(level, pos, state);
+        return d != null && level.getBlockEntity(pos.relative(d)) instanceof TegBlockEntity teg ? teg : null;
+    }
+
+    /**
+     * The way from a circulator to the core it serves, by the blocks' states alone: the first way, of
+     * north, east, south and west, to a core beside it that has the circulator on one of
+     * its sides, with neither of the circulator's ports facing it. On a server it asks only loaded
+     * blocks, as asking would load one.
+     *
+     * @param level the level
+     * @param pos the circulator's block
+     * @param state its state
+     * @return the way, or null if it serves no core
+     */
+    public static @Nullable Direction coreSide(BlockGetter level, BlockPos pos, BlockState state) {
         for (Direction d : Direction.Plane.HORIZONTAL) {
             if (!CirculatorBlock.servesToward(state, d)) {
                 continue;
             }
             BlockPos at = pos.relative(d);
-            if (level instanceof ServerLevel server && LoadedBlocks.state(server, at) == null) {
-                continue; // not loaded in full: asking would load it
-            }
-            BlockState core = level.getBlockState(at);
-            if (core.getBlock() instanceof TegBlock) {
+            BlockState core =
+                    level instanceof ServerLevel server ? LoadedBlocks.state(server, at) : level.getBlockState(at);
+            if (core != null && core.getBlock() instanceof TegBlock) {
                 for (Direction side : sides(core)) {
-                    if (side == d.getOpposite() && level.getBlockEntity(at) instanceof TegBlockEntity teg) {
-                        return teg;
+                    if (side == d.getOpposite()) {
+                        return d;
                     }
                 }
             }

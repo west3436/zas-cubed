@@ -1,50 +1,433 @@
 {
-  "variants": {
-    "facing=north,on=false": {
-      "model": "zas_atmos:block/circulator"
+  "multipart": [
+    {
+      "when": {
+        "facing": "north",
+        "on": "false",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator"
+      }
     },
-    "facing=north,on=true": {
-      "model": "zas_atmos:block/circulator_on"
+    {
+      "when": {
+        "facing": "north",
+        "on": "true",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_on"
+      }
     },
-    "facing=east,on=false": {
-      "model": "zas_atmos:block/circulator",
-      "y": 90
+    {
+      "when": {
+        "facing": "north",
+        "on": "false",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east"
+      }
     },
-    "facing=east,on=true": {
-      "model": "zas_atmos:block/circulator_on",
-      "y": 90
+    {
+      "when": {
+        "facing": "north",
+        "on": "true",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east_on"
+      }
     },
-    "facing=south,on=false": {
-      "model": "zas_atmos:block/circulator",
-      "y": 180
+    {
+      "when": {
+        "facing": "north",
+        "on": "false",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west"
+      }
     },
-    "facing=south,on=true": {
-      "model": "zas_atmos:block/circulator_on",
-      "y": 180
+    {
+      "when": {
+        "facing": "north",
+        "on": "true",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west_on"
+      }
     },
-    "facing=west,on=false": {
-      "model": "zas_atmos:block/circulator",
-      "y": 270
+    {
+      "when": {
+        "facing": "east",
+        "on": "false",
+        "core": "none|east|west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator",
+        "y": 90
+      }
     },
-    "facing=west,on=true": {
-      "model": "zas_atmos:block/circulator_on",
-      "y": 270
+    {
+      "when": {
+        "facing": "east",
+        "on": "true",
+        "core": "none|east|west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_on",
+        "y": 90
+      }
     },
-    "facing=up,on=false": {
-      "model": "zas_atmos:block/circulator",
-      "x": 270
+    {
+      "when": {
+        "facing": "east",
+        "on": "false",
+        "core": "south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east",
+        "y": 90
+      }
     },
-    "facing=up,on=true": {
-      "model": "zas_atmos:block/circulator_on",
-      "x": 270
+    {
+      "when": {
+        "facing": "east",
+        "on": "true",
+        "core": "south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east_on",
+        "y": 90
+      }
     },
-    "facing=down,on=false": {
-      "model": "zas_atmos:block/circulator",
-      "x": 90
+    {
+      "when": {
+        "facing": "east",
+        "on": "false",
+        "core": "north"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west",
+        "y": 90
+      }
     },
-    "facing=down,on=true": {
-      "model": "zas_atmos:block/circulator_on",
-      "x": 90
+    {
+      "when": {
+        "facing": "east",
+        "on": "true",
+        "core": "north"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west_on",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "on": "false",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "on": "true",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_on",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "on": "false",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "on": "true",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east_on",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "on": "false",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "on": "true",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west_on",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "on": "false",
+        "core": "none|east|west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "on": "true",
+        "core": "none|east|west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_on",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "on": "false",
+        "core": "north"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "on": "true",
+        "core": "north"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east_on",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "on": "false",
+        "core": "south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "on": "true",
+        "core": "south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west_on",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "on": "false",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "on": "true",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_on",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "on": "false",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "on": "true",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east_on",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "on": "false",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "on": "true",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west_on",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "on": "false",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "on": "true",
+        "core": "none|north|south"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_on",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "on": "false",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "on": "true",
+        "core": "east"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_east_on",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "on": "false",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "on": "true",
+        "core": "west"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_linked_west_on",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "core": "north",
+        "facing": "east|west|down"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_coupling"
+      }
+    },
+    {
+      "when": {
+        "core": "east",
+        "facing": "north|south|up|down"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_coupling",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "core": "south",
+        "facing": "east|west|up"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_coupling",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "core": "west",
+        "facing": "north|south|up|down"
+      },
+      "apply": {
+        "model": "zas_atmos:block/circulator_coupling",
+        "y": 270
+      }
     }
-  }
+  ]
 }

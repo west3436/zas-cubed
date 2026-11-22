@@ -264,8 +264,9 @@ public final class AtmosServerConfig {
                 .push("generators");
         JOULES_PER_FE = builder.comment(
                         "The work, in J, that makes one FE in the TEG and the turbine. Their heat and work",
-                        "are reckoned in J, so the energy that leaves the gas as FE is this many J each.")
-                .defineInRange("joules_per_fe", 4.0, 0.01, 1_000_000.0);
+                        "are reckoned in J, so the energy that leaves the gas as FE is this many J each.",
+                        "The default, 2.5, is Mekanism's own rate of its joules to FE.")
+                .defineInRange("joules_per_fe", 2.5, 0.01, 1_000_000.0);
         TEG_CARNOT_FRACTION = builder.comment(
                         "The TEG's efficiency as a share of the Carnot efficiency of its two streams' inlet",
                         "temperatures (CONT-158). It never turns more heat into work than the second law allows.")
