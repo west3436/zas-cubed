@@ -15,14 +15,23 @@ import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -48,8 +57,11 @@ import org.jetbrains.annotations.Nullable;
  * <p><b>Conservation.</b> The gas leaves its network as it goes, and goes into the chamber through the
  * API as the turbine's {@link TurbineBlockEntity#SOURCE}; what the chamber doesn't take comes back to
  * the network.
+ *
+ * <p>Its own window ({@link CompressorMenu}, CONT-163) shows its engine's state, its controller, its
+ * buffer and what it released. It has nothing to set: its controller does that.
  */
-public class CompressorBlockEntity extends PipeNodeEntity {
+public class CompressorBlockEntity extends PipeNodeEntity implements MenuProvider {
     private static final String CONTROLLER = "Controller";
 
     private final ZonePort chamberPort = new ZonePort(TurbineBlockEntity.SOURCE);
@@ -61,6 +73,26 @@ public class CompressorBlockEntity extends PipeNodeEntity {
     private double lastFuel;
 
     private double lastOxidizer;
+
+    /** The gas lists its window last offered. */
+    private List<ResourceLocation> offeredFuels = List.of();
+
+    private List<ResourceLocation> offeredOxidizers = List.of();
+
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            return dataValue(index);
+        }
+
+        @Override
+        public void set(int index, int value) {}
+
+        @Override
+        public int getCount() {
+            return CompressorMenu.DATA_COUNT;
+        }
+    };
 
     public CompressorBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.COMPRESSOR.get(), pos, state, PipeVolumes.PORT);
@@ -210,6 +242,59 @@ public class CompressorBlockEntity extends PipeNodeEntity {
                 r -> deliver(new GasParcel(ZonePort.untaken(sent, r), sent.temperature())));
         reportMoved(sent.totalMoles());
         setChanged();
+    }
+
+    // ---- Its window --------------------------------------------------------------------------
+
+    /** Where its controller is, if one links it. */
+    private Optional<BlockPos> linkedController() {
+        return controller() == null ? Optional.empty() : Optional.ofNullable(controller);
+    }
+
+    /** The lists its window offers, fixed as it opens: fuels, then oxidizers. */
+    private void offer() {
+        offeredFuels = TurbineFuels.fuels();
+        offeredOxidizers = TurbineFuels.oxidizers();
+    }
+
+    /** Writes where its controller is and the gas lists, for the client's window. */
+    public void writeMenu(RegistryFriendlyByteBuf buf) {
+        if (offeredFuels.isEmpty() && offeredOxidizers.isEmpty()) {
+            offer();
+        }
+        CompressorMenu.write(buf, linkedController(), offeredFuels, offeredOxidizers);
+    }
+
+    private int dataValue(int index) {
+        TurbineControllerBlockEntity c = controller();
+        ResourceLocation fuel = c == null ? null : c.fuel();
+        ResourceLocation oxidizer = c == null ? null : c.oxidizer();
+        return switch (index) {
+            case CompressorMenu.DATA_STATUS -> (c == null ? TurbineStatus.UNLINKED : c.status()).ordinal();
+            case CompressorMenu.DATA_LINKED -> c == null ? 0 : 1;
+            case CompressorMenu.DATA_BUFFER_PRESSURE -> TurbineMenu.shortOf(Math.round(buffer().pressure()));
+            case CompressorMenu.DATA_FUEL -> fuel == null ? -1 : offeredFuels.indexOf(fuel);
+            case CompressorMenu.DATA_OXIDIZER -> oxidizer == null ? -1 : offeredOxidizers.indexOf(oxidizer);
+            case CompressorMenu.DATA_BUFFER_FUEL ->
+                fuel == null ? 0 : TurbineMenu.shortOf(Math.round(buffer().partialPressure(fuel)));
+            case CompressorMenu.DATA_BUFFER_OXIDIZER ->
+                oxidizer == null ? 0 : TurbineMenu.shortOf(Math.round(buffer().partialPressure(oxidizer)));
+            case CompressorMenu.DATA_FUEL_RATE -> TurbineMenu.shortOf(Math.round(lastFuel / AtmosTicks.SECONDS * 100));
+            case CompressorMenu.DATA_OXIDIZER_RATE ->
+                TurbineMenu.shortOf(Math.round(lastOxidizer / AtmosTicks.SECONDS * 100));
+            default -> 0;
+        };
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.zas_atmos.compressor");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+        offer();
+        return new CompressorMenu(id, this, data, linkedController(), offeredFuels, offeredOxidizers);
     }
 
     @Override

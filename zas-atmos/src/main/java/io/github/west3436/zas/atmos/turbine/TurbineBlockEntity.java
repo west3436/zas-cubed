@@ -27,15 +27,23 @@ import io.github.west3436.zas.atmos.power.WorkToFe;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -47,8 +55,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p><b>Each atmos tick</b>, while its {@linkplain TurbineControllerBlockEntity controller} is on,
  * links it and its compressor, the compressor is its partner and its chamber is a zone, the turbine
- * lets out {@code turbine_nozzle} of what would even out the chamber and the exhaust, the cell in front
- * of it ({@link TurbineMath#turbineMoles}). When that gas arrives, the shaft takes its expansion work
+ * lets out through its nozzle, {@code turbine_nozzle_flow} mol/s for each kPa the chamber is above the
+ * exhaust, the cell in front of it ({@link TurbineMath#turbineMoles}). When that gas arrives, the shaft takes its expansion work
  * ({@link TurbineMath#expansionWork}), never past top speed, and the gas is that much cooler. It goes
  * into the exhaust at the next atmos tick. The {@linkplain CompressorBlockEntity compressor} feeds the
  * chamber, and the shaft pays for any compression it needs ({@link #payCompression}).
@@ -56,7 +64,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>Whether on or not, the generator then takes its share of the shaft's energy as FE into its
  * controller's store ({@link TurbineMath#generatorJoules}), none with no controller, and friction
  * takes {@code turbine_friction} of it each second, as heat into the chamber. So with nothing burning,
- * the shaft only slows. The turbine has no FE store of its own and offers FE to no one: its controller
+ * the shaft only slows. While its engine is off or unlinked its brake takes {@code turbine_brake} of it
+ * instead, if more, and the rest once its blades would show still ({@link TurbineMath#braked}), so a
+ * switched-off shaft stops in seconds even with its controller's store full. The turbine has no FE store of its own and offers FE to no one: its controller
  * is the engine's one output (CONT-162).
  *
  * <p><b>Conservation.</b> Every change to a zone goes through the API's mutations, each port with at
@@ -64,8 +74,11 @@ import org.jetbrains.annotations.Nullable;
  * an addition is held here and saved, and released into its cell if the turbine is broken. The gas's
  * thermal energy, the shaft's energy, the FE made and the friction's heat always sum to the same
  * ({@link TurbineMath}).
+ *
+ * <p>Its own window ({@link TurbineMenu}, CONT-163) shows what it does: its state, its controller,
+ * its blades' speed, its flow and its output. It has nothing to set: its controller does that.
  */
-public class TurbineBlockEntity extends AtmosDevice {
+public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
     /** Who the gas turbine's changes to zones are made by: the turbine and its compressor. */
     public static final SourceId SOURCE = SourceId.of(ZasAtmosMod.MOD_ID, "gas_turbine");
 
@@ -104,6 +117,23 @@ public class TurbineBlockEntity extends AtmosDevice {
     private double lastCompressorWork;
     private double compressorWorkSince;
     private double lastFriction;
+    private double exhaustPressure;
+    private double lastFlow;
+
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            return dataValue(index);
+        }
+
+        @Override
+        public void set(int index, int value) {}
+
+        @Override
+        public int getCount() {
+            return TurbineMenu.DATA_COUNT;
+        }
+    };
 
     public TurbineBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.TURBINE.get(), pos, state);
@@ -177,6 +207,8 @@ public class TurbineBlockEntity extends AtmosDevice {
                 chamber.state() == AtmosphereState.ZONED ? chamber.mixture().pressure() : 0;
         chamberTemperature =
                 chamber.state() == AtmosphereState.ZONED ? chamber.mixture().temperature() : 0;
+        exhaustPressure = exhaustOk ? exhaust.mixture().pressure() : 0;
+        lastFlow = 0;
         lastTurbineWork = 0;
         lastCompressorWork = compressorWorkSince;
         compressorWorkSince = 0;
@@ -207,8 +239,15 @@ public class TurbineBlockEntity extends AtmosDevice {
         }
         powerPerTick = generated / jpf / (20.0 * AtmosTicks.SECONDS);
 
-        double friction =
-                shaft * Math.min(1, AtmosServerConfig.get(AtmosServerConfig.TURBINE_FRICTION) * AtmosTicks.SECONDS);
+        double share = AtmosServerConfig.get(AtmosServerConfig.TURBINE_FRICTION);
+        boolean braking = c == null || !c.runs();
+        if (braking) {
+            share = Math.max(share, AtmosServerConfig.get(AtmosServerConfig.TURBINE_BRAKE));
+        }
+        double friction = shaft * Math.min(1, share * AtmosTicks.SECONDS);
+        if (braking) {
+            friction = TurbineMath.braked(shaft, friction, topEnergy());
+        }
         lastFriction = friction;
         if (friction > 0) {
             shaft -= friction;
@@ -277,6 +316,7 @@ public class TurbineBlockEntity extends AtmosDevice {
             return;
         }
         double from = chamber.pressure();
+        lastFlow = n / AtmosTicks.SECONDS;
         chamberTakePort.remove(
                 level, chamberPoint(), share(chamber, n), r -> expanded(level, r.moved(), from, exhaustP));
         reportMoved(n);
@@ -368,6 +408,43 @@ public class TurbineBlockEntity extends AtmosDevice {
         }
     }
 
+    // ---- Its window --------------------------------------------------------------------------
+
+    /** Where its controller is, if one links it. */
+    private Optional<BlockPos> linkedController() {
+        return controller() == null ? Optional.empty() : Optional.ofNullable(controller);
+    }
+
+    /** Writes where its controller is, for the client's window. */
+    public void writeMenu(RegistryFriendlyByteBuf buf) {
+        TurbineMenu.write(buf, linkedController());
+    }
+
+    private int dataValue(int index) {
+        return switch (index) {
+            case TurbineMenu.DATA_STATUS -> status.ordinal();
+            case TurbineMenu.DATA_LINKED -> controller() == null ? 0 : 1;
+            case TurbineMenu.DATA_RPM -> TurbineMenu.shortOf(Math.round(rpm()));
+            case TurbineMenu.DATA_TOP_RPM ->
+                TurbineMenu.shortOf(Math.round(AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_RPM)));
+            case TurbineMenu.DATA_FLOW -> TurbineMenu.shortOf(Math.round(lastFlow * 100));
+            case TurbineMenu.DATA_CHAMBER_PRESSURE -> TurbineMenu.shortOf(Math.round(chamberPressure));
+            case TurbineMenu.DATA_EXHAUST_PRESSURE -> TurbineMenu.shortOf(Math.round(exhaustPressure));
+            case TurbineMenu.DATA_POWER -> TurbineMenu.shortOf(Math.round(powerPerTick));
+            default -> 0;
+        };
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.zas_atmos.turbine");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+        return new TurbineMenu(id, this, data, linkedController());
+    }
+
     // ---- Its state ---------------------------------------------------------------------------
 
     private static double topEnergy() {
@@ -408,6 +485,16 @@ public class TurbineBlockEntity extends AtmosDevice {
     /** The chamber's pressure at its last atmos tick, kPa; 0 if it wasn't a zone. */
     public double chamberPressure() {
         return chamberPressure;
+    }
+
+    /** The gas it let out at its last atmos tick, mol/s. */
+    public double flow() {
+        return lastFlow;
+    }
+
+    /** The exhaust's pressure at its last atmos tick, kPa; 0 if it couldn't be read. */
+    public double exhaustPressure() {
+        return exhaustPressure;
     }
 
     /** The chamber's temperature at its last atmos tick, K; 0 if it wasn't a zone. */

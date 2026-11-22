@@ -20,7 +20,9 @@ import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.teg.TegMenu;
 import io.github.west3436.zas.atmos.ttv.RemoteSignalerMenu;
 import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
+import io.github.west3436.zas.atmos.turbine.CompressorMenu;
 import io.github.west3436.zas.atmos.turbine.TurbineControllerMenu;
+import io.github.west3436.zas.atmos.turbine.TurbineMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -79,6 +81,14 @@ public final class AtmosMenus {
     /** A gas turbine controller's switch, settings and readings (CONT-163). */
     public static final Supplier<MenuType<TurbineControllerMenu>> TURBINE_CONTROLLER =
             MENUS.register("turbine_controller", () -> IMenuTypeExtension.create(TurbineControllerMenu::new));
+
+    /** A gas turbine's own readings: its speed, its flow and its output (CONT-161, CONT-163). */
+    public static final Supplier<MenuType<TurbineMenu>> TURBINE =
+            MENUS.register("turbine", () -> IMenuTypeExtension.create(TurbineMenu::new));
+
+    /** A compressor's own readings: its buffer and what it releases (CONT-160, CONT-163). */
+    public static final Supplier<MenuType<CompressorMenu>> COMPRESSOR =
+            MENUS.register("compressor", () -> IMenuTypeExtension.create(CompressorMenu::new));
 
     /** A pressure pump's switch and target (CONT-011). */
     public static final Supplier<MenuType<PumpMenu>> PRESSURE_PUMP = MENUS.register(

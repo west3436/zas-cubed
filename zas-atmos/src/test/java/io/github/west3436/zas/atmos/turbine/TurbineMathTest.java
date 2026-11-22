@@ -46,12 +46,25 @@ class TurbineMathTest {
     @Test
     void cont_161_the_turbine_lets_out_toward_even_within_its_caps() {
         double t = 1000, v = 1000;
+        // A wide nozzle evens the two out.
         double even = TurbineMath.turbineMoles(1000, t, v, 300, v, 100, 1, 1e9);
         assertEquals(200 / (GasMixture.GAS_CONSTANT * t * (2 / v)), even, 1e-9);
-        assertEquals(even / 2, TurbineMath.turbineMoles(1000, t, v, 300, v, 100, 0.5, 1e9), 1e-9);
+        // A narrow one passes its flow for each kPa of difference, whatever the chamber's size.
+        assertEquals(0.02 * 200, TurbineMath.turbineMoles(1000, t, v, 300, v, 100, 0.02, 1e9), 1e-9);
+        assertEquals(0.02 * 200, TurbineMath.turbineMoles(1000, t, 4 * v, 300, v, 100, 0.02, 1e9), 1e-9);
+        assertEquals(0.02 * 100, TurbineMath.turbineMoles(1000, t, v, 200, v, 100, 0.02, 1e9), 1e-9);
         // Into open air it would let out 36 mol here, but never more than half what the chamber holds.
         assertEquals(25, TurbineMath.turbineMoles(50, t, v, 300, Double.POSITIVE_INFINITY, 0, 1, 1e9), 1e-9);
         assertEquals(0, TurbineMath.turbineMoles(1000, t, v, 100, v, 300, 1, 1e9));
+    }
+
+    @Test
+    void cont_161_a_brake_takes_its_share_then_the_rest() {
+        double top = 500_000;
+        assertEquals(1000, TurbineMath.braked(100_000, 1000, top), 1e-9);
+        // What it would leave shows the blades still (under 2 % of top speed: 200 J here): it takes it all.
+        assertEquals(150, TurbineMath.braked(150, 10, top), 1e-9);
+        assertEquals(0, TurbineMath.braked(0, 10, top));
     }
 
     @Test
