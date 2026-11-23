@@ -735,6 +735,26 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator_on.j
 origin: original
 notes: The circulator moving gas.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator_linked_east.json
+origin: original
+notes: The circulator serving a TEG core on its east (as drawn, facing north): its drum 2 px narrower on that side, so the pipe to the core shows.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator_linked_east_on.json
+origin: original
+notes: As circulator_linked_east.json, moving gas.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator_linked_west.json
+origin: original
+notes: As circulator_linked_east.json, the core on its west.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator_linked_west_on.json
+origin: original
+notes: As circulator_linked_west.json, moving gas.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/circulator_coupling.json
+origin: original
+notes: The pipe joining a circulator to its TEG core: the pipe's flange on the block edge and a short tube (pipe_fitting.png), as on the pumps' ends, drawn pointing north; the blockstate turns it toward the core.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/compressor.json
 origin: original
 notes: The compressor: the fan 2 px deep behind a lip on the chamber side, the pipe port flush on the back. Still.

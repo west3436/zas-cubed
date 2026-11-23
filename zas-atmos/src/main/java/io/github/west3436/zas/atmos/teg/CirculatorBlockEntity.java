@@ -84,6 +84,7 @@ public class CirculatorBlockEntity extends InlineDeviceEntity {
 
     @Override
     protected InlineStatus work(ServerLevel level) {
+        CirculatorBlock.refreshCore(level, worldPosition, getBlockState());
         TegBlockEntity core = TegBlock.coreOf(level, worldPosition, getBlockState());
         if (core != null && core.drives()) {
             InlineStatus status = drivenStatus == null ? InlineStatus.TARGET_REACHED : drivenStatus;

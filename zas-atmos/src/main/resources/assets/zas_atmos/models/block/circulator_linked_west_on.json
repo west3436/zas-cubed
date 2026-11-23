@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/circulator_linked_west",
+  "textures": {
+    "side": "zas_atmos:block/circulator_side_on"
+  }
+}
