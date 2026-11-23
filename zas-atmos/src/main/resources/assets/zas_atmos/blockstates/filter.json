@@ -1,96 +1,396 @@
 {
   "variants": {
-    "facing=north,mirrored=false,on=false": {
+    "facing=north,mirrored=false,on=false,spin=none": {
       "model": "zas_atmos:block/filter"
     },
-    "facing=north,mirrored=false,on=true": {
+    "facing=north,mirrored=false,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter"
+    },
+    "facing=north,mirrored=false,on=false,spin=180": {
+      "model": "zas_atmos:block/filter"
+    },
+    "facing=north,mirrored=false,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter"
+    },
+    "facing=north,mirrored=false,on=true,spin=none": {
       "model": "zas_atmos:block/filter_on"
     },
-    "facing=north,mirrored=true,on=false": {
+    "facing=north,mirrored=false,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_on"
+    },
+    "facing=north,mirrored=false,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_on"
+    },
+    "facing=north,mirrored=false,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_on"
+    },
+    "facing=north,mirrored=true,on=false,spin=none": {
       "model": "zas_atmos:block/filter_mirrored"
     },
-    "facing=north,mirrored=true,on=true": {
+    "facing=north,mirrored=true,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored"
+    },
+    "facing=north,mirrored=true,on=false,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored"
+    },
+    "facing=north,mirrored=true,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored"
+    },
+    "facing=north,mirrored=true,on=true,spin=none": {
       "model": "zas_atmos:block/filter_mirrored_on"
     },
-    "facing=east,mirrored=false,on=false": {
+    "facing=north,mirrored=true,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on"
+    },
+    "facing=north,mirrored=true,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored_on"
+    },
+    "facing=north,mirrored=true,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on"
+    },
+    "facing=east,mirrored=false,on=false,spin=none": {
       "model": "zas_atmos:block/filter",
       "y": 90
     },
-    "facing=east,mirrored=false,on=true": {
+    "facing=east,mirrored=false,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "y": 90
+    },
+    "facing=east,mirrored=false,on=false,spin=180": {
+      "model": "zas_atmos:block/filter",
+      "y": 90
+    },
+    "facing=east,mirrored=false,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "y": 90
+    },
+    "facing=east,mirrored=false,on=true,spin=none": {
       "model": "zas_atmos:block/filter_on",
       "y": 90
     },
-    "facing=east,mirrored=true,on=false": {
+    "facing=east,mirrored=false,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 90
+    },
+    "facing=east,mirrored=false,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 90
+    },
+    "facing=east,mirrored=false,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 90
+    },
+    "facing=east,mirrored=true,on=false,spin=none": {
       "model": "zas_atmos:block/filter_mirrored",
       "y": 90
     },
-    "facing=east,mirrored=true,on=true": {
+    "facing=east,mirrored=true,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 90
+    },
+    "facing=east,mirrored=true,on=false,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 90
+    },
+    "facing=east,mirrored=true,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 90
+    },
+    "facing=east,mirrored=true,on=true,spin=none": {
       "model": "zas_atmos:block/filter_mirrored_on",
       "y": 90
     },
-    "facing=south,mirrored=false,on=false": {
+    "facing=east,mirrored=true,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 90
+    },
+    "facing=east,mirrored=true,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 90
+    },
+    "facing=east,mirrored=true,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 90
+    },
+    "facing=south,mirrored=false,on=false,spin=none": {
       "model": "zas_atmos:block/filter",
       "y": 180
     },
-    "facing=south,mirrored=false,on=true": {
+    "facing=south,mirrored=false,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "y": 180
+    },
+    "facing=south,mirrored=false,on=false,spin=180": {
+      "model": "zas_atmos:block/filter",
+      "y": 180
+    },
+    "facing=south,mirrored=false,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "y": 180
+    },
+    "facing=south,mirrored=false,on=true,spin=none": {
       "model": "zas_atmos:block/filter_on",
       "y": 180
     },
-    "facing=south,mirrored=true,on=false": {
+    "facing=south,mirrored=false,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 180
+    },
+    "facing=south,mirrored=false,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 180
+    },
+    "facing=south,mirrored=false,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 180
+    },
+    "facing=south,mirrored=true,on=false,spin=none": {
       "model": "zas_atmos:block/filter_mirrored",
       "y": 180
     },
-    "facing=south,mirrored=true,on=true": {
+    "facing=south,mirrored=true,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 180
+    },
+    "facing=south,mirrored=true,on=false,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 180
+    },
+    "facing=south,mirrored=true,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 180
+    },
+    "facing=south,mirrored=true,on=true,spin=none": {
       "model": "zas_atmos:block/filter_mirrored_on",
       "y": 180
     },
-    "facing=west,mirrored=false,on=false": {
+    "facing=south,mirrored=true,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 180
+    },
+    "facing=south,mirrored=true,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 180
+    },
+    "facing=south,mirrored=true,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 180
+    },
+    "facing=west,mirrored=false,on=false,spin=none": {
       "model": "zas_atmos:block/filter",
       "y": 270
     },
-    "facing=west,mirrored=false,on=true": {
+    "facing=west,mirrored=false,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "y": 270
+    },
+    "facing=west,mirrored=false,on=false,spin=180": {
+      "model": "zas_atmos:block/filter",
+      "y": 270
+    },
+    "facing=west,mirrored=false,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "y": 270
+    },
+    "facing=west,mirrored=false,on=true,spin=none": {
       "model": "zas_atmos:block/filter_on",
       "y": 270
     },
-    "facing=west,mirrored=true,on=false": {
+    "facing=west,mirrored=false,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 270
+    },
+    "facing=west,mirrored=false,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 270
+    },
+    "facing=west,mirrored=false,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "y": 270
+    },
+    "facing=west,mirrored=true,on=false,spin=none": {
       "model": "zas_atmos:block/filter_mirrored",
       "y": 270
     },
-    "facing=west,mirrored=true,on=true": {
+    "facing=west,mirrored=true,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 270
+    },
+    "facing=west,mirrored=true,on=false,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 270
+    },
+    "facing=west,mirrored=true,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "y": 270
+    },
+    "facing=west,mirrored=true,on=true,spin=none": {
       "model": "zas_atmos:block/filter_mirrored_on",
       "y": 270
     },
-    "facing=up,mirrored=false,on=false": {
+    "facing=west,mirrored=true,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 270
+    },
+    "facing=west,mirrored=true,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 270
+    },
+    "facing=west,mirrored=true,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "y": 270
+    },
+    "facing=up,mirrored=false,on=false,spin=none": {
       "model": "zas_atmos:block/filter",
       "x": 270
     },
-    "facing=up,mirrored=false,on=true": {
+    "facing=up,mirrored=false,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "x": 270,
+      "y": 90
+    },
+    "facing=up,mirrored=false,on=false,spin=180": {
+      "model": "zas_atmos:block/filter",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,mirrored=false,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "x": 270,
+      "y": 270
+    },
+    "facing=up,mirrored=false,on=true,spin=none": {
       "model": "zas_atmos:block/filter_on",
       "x": 270
     },
-    "facing=up,mirrored=true,on=false": {
+    "facing=up,mirrored=false,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=up,mirrored=false,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,mirrored=false,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=up,mirrored=true,on=false,spin=none": {
       "model": "zas_atmos:block/filter_mirrored",
       "x": 270
     },
-    "facing=up,mirrored=true,on=true": {
+    "facing=up,mirrored=true,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "x": 270,
+      "y": 90
+    },
+    "facing=up,mirrored=true,on=false,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,mirrored=true,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "x": 270,
+      "y": 270
+    },
+    "facing=up,mirrored=true,on=true,spin=none": {
       "model": "zas_atmos:block/filter_mirrored_on",
       "x": 270
     },
-    "facing=down,mirrored=false,on=false": {
+    "facing=up,mirrored=true,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "x": 270,
+      "y": 90
+    },
+    "facing=up,mirrored=true,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "x": 270,
+      "y": 180
+    },
+    "facing=up,mirrored=true,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "x": 270,
+      "y": 270
+    },
+    "facing=down,mirrored=false,on=false,spin=none": {
       "model": "zas_atmos:block/filter",
       "x": 90
     },
-    "facing=down,mirrored=false,on=true": {
+    "facing=down,mirrored=false,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "x": 90,
+      "y": 90
+    },
+    "facing=down,mirrored=false,on=false,spin=180": {
+      "model": "zas_atmos:block/filter",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,mirrored=false,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter",
+      "x": 90,
+      "y": 270
+    },
+    "facing=down,mirrored=false,on=true,spin=none": {
       "model": "zas_atmos:block/filter_on",
       "x": 90
     },
-    "facing=down,mirrored=true,on=false": {
+    "facing=down,mirrored=false,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "x": 90,
+      "y": 90
+    },
+    "facing=down,mirrored=false,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_on",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,mirrored=false,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_on",
+      "x": 90,
+      "y": 270
+    },
+    "facing=down,mirrored=true,on=false,spin=none": {
       "model": "zas_atmos:block/filter_mirrored",
       "x": 90
     },
-    "facing=down,mirrored=true,on=true": {
+    "facing=down,mirrored=true,on=false,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "x": 90,
+      "y": 90
+    },
+    "facing=down,mirrored=true,on=false,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,mirrored=true,on=false,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored",
+      "x": 90,
+      "y": 270
+    },
+    "facing=down,mirrored=true,on=true,spin=none": {
       "model": "zas_atmos:block/filter_mirrored_on",
       "x": 90
+    },
+    "facing=down,mirrored=true,on=true,spin=clockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "x": 90,
+      "y": 90
+    },
+    "facing=down,mirrored=true,on=true,spin=180": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "x": 90,
+      "y": 180
+    },
+    "facing=down,mirrored=true,on=true,spin=counterclockwise_90": {
+      "model": "zas_atmos:block/filter_mirrored_on",
+      "x": 90,
+      "y": 270
     }
   }
 }
