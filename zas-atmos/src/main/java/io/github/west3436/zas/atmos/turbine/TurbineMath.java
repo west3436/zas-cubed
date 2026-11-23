@@ -76,9 +76,11 @@ public final class TurbineMath {
     }
 
     /**
-     * The moles the turbine lets out of the chamber in an atmos tick (CONT-161): {@code nozzle} times
-     * what would even out the chamber and the exhaust, at most {@code maxLitres} of the chamber's gas
-     * and half what it holds.
+     * The moles the turbine lets out of the chamber in an atmos tick (CONT-161): its nozzle passes
+     * {@code nozzle} mol for each kPa the chamber is above the exhaust, whatever the chamber's size, so
+     * at a steady feed the chamber settles where the nozzle passes what is fed. Never more than would
+     * even out the chamber and the exhaust, {@code maxLitres} of the chamber's gas, or half what it
+     * holds.
      *
      * @param chamberMoles the chamber's moles
      * @param chamberT its temperature, K
@@ -86,7 +88,7 @@ public final class TurbineMath {
      * @param chamberP its pressure, kPa
      * @param exhaustV the exhaust's volume, L; infinite for the open air
      * @param exhaustP its pressure, kPa
-     * @param nozzle the share of the evening moles
+     * @param nozzle mol it passes per kPa of difference in the atmos tick
      * @param maxLitres the most it lets out, L at the chamber's conditions
      * @return the moles, at least 0
      */
@@ -105,7 +107,8 @@ public final class TurbineMath {
         }
         double even = drive / (GasMixture.GAS_CONSTANT * chamberT * (1 / chamberV + 1 / exhaustV));
         double cap = Math.max(0, maxLitres) * chamberP / (GasMixture.GAS_CONSTANT * chamberT);
-        return Math.max(0, Math.min(Math.min(Math.max(0, nozzle) * even, cap), chamberMoles / 2));
+        double passed = Math.max(0, nozzle) * drive;
+        return Math.max(0, Math.min(Math.min(Math.min(passed, even), cap), chamberMoles / 2));
     }
 
     /**
@@ -199,6 +202,26 @@ public final class TurbineMath {
         }
         double want = topJoules * Math.pow(Math.min(1, speed), OUTPUT_EXPONENT);
         return Math.min(Math.min(want, energy), room);
+    }
+
+    /**
+     * What a brake takes from the shaft in an atmos tick (CONT-161): {@code friction}, or all it holds
+     * once what is left would show its blades still ({@link #spin}), so a braked shaft stops.
+     *
+     * @param energy the shaft's energy, J
+     * @param friction what friction and the brake take in the tick, J
+     * @param topEnergy its energy at top speed, J
+     * @return J, 0 to {@code energy}
+     */
+    public static double braked(double energy, double friction, double topEnergy) {
+        if (!(energy > 0)) {
+            return 0;
+        }
+        double left = energy - Math.max(0, friction);
+        if (!(topEnergy > 0) || spin(Math.sqrt(Math.max(0, left) / topEnergy)) == 0) {
+            return energy;
+        }
+        return Math.min(energy, Math.max(0, friction));
     }
 
     /**

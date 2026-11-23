@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.radiator;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.atmos.device.BlockTurns;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import java.util.EnumMap;
@@ -13,7 +14,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -126,5 +129,16 @@ public class RadiatorPipeBlock extends BaseEntityBlock implements PipeConnector 
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new RadiatorPipeBlockEntity(pos, state);
+    }
+
+    /** It turns with what it is part of, as a structure or a ship turns it (CONT-156). */
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return BlockTurns.rotate(state, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return BlockTurns.mirror(state, mirror);
     }
 }

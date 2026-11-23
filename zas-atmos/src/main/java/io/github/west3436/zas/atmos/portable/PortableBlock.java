@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.portable;
 
+import io.github.west3436.zas.atmos.device.BlockTurns;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;
@@ -10,7 +11,9 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -105,5 +108,16 @@ public abstract class PortableBlock extends BaseEntityBlock {
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
         return level.getBlockEntity(pos) instanceof PortableDevice device ? device.signal() : 0;
+    }
+
+    /** It turns with what it is part of, as a structure or a ship turns it (CONT-156). */
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return BlockTurns.rotate(state, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return BlockTurns.mirror(state, mirror);
     }
 }

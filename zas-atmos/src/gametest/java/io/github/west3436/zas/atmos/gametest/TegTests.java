@@ -2,15 +2,19 @@ package io.github.west3436.zas.atmos.gametest;
 
 import static io.github.west3436.zas.atmos.gametest.Area.N2;
 
+import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.teg.CirculatorBlock;
 import io.github.west3436.zas.atmos.teg.CirculatorBlockEntity;
+import io.github.west3436.zas.atmos.teg.CoreSide;
 import io.github.west3436.zas.atmos.teg.TegBlock;
 import io.github.west3436.zas.atmos.teg.TegBlockEntity;
 import io.github.west3436.zas.atmos.teg.TegMenu;
@@ -27,12 +31,16 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import org.slf4j.Logger;
 
 /**
  * The thermoelectric generator: its circulators and its core (CONT-157 to CONT-159). Each test builds
- * in its own {@link Area}, 5600 to 5609, and steps the devices itself. A core at (4, 2, 4) faces
+ * in its own {@link Area}, 5600 to 5609 and 6500 to 6509, and steps the devices itself. A core at (4, 2, 4) faces
  * north, so its sides are west and east; a circulator on each side passes gas south, from a capped
  * pipe north of it (its inlet) to a capped pipe south of it (its outlet). The framework's heat is
  * off, so nothing but the core moves heat between the streams.
@@ -41,6 +49,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class TegTests {
     private static final String BATCH = "zas_atmos_teg";
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     /** The west (left) and east (right) circulators' x. */
     private static final int LEFT = 3;
@@ -279,5 +288,146 @@ public final class TegTests {
             h.assertValueEqual(copy.energy().getEnergyStored(), teg.energy().getEnergyStored(), "the copy's FE");
             a.close(copy.workCarry(), teg.workCarry(), "the copy's carried work");
         });
+    }
+
+    /**
+     * Runs a test whose circulators must leave their passing to the core, as in a world: in a chunk
+     * that ticks, so the core drives them (a circulator beside a core that doesn't tick passes gas on
+     * its own). It force-loads the area, waits until its chunk ticks, then runs the body once.
+     */
+    private static void ticking(GameTestHelper h, Area a, Runnable body) {
+        a.forceLoad(true);
+        h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(
+                        LoadedBlocks.ticking(a.level, a.abs(4, 2, 4)), "the area's chunk doesn't tick yet"))
+                .thenExecute(() -> {
+                    ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
+                    try {
+                        body.run();
+                    } finally {
+                        ZasServerConfig.overrideHeatForTest(null);
+                        a.clear(0, 0, 8, 8);
+                        a.forceLoad(false);
+                    }
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * What the core makes, FE/t, with a steady stream through each side: each atmos tick the inlets
+     * get a second's worth of gas and the outlets are emptied, as pumps feeding the circulators and
+     * the gas going on would, and its store is emptied, as a receiver would. It returns the mean of
+     * the last ticks, once the streams are steady.
+     */
+    private static double steadyPower(
+            Area a, TegBlockEntity teg, double hotMolPerS, double hotK, double coldMolPerS, double coldK) {
+        teg.setOn(true);
+        double sum = 0;
+        int counted = 0;
+        for (int i = 0; i < 10; i++) {
+            add(in(a, LEFT), hotMolPerS * AtmosTicks.SECONDS, hotK);
+            add(in(a, RIGHT), coldMolPerS * AtmosTicks.SECONDS, coldK);
+            a.step();
+            teg.energy().set(0);
+            for (int x : new int[] {LEFT, RIGHT}) {
+                GasStore outlet = out(a, x).gas();
+                if (!outlet.isEmpty()) {
+                    outlet.takeFraction(1);
+                }
+            }
+            if (i >= 4) {
+                sum += teg.powerPerTick();
+                counted++;
+            }
+        }
+        return sum / counted;
+    }
+
+    /**
+     * The combined world's station, about 10 mol/s of nitrogen at 650 K against 10 mol/s at 250 K, makes
+     * a few hundred FE/t, not the hundred or so it made at 4 J/FE (CONT-158, 2026-11-22).
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
+    public static void cont_158_the_test_station_makes_a_few_hundred_fe(GameTestHelper h) {
+        Area a = new Area(h, 6500);
+        ticking(h, a, () -> {
+            TegBlockEntity teg = build(a, true);
+            double fe = steadyPower(a, teg, 10, 650, 10, 250);
+            LOGGER.info("cont_158 test station: {} FE/t", Math.round(fe));
+            h.assertTrue(fe >= 200, "the station makes " + fe + " FE/t");
+            // The second law: never more than a reversible engine between the two streams could make.
+            double c = 10 * 20.81;
+            double most = c
+                    * (650 + 250 - 2 * Math.sqrt(650.0 * 250))
+                    / AtmosServerConfig.get(AtmosServerConfig.JOULES_PER_FE)
+                    / 20;
+            h.assertTrue(fe <= most, "the station makes " + fe + " FE/t, more than the second law's " + most);
+        });
+    }
+
+    /**
+     * A strong loop, a volume pump's full 100 L/s at 1,000 kPa on each side, 1,000 K against 280 K,
+     * makes about 1,000 FE/t (CONT-158, 2026-11-22).
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
+    public static void cont_158_a_strong_loop_makes_about_a_thousand_fe(GameTestHelper h) {
+        Area a = new Area(h, 6501);
+        ticking(h, a, () -> {
+            TegBlockEntity teg = build(a, true);
+            double hot = 1000 * 100 / (8.314 * 1000);
+            double cold = 1000 * 100 / (8.314 * 280);
+            double fe = steadyPower(a, teg, hot, 1000, cold, 280);
+            LOGGER.info("cont_158 strong loop: {} FE/t", Math.round(fe));
+            h.assertTrue(fe >= 950, "the strong loop makes " + fe + " FE/t");
+        });
+    }
+
+    /**
+     * A circulator that serves a core shows the pipe that joins them on the core's side; one that
+     * doesn't, or whose core goes, shows none (CONT-157, 2026-11-22).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_157_a_circulator_shows_the_pipe_to_its_core(GameTestHelper h) {
+        Area a = new Area(h, 6502);
+        run(h, () -> {
+            build(a, true);
+            h.assertValueEqual(core(a, LEFT), CoreSide.EAST, "the west circulator's side");
+            h.assertValueEqual(core(a, RIGHT), CoreSide.WEST, "the east circulator's side");
+
+            // Turned so that its port faces the core, it serves none; turned back, it does again.
+            BlockPos left = a.abs(LEFT, 2, 4);
+            a.level.setBlock(
+                    left, a.get(LEFT, 2, 4).setValue(InlineDeviceBlock.FACING, Direction.EAST), Block.UPDATE_ALL);
+            h.assertValueEqual(core(a, LEFT), CoreSide.NONE, "a circulator with its port to the core");
+            a.level.setBlock(
+                    left, a.get(LEFT, 2, 4).setValue(InlineDeviceBlock.FACING, Direction.UP), Block.UPDATE_ALL);
+            h.assertValueEqual(core(a, LEFT), CoreSide.EAST, "a circulator turned upright beside its core");
+
+            // A core turned a quarter has its sides north and south: neither circulator is on one.
+            a.place(4, 2, 4, AtmosBlocks.TEG.get().defaultBlockState().setValue(TegBlock.FACING, Direction.EAST));
+            h.assertValueEqual(core(a, LEFT), CoreSide.NONE, "the west circulator beside a turned core");
+            h.assertValueEqual(core(a, RIGHT), CoreSide.NONE, "the east circulator beside a turned core");
+
+            a.place(4, 2, 4, AtmosBlocks.TEG.get().defaultBlockState().setValue(TegBlock.FACING, Direction.NORTH));
+            h.assertValueEqual(core(a, RIGHT), CoreSide.WEST, "the east circulator with its core back");
+            a.set(4, 2, 4, Area.AIR);
+            h.assertValueEqual(core(a, LEFT), CoreSide.NONE, "the west circulator with no core");
+            h.assertValueEqual(core(a, RIGHT), CoreSide.NONE, "the east circulator with no core");
+
+            // Its side turns with it, as a structure or a moved ship turns it.
+            BlockState served = AtmosBlocks.CIRCULATOR
+                    .get()
+                    .defaultBlockState()
+                    .setValue(InlineDeviceBlock.FACING, Direction.SOUTH)
+                    .setValue(CirculatorBlock.CORE, CoreSide.EAST);
+            BlockState turned = served.rotate(Rotation.CLOCKWISE_90);
+            h.assertValueEqual(turned.getValue(InlineDeviceBlock.FACING), Direction.WEST, "the turned facing");
+            h.assertValueEqual(turned.getValue(CirculatorBlock.CORE), CoreSide.SOUTH, "the turned side");
+        });
+    }
+
+    /** A circulator's side, as its model shows it. */
+    private static CoreSide core(Area a, int x) {
+        return a.get(x, 2, 4).getValue(CirculatorBlock.CORE);
     }
 }

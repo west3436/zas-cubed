@@ -7,6 +7,7 @@ import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
@@ -31,6 +32,10 @@ import net.minecraft.world.level.block.state.BlockState;
  * (2, 2, 2) make its feed network. An igniter lies on the chamber's floor at (6, 1, 2), and the
  * controller stands on the box's roof at (6, 5, 2), facing south. Nothing is linked until a test links
  * it. The chamber and the exhaust room hold the ambient air, with a little more nitrogen.
+ *
+ * <p>Its chamber is 27 cells, far bigger than a player's should be: at the server's nozzle it would take
+ * minutes to fill or empty. Tests of what happens as the gas goes through, not of how much power a
+ * good build makes ({@link TurbineStationTests}), widen the nozzle for their run ({@link #wideNozzle}).
  */
 final class TurbineRig {
     static final ResourceLocation H2 = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
@@ -72,6 +77,22 @@ final class TurbineRig {
         turbine = a.entity(8, 2, 2);
         compressor = a.entity(4, 2, 2);
         igniter = a.entity(6, 1, 2);
+    }
+
+    /** A nozzle that lets out a mol each second per kPa, which evens the rig's rooms out quickly. */
+    static final double WIDE_NOZZLE = 1.0;
+
+    /** The server's nozzle while it is open: restores it as it closes. */
+    interface Nozzle extends AutoCloseable {
+        @Override
+        void close();
+    }
+
+    /** Widens the turbine's nozzle to {@link #WIDE_NOZZLE} until the returned nozzle closes. */
+    static Nozzle wideNozzle() {
+        double before = AtmosServerConfig.get(AtmosServerConfig.TURBINE_NOZZLE);
+        AtmosServerConfig.TURBINE_NOZZLE.set(WIDE_NOZZLE);
+        return () -> AtmosServerConfig.TURBINE_NOZZLE.set(before);
     }
 
     /** Builds it. */

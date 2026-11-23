@@ -21,7 +21,9 @@ if (chosen == null) {
     throw new GradleException("-Psable.version is one of ${table.keySet().join(', ')}, not '${runName}'")
 }
 // The tests of a Sable the adapter supports, or the one that checks it stays off.
-def namespace = chosen.supported ? 'zas_sable' : 'zas_sable_off'
+// With the content off (-Pcontent=off, CONT-155) the tests that build with the content mod's blocks
+// are left out: they are in a namespace of their own.
+def namespace = !chosen.supported ? 'zas_sable_off' : contentOff ? 'zas_sable' : 'zas_sable,zas_sable_content'
 
 repositories {
     // Sable comes from Modrinth's maven, as a player downloads it, with what it nests.
@@ -72,7 +74,7 @@ def sableCompanionJar = files({ fileTree(sableCompanion.get().destinationDir).in
 // The GameTests' empty structure in each of their namespaces, copied from the framework's so no
 // second binary is kept here.
 def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
-    ['zas_sable', 'zas_sable_off'].each { ns ->
+    ['zas_sable', 'zas_sable_content', 'zas_sable_off'].each { ns ->
         from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
             into "data/${ns}/structure"
         }
