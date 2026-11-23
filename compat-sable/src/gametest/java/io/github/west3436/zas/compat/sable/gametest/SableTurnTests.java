@@ -43,9 +43,12 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * turned: every part faces where the ship turned it, its pipes still join it, and its networks are
  * whole. Before, a vent came back facing the way it faced on board, away from its pipe.
  */
-@GameTestHolder(SableGateTests.NAMESPACE)
+@GameTestHolder(SableTurnTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
 public final class SableTurnTests {
+    /** The content mod's blocks are built here, so the run with the content off leaves these out (CONT-155). */
+    public static final String NAMESPACE = "zas_sable_content";
+
     private SableTurnTests() {}
 
     @GameTest(template = "empty", timeoutTicks = 200)
