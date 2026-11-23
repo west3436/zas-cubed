@@ -3,7 +3,6 @@ package io.github.west3436.zas.atmos.turbine;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -131,18 +130,18 @@ public abstract class TurbinePartBlock extends HorizontalDirectionalBlock {
     }
 
     /**
-     * Opens its controller's window, from either block (CONT-163). Unlinked, it says so and opens
-     * nothing.
+     * Opens its own window, linked or not (CONT-163): the turbine's {@link TurbineMenu} or the
+     * compressor's {@link CompressorMenu}. Its controller's window opens at the controller.
      */
     @Override
     protected InteractionResult useWithoutItem(
             BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
-            TurbineControllerBlockEntity controller = controllerOf(level, pos);
-            if (controller == null) {
-                sp.displayClientMessage(Component.translatable("block.zas_atmos.turbine_controller.unlinked"), true);
-            } else {
-                sp.openMenu(controller, controller::writeMenu);
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TurbineBlockEntity turbine) {
+                sp.openMenu(turbine, turbine::writeMenu);
+            } else if (be instanceof CompressorBlockEntity compressor) {
+                sp.openMenu(compressor, compressor::writeMenu);
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

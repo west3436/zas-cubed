@@ -138,7 +138,7 @@ public final class AtmosServerConfig {
     /** The oxidizer's share of the chamber the compressor keeps it at, at least (CONT-160). */
     public static final ModConfigSpec.DoubleValue TURBINE_OXIDIZER_FRACTION;
 
-    /** The turbine's nozzle, a share per second (CONT-161). */
+    /** The turbine's nozzle, mol/s per kPa its chamber is above its exhaust (CONT-161). */
     public static final ModConfigSpec.DoubleValue TURBINE_NOZZLE;
 
     /** The turbine's most flow, L/s (CONT-161). */
@@ -146,6 +146,9 @@ public final class AtmosServerConfig {
 
     /** The share of shaft energy lost per second (CONT-161). */
     public static final ModConfigSpec.DoubleValue TURBINE_FRICTION;
+
+    /** The share of shaft energy its brake takes per second while its engine is off (CONT-161). */
+    public static final ModConfigSpec.DoubleValue TURBINE_BRAKE;
 
     /** The turbine controller's FE store (CONT-162). */
     public static final ModConfigSpec.IntValue TURBINE_BUFFER;
@@ -299,15 +302,16 @@ public final class AtmosServerConfig {
         TURBINE_MAX_BURN = builder.comment(
                         "The most a turbine controller's burn rate may be set to, in mol of fuel per second",
                         "(CONT-160, CONT-163)")
-                .defineInRange("turbine_max_burn", 1.0, 0.01, 100.0);
+                .defineInRange("turbine_max_burn", 4.0, 0.01, 100.0);
         TURBINE_OXIDIZER_FRACTION = builder.comment(
                         "The oxidizer's share of the turbine's chamber that its compressor keeps it at, at least,",
                         "while it has oxidizer to give (CONT-160)")
                 .defineInRange("turbine_oxidizer_fraction", 0.2, 0.0, 1.0);
         TURBINE_NOZZLE = builder.comment(
-                        "The share of the moles that would even out the chamber and the exhaust that the turbine",
-                        "lets out each second (CONT-161)")
-                .defineInRange("turbine_nozzle", 0.5, 0.0, 1.0);
+                        "The turbine's nozzle: the mol it lets out each second for each kPa its chamber is above",
+                        "its exhaust, never more than would even the two out. Narrower holds the chamber's",
+                        "pressure higher, so it takes more work from the gas (CONT-161)")
+                .defineInRange("turbine_nozzle_flow", 0.005, 0.0, 10.0);
         TURBINE_MAX_FLOW = builder.comment(
                         "The most the turbine lets out per second, in L at the chamber's conditions (CONT-161)")
                 .defineInRange("turbine_max_flow", 2_500.0, 0.0, 1_000_000.0);
@@ -315,6 +319,11 @@ public final class AtmosServerConfig {
                         "The share of its shaft's energy the turbine loses each second to friction, as heat",
                         "into its chamber (CONT-161)")
                 .defineInRange("turbine_friction", 0.01, 0.0, 1.0);
+        TURBINE_BRAKE = builder.comment(
+                        "The share of its shaft's energy the turbine's brake takes each second while its engine",
+                        "is off, as heat into its chamber; below the slowest its blades show turning, it takes",
+                        "the rest. Without it a shaft with nowhere to send its power coasts for minutes (CONT-161)")
+                .defineInRange("turbine_brake", 0.3, 0.0, 1.0);
         TURBINE_BUFFER = builder.comment(
                         "A turbine controller's FE store. Its turbine's generator makes no FE while it is full",
                         "(CONT-162)")

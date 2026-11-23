@@ -45,7 +45,9 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li><b>Settings.</b> Its switch, the fuel and the oxidizer its compressor feeds (any gas the
  *       engine's reactions burn as one, {@link TurbineFuels}), the burn rate in mol of fuel per
- *       second, 0 to {@code turbine_max_burn}, and whether it relights the chamber by itself.
+ *       second, 0 to {@code turbine_max_burn} ({@value #DEFAULT_BURN_RATE} for a new one: enough for
+ *       a 1-by-2 chamber to reach its generator's top output), and whether it relights the chamber
+ *       by itself.
  *   <li><b>Output.</b> The turbine's generator fills its FE store, and it offers that FE to the
  *       blocks beside it each game tick. It is the engine's one output (CONT-162).
  *   <li><b>Igniter.</b> {@link #ignite} sparks its linked igniter once ({@link IgniterBlockEntity#spark}).
@@ -69,7 +71,7 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
     public static final int AUTO_SPARK_STEPS = 2;
 
     /** A new controller's burn rate, mol/s of fuel. */
-    public static final double DEFAULT_BURN_RATE = 0.2;
+    public static final double DEFAULT_BURN_RATE = 2.0;
 
     /** What linking a block does. */
     public enum LinkResult {
@@ -445,9 +447,9 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
         return ratio;
     }
 
-    /** Its burn rate, mol of fuel per second. */
+    /** Its burn rate, mol of fuel per second, never above what the server allows now. */
     public double burnRate() {
-        return burnRate;
+        return clampBurnRate(burnRate);
     }
 
     /** The most it can be set to burn, mol/s. */
@@ -514,7 +516,7 @@ public class TurbineControllerBlockEntity extends AtmosDevice implements MenuPro
                 TurbineControllerMenu.shortOf(AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_RPM));
             case TurbineControllerMenu.DATA_FUEL -> fuel == null ? -1 : offeredFuels.indexOf(fuel);
             case TurbineControllerMenu.DATA_OXIDIZER -> oxidizer == null ? -1 : offeredOxidizers.indexOf(oxidizer);
-            case TurbineControllerMenu.DATA_RATE -> TurbineControllerMenu.shortOf(Math.round(burnRate * 100));
+            case TurbineControllerMenu.DATA_RATE -> TurbineControllerMenu.shortOf(Math.round(burnRate() * 100));
             case TurbineControllerMenu.DATA_AUTO -> auto ? 1 : 0;
             case TurbineControllerMenu.DATA_LINKS ->
                 (linked(Part.TURBINE) ? 1 : 0) | (linked(Part.COMPRESSOR) ? 2 : 0) | (linked(Part.IGNITER) ? 4 : 0);

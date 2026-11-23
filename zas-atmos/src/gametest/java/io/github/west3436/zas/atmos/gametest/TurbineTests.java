@@ -167,80 +167,84 @@ public final class TurbineTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_160_a_pipe_fed_compressor_sustains_a_fire(GameTestHelper h) {
-        Area a = new Area(h, 5613);
-        TurbineRig r = TurbineRig.build(a).link(true);
-        Player player = h.makeMockPlayer(GameType.SURVIVAL);
-        TurbineControllerMenu window =
-                (TurbineControllerMenu) r.controller.createMenu(1, player.getInventory(), player);
-        h.assertTrue(
-                window.clickMenuButton(
-                        player, TurbineControllerMenu.FUEL + window.fuels().indexOf(H2)),
-                "the fuel's box");
-        h.assertTrue(
-                window.clickMenuButton(
-                        player,
-                        TurbineControllerMenu.OXIDIZER + window.oxidizers().indexOf(O2)),
-                "the oxidizer's box");
-        for (int i = 0; i < 3; i++) {
-            h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.RATE_DOWN_TENTH + 3), "the rate's +0.1");
-        }
-        h.assertValueEqual(r.controller.burnRate(), 0.5, "the burn rate the window set");
-        h.assertTrue(r.controller.autoIgnite(), "a new controller's auto relight");
-        h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.TOGGLE), "the window's switch");
-        r.feed(200, 100);
-        double fed = r.feedGas().moles(H2);
-
-        // The rig's chamber starts nearly empty: it lights once the compressor has brought its O2 up to
-        // what a fire needs (FIRE-030), then must keep burning.
-        int lit = -1;
-        for (int i = 0; i < 300 && lit < 0; i++) {
-            r.step();
-            if (r.burning()) {
-                lit = i;
+        try (TurbineRig.Nozzle wide = TurbineRig.wideNozzle()) {
+            Area a = new Area(h, 5613);
+            TurbineRig r = TurbineRig.build(a).link(true);
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            TurbineControllerMenu window =
+                    (TurbineControllerMenu) r.controller.createMenu(1, player.getInventory(), player);
+            h.assertTrue(
+                    window.clickMenuButton(
+                            player, TurbineControllerMenu.FUEL + window.fuels().indexOf(H2)),
+                    "the fuel's box");
+            h.assertTrue(
+                    window.clickMenuButton(
+                            player,
+                            TurbineControllerMenu.OXIDIZER + window.oxidizers().indexOf(O2)),
+                    "the oxidizer's box");
+            r.controller.setBurnRate(0.2); // the rig's big chamber, fed slowly
+            for (int i = 0; i < 3; i++) {
+                h.assertTrue(
+                        window.clickMenuButton(player, TurbineControllerMenu.RATE_DOWN_TENTH + 3), "the rate's +0.1");
             }
-        }
-        h.assertTrue(lit >= 0, "the chamber never lit");
-        int rounds = 80;
-        int burningAfter = 0;
-        int made = 0;
-        double top = 0;
-        boolean ran = false;
-        StringBuilder pattern = new StringBuilder();
-        for (int i = 0; i < rounds; i++) {
-            made += r.step();
-            ran |= r.controller.status() == TurbineStatus.RUNNING;
-            boolean burning = r.burning();
-            pattern.append(burning ? '#' : '.');
-            burningAfter += burning ? 1 : 0;
-            top = Math.max(top, r.turbine.rpm());
-        }
-        h.assertTrue(
-                burningAfter >= rounds * 0.9,
-                "the chamber burned " + burningAfter + " of " + rounds + " rounds after lighting: " + pattern);
-        h.assertTrue(made > 0, "no FE in the " + rounds + " rounds after lighting");
-        h.assertTrue(top > 0, "the shaft never turned");
-        h.assertTrue(fed - r.feedGas().moles(H2) > 5, "the compressor fed little hydrogen");
-        // The rig's exhaust is a sealed room, which in time fills to the chamber's pressure and stops the
-        // shaft: the controller showed Running while the gas went through.
-        h.assertTrue(ran, "the controller never showed Running");
+            h.assertValueEqual(r.controller.burnRate(), 0.5, "the burn rate the window set");
+            h.assertTrue(r.controller.autoIgnite(), "a new controller's auto relight");
+            h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.TOGGLE), "the window's switch");
+            r.feed(200, 100);
+            double fed = r.feedGas().moles(H2);
 
-        h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.TOGGLE), "the window's switch off");
-        h.assertFalse(r.controller.on(), "the window didn't switch it off");
-        double left = r.feedGas().totalMoles();
-        int i = 0;
-        for (; i < 600 && r.turbine.rpm() > 0; i++) {
-            r.step();
+            // The rig's chamber starts nearly empty: it lights once the compressor has brought its O2 up to
+            // what a fire needs (FIRE-030), then must keep burning.
+            int lit = -1;
+            for (int i = 0; i < 300 && lit < 0; i++) {
+                r.step();
+                if (r.burning()) {
+                    lit = i;
+                }
+            }
+            h.assertTrue(lit >= 0, "the chamber never lit");
+            int rounds = 80;
+            int burningAfter = 0;
+            int made = 0;
+            double top = 0;
+            boolean ran = false;
+            StringBuilder pattern = new StringBuilder();
+            for (int i = 0; i < rounds; i++) {
+                made += r.step();
+                ran |= r.controller.status() == TurbineStatus.RUNNING;
+                boolean burning = r.burning();
+                pattern.append(burning ? '#' : '.');
+                burningAfter += burning ? 1 : 0;
+                top = Math.max(top, r.turbine.rpm());
+            }
+            h.assertTrue(
+                    burningAfter >= rounds * 0.9,
+                    "the chamber burned " + burningAfter + " of " + rounds + " rounds after lighting: " + pattern);
+            h.assertTrue(made > 0, "no FE in the " + rounds + " rounds after lighting");
+            h.assertTrue(top > 0, "the shaft never turned");
+            h.assertTrue(fed - r.feedGas().moles(H2) > 5, "the compressor fed little hydrogen");
+            // The rig's exhaust is a sealed room, which in time fills to the chamber's pressure and stops the
+            // shaft: the controller showed Running while the gas went through.
+            h.assertTrue(ran, "the controller never showed Running");
+
+            h.assertTrue(window.clickMenuButton(player, TurbineControllerMenu.TOGGLE), "the window's switch off");
+            h.assertFalse(r.controller.on(), "the window didn't switch it off");
+            double left = r.feedGas().totalMoles();
+            int i = 0;
+            for (; i < 600 && r.turbine.rpm() > 0; i++) {
+                r.step();
+            }
+            h.assertValueEqual(r.turbine.rpm(), 0.0, "the shaft's speed " + i + " rounds after switching off");
+            a.close(r.feedGas().totalMoles(), left, "the feed while off");
+            h.assertValueEqual(r.turbine.status(), TurbineStatus.OFF, "the turbine's state");
+            h.assertValueEqual(r.spin(8), 0, "the turbine's blades at rest");
+            int madeOff = 0;
+            for (int j = 0; j < 5; j++) {
+                madeOff += r.step();
+            }
+            h.assertValueEqual(madeOff, 0, "FE made while off and still");
+            h.succeed();
         }
-        h.assertValueEqual(r.turbine.rpm(), 0.0, "the shaft's speed " + i + " rounds after switching off");
-        a.close(r.feedGas().totalMoles(), left, "the feed while off");
-        h.assertValueEqual(r.turbine.status(), TurbineStatus.OFF, "the turbine's state");
-        h.assertValueEqual(r.spin(8), 0, "the turbine's blades at rest");
-        int madeOff = 0;
-        for (int j = 0; j < 5; j++) {
-            madeOff += r.step();
-        }
-        h.assertValueEqual(madeOff, 0, "FE made while off and still");
-        h.succeed();
     }
 
     // ---- The turbine (CONT-161) --------------------------------------------------------------------
@@ -254,7 +258,7 @@ public final class TurbineTests {
     public static void cont_161_a_pressed_chamber_spins_it_up_and_down_and_keeps_its_moles(GameTestHelper h) {
         Area a = new Area(h, 5614);
         ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
-        try {
+        try (TurbineRig.Nozzle wide = TurbineRig.wideNozzle()) {
             TurbineRig r = TurbineRig.build(a).link(false);
             r.pressurise(300);
             double before = r.moles();
@@ -322,7 +326,7 @@ public final class TurbineTests {
     public static void cont_162_fe_goes_out_through_the_controller(GameTestHelper h) {
         Area a = new Area(h, 5616);
         ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
-        try {
+        try (TurbineRig.Nozzle wide = TurbineRig.wideNozzle()) {
             TurbineRig r = TurbineRig.build(a).link(false);
             a.set(7, 5, 1, Area.STONE);
             a.place(
@@ -377,7 +381,7 @@ public final class TurbineTests {
     public static void cont_163_the_controller_window_shows_and_sets_the_engine(GameTestHelper h) {
         Area a = new Area(h, 5617);
         ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
-        try {
+        try (TurbineRig.Nozzle wide = TurbineRig.wideNozzle()) {
             TurbineRig r = TurbineRig.build(a).link(false);
             r.feed(10, 5);
             r.pressurise(300);
@@ -389,7 +393,10 @@ public final class TurbineTests {
             h.assertTrue(menu.oxidizers().contains(O2), "oxygen isn't offered as an oxidizer");
             h.assertFalse(menu.fuels().contains(Area.N2), "nitrogen is offered as a fuel");
             h.assertValueEqual(menu.value(TurbineControllerMenu.DATA_FUEL), -1, "a new controller's fuel");
-            h.assertValueEqual(menu.value(TurbineControllerMenu.DATA_RATE), 20, "a new controller's rate");
+            h.assertValueEqual(
+                    menu.value(TurbineControllerMenu.DATA_RATE),
+                    (int) Math.round(TurbineControllerBlockEntity.DEFAULT_BURN_RATE * 100),
+                    "a new controller's rate");
             h.assertTrue(menu.clickMenuButton(player, TurbineControllerMenu.TOGGLE), "the switch");
             h.assertTrue(
                     menu.clickMenuButton(
@@ -407,8 +414,11 @@ public final class TurbineTests {
             h.assertTrue(menu.clickMenuButton(player, TurbineControllerMenu.AUTO), "the auto box");
             h.assertFalse(r.controller.autoIgnite(), "the auto box didn't switch it off");
             h.assertTrue(menu.clickMenuButton(player, TurbineControllerMenu.RATE_DOWN_TENTH + 2), "the rate's +0.01");
-            h.assertValueEqual(r.controller.burnRate(), 0.21, "the rate after +0.01");
-            for (int i = 0; i < 5; i++) {
+            h.assertValueEqual(
+                    r.controller.burnRate(),
+                    TurbineControllerBlockEntity.DEFAULT_BURN_RATE + 0.01,
+                    "the rate after +0.01");
+            for (int i = 0; i < 25; i++) {
                 menu.clickMenuButton(player, TurbineControllerMenu.RATE_DOWN_TENTH);
             }
             h.assertValueEqual(r.controller.burnRate(), 0.0, "the rate stepped below 0");
@@ -476,7 +486,7 @@ public final class TurbineTests {
     /**
      * The multitool links a turbine, a compressor and an igniter to the controller it selected, and
      * unlinks one used again; it links nothing else (CONT-190). A part linked to a second controller
-     * leaves the first. A linked part opens its controller's window; an unlinked one has none.
+     * leaves the first. Each part knows the controller that links it, and an unlinked one knows none.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_190_the_multitool_links_and_unlinks_the_parts(GameTestHelper h) {
@@ -497,11 +507,10 @@ public final class TurbineTests {
         h.assertValueEqual(r.turbine.controllerPos(), r.controller.getBlockPos(), "the turbine's controller");
         h.assertValueEqual(r.compressor.controllerPos(), r.controller.getBlockPos(), "the compressor's controller");
         h.assertTrue(
-                TurbinePartBlock.controllerOf(a.level, r.turbine.getBlockPos()) == r.controller,
-                "the turbine's window");
+                TurbinePartBlock.controllerOf(a.level, r.turbine.getBlockPos()) == r.controller, "the turbine's link");
         h.assertTrue(
                 TurbinePartBlock.controllerOf(a.level, r.compressor.getBlockPos()) == r.controller,
-                "the compressor's window");
+                "the compressor's link");
         h.assertValueEqual(
                 key(MultitoolItem.link(tool, a.level, a.abs(0, 2, 2))),
                 "item.zas_atmos.multitool.not_linkable_turbine",
@@ -515,7 +524,7 @@ public final class TurbineTests {
         h.assertTrue(r.compressor.controllerPos() == null, "the compressor kept its controller");
         h.assertTrue(
                 TurbinePartBlock.controllerOf(a.level, r.compressor.getBlockPos()) == null,
-                "an unlinked compressor's window");
+                "an unlinked compressor's link");
         r.controller.setOn(true);
         a.step();
         h.assertValueEqual(r.controller.status(), TurbineStatus.NO_COMPRESSOR, "a controller with no compressor");
@@ -534,7 +543,7 @@ public final class TurbineTests {
         MultitoolItem.link(tool, a.level, r.turbine.getBlockPos());
         h.assertTrue(second.linked(Part.TURBINE), "the second controller didn't take the turbine");
         h.assertFalse(r.controller.linked(Part.TURBINE), "the first controller kept the turbine");
-        h.assertTrue(TurbinePartBlock.controllerOf(a.level, r.turbine.getBlockPos()) == second, "the turbine's window");
+        h.assertTrue(TurbinePartBlock.controllerOf(a.level, r.turbine.getBlockPos()) == second, "the turbine's link");
         h.succeed();
     }
 

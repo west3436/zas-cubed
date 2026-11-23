@@ -226,7 +226,7 @@ final class TurbineControllerScreen extends TguiScreen<TurbineControllerMenu> {
                 : "—";
     }
 
-    private static int colour(TurbineStatus status) {
+    static int colour(TurbineStatus status) {
         return switch (status) {
             case OFF -> Ui.DIM;
             case RUNNING -> Ui.GOOD;
