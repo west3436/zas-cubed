@@ -3,7 +3,7 @@ package io.github.west3436.zas.geometry;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
-import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.ss13.data.DatapackErrors;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

@@ -1,7 +1,7 @@
 package io.github.west3436.zas.reaction;
 
 import com.mojang.logging.LogUtils;
-import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.engine.reaction.ReactionDefinition;
 import io.github.west3436.zas.engine.reaction.ReactionSet;
 import io.github.west3436.zas.gas.ServerGasRegistry;

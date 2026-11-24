@@ -6,6 +6,7 @@ import static io.github.west3436.zas.gametest.Rooms.source;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -16,7 +17,6 @@ import io.github.west3436.zas.api.reaction.ReactionChange;
 import io.github.west3436.zas.api.reaction.ReactionContext;
 import io.github.west3436.zas.api.reaction.ReactionType;
 import io.github.west3436.zas.api.reaction.Reactions;
-import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.reaction.ReactionDefinition;
 import io.github.west3436.zas.reaction.ClientReactions;
 import io.github.west3436.zas.reaction.ReactionCodecs;

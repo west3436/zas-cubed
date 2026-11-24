@@ -1,6 +1,7 @@
 package io.github.west3436.zas.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -14,7 +15,6 @@ import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.ProtectionConfig;
-import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.EnvironmentHazards;
