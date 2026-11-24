@@ -45,7 +45,7 @@ public final class EmiUnsupportedTests {
     public static final String NAMESPACE = "zas_emi_off";
 
     /** What the one warning says, up to the versions. */
-    private static final String WARNING = "The adapter for emi is off";
+    private static final String WARNING = "The zas adapter for emi is off";
 
     private EmiUnsupportedTests() {}
 

@@ -1,10 +1,10 @@
 package io.github.west3436.zas.compat.jei;
 
+import io.github.west3436.ss13.compat.PluginGate;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.compat.viewer.GasEntry;
 import io.github.west3436.zas.compat.viewer.GasStack;
 import io.github.west3436.zas.compat.viewer.ViewerData;
-import io.github.west3436.zas.compat.viewer.ViewerGate;
 import java.util.List;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
@@ -39,9 +39,9 @@ public final class ZasJeiPlugin implements IModPlugin {
     private static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "viewer");
 
     /** One gate for the whole game, so its warning is logged once however often JEI reloads. */
-    private static final ViewerGate INSTALLED = new ViewerGate(JEI, SUPPORTED);
+    private static final PluginGate INSTALLED = new PluginGate(ZasMod.MOD_ID, JEI, SUPPORTED);
 
-    private final ViewerGate gate;
+    private final PluginGate gate;
 
     /** JEI makes the plugin with this. */
     public ZasJeiPlugin() {
@@ -49,7 +49,7 @@ public final class ZasJeiPlugin implements IModPlugin {
     }
 
     /** A plugin behind a gate of the caller's, for tests. */
-    public ZasJeiPlugin(ViewerGate gate) {
+    public ZasJeiPlugin(PluginGate gate) {
         this.gate = gate;
     }
 

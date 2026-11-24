@@ -1,7 +1,7 @@
 package io.github.west3436.zas.compat.kubejs.gametest;
 
-import io.github.west3436.zas.compat.VersionGate;
-import io.github.west3436.zas.compat.VersionGate.Verdict;
+import io.github.west3436.ss13.compat.VersionGate;
+import io.github.west3436.ss13.compat.VersionGate.Verdict;
 import io.github.west3436.zas.compat.kubejs.KubeJsGate;
 import java.util.List;
 import net.minecraft.gametest.framework.GameTest;
@@ -44,12 +44,13 @@ public final class OffTests {
         }
 
         h.assertValueEqual(
-                GateTests.logged("The adapter for kubejs is off: it supports versions " + KubeJsGate.SUPPORTED
+                GateTests.logged("The zas adapter for kubejs is off: it supports versions " + KubeJsGate.SUPPORTED
                         + ", and " + installed + " is installed"),
                 1L,
                 "the warnings in the log");
-        h.assertValueEqual(GateTests.logged("The adapter for kubejs is off"), 1L, "warnings of any wording");
-        h.assertValueEqual(GateTests.logged("The adapter for kubejs " + installed + " is on"), 0L, "lines saying on");
+        h.assertValueEqual(GateTests.logged("The zas adapter for kubejs is off"), 1L, "warnings of any wording");
+        h.assertValueEqual(
+                GateTests.logged("The zas adapter for kubejs " + installed + " is on"), 0L, "lines saying on");
         h.succeed();
     }
 }

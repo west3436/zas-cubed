@@ -1,9 +1,10 @@
 package io.github.west3436.zas.compat.mekanism.gametest;
 
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.gas.GasProperties;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.mekanism.ChemicalGases;
 import io.github.west3436.zas.compat.mekanism.MekanismCompat;
 import io.github.west3436.zas.compat.mekanism.MekanismSettings;
@@ -48,14 +49,11 @@ public final class MekanismUnsupportedTests {
                 "the build asked for Mekanism " + asked + ", and " + installed + " is installed");
         h.assertFalse(MekanismVersions.supports(installed), installed + " is inside " + MekanismVersions.SUPPORTED);
 
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(MekanismVersions.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(MekanismVersions.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Mekanism");
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(MekanismVersions.MOD_ID), "zas says the adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(MekanismVersions.MOD_ID), "zas says the adapter is on");
         h.assertFalse(MekanismCompat.isActive(), "the adapter says it started");
 
         // Mixin was handed the config, since Mekanism is installed, and the plugin kept it off.

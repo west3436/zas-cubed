@@ -1,8 +1,8 @@
 package io.github.west3436.zas.compat.cosmonautics.gametest;
 
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.cosmonautics.CosmonauticsCompat;
 import java.util.Map;
 import net.minecraft.gametest.framework.GameTest;
@@ -30,13 +30,10 @@ public final class CosmonauticsOffTests {
      */
     @GameTest(template = "empty")
     public static void compat_002_the_adapter_stays_off_with_an_older_cosmonautics(GameTestHelper h) {
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(CosmonauticsCompat.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(CosmonauticsCompat.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Cosmonautics");
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(CosmonauticsCompat.MOD_ID), "zas says the adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(CosmonauticsCompat.MOD_ID), "zas says the adapter is on");
         h.assertFalse(CosmonauticsCompat.isActive(), "the adapter started");
         try (Site site = Site.onTheMoon(h, 7)) {
             site.room(0, Map.of(Site.N2, 79.0, Site.O2, 21.0));

@@ -1,8 +1,9 @@
 package io.github.west3436.zas.compat.sable.gametest;
 
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.sable.SableCompat;
 import io.github.west3436.zas.compat.sable.SableVersions;
 import io.github.west3436.zas.compat.sable.mixin.SableMixinPlugin;
@@ -25,10 +26,7 @@ public final class SableGateTests {
 
     /** The adapter's row in zas's table, as the loader found it. */
     static Status status(GameTestHelper h) {
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(SableVersions.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(SableVersions.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Sable");
         return status;
     }
@@ -60,7 +58,7 @@ public final class SableGateTests {
         h.assertValueEqual(status.row().range(), SableVersions.SUPPORTED, "the row's range");
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter's state");
-        h.assertTrue(Adapters.isActive(SableVersions.MOD_ID), "zas says the adapter is off");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(SableVersions.MOD_ID), "zas says the adapter is off");
         h.assertTrue(SableCompat.isActive(), "the adapter says it never started");
         h.assertTrue(SableMixinPlugin.loaded(), "Mixin never loaded the adapter's config");
         h.assertTrue(SableMixinPlugin.applies(), "the plugin keeps the hooks from applying");

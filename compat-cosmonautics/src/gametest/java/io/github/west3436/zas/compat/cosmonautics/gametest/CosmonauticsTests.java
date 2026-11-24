@@ -1,11 +1,12 @@
 package io.github.west3436.zas.compat.cosmonautics.gametest;
 
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathing;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.cosmonautics.CosmonauticsCompat;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.life.Breathers;
@@ -79,10 +80,7 @@ public final class CosmonauticsTests {
     public static void compat_002_the_adapter_is_on_with_cosmonautics(GameTestHelper h) {
         String installed = Adapters.installedVersion(CosmonauticsCompat.MOD_ID).orElse(null);
         h.assertValueEqual(installed, System.getProperty("zas.cosmonautics.version"), "the Cosmonautics installed");
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(CosmonauticsCompat.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(CosmonauticsCompat.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Cosmonautics");
         h.assertValueEqual(status.row().entryClass(), CosmonauticsCompat.class.getName(), "the row's entry class");
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter's state");
