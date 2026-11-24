@@ -296,7 +296,7 @@ public final class AmbientProviderTests {
             h.assertValueEqual(Ambients.ambient(Level.END), vacuum, "before it throws");
             // Not a FaultLog: the other tests here attach to this logger, which cuts it off from the root.
             try (Warnings log = providerWarnings()) {
-                FaultLog.aMinutePasses();
+                FaultClock.aMinutePasses();
                 provider.failing = true;
                 provider.calls = 0;
                 tick(end);
@@ -308,7 +308,7 @@ public final class AmbientProviderTests {
                 h.assertValueEqual(log.errors.size(), 1, "errors logged: " + log.errors);
                 h.assertTrue(log.errors.get(0).contains(id.toString()), log.errors.get(0));
 
-                FaultLog.aMinutePasses();
+                FaultClock.aMinutePasses();
                 tick(end);
                 h.assertValueEqual(log.errors.size(), 2, "errors logged a minute later: " + log.errors);
 
@@ -383,7 +383,7 @@ public final class AmbientProviderTests {
             AmbientProviders.register(id("zas_gametest", "nfr_013_null"), Level.END, provider);
             Ambients.seedForTest(Level.END, SEEDED);
             try (Warnings log = providerWarnings()) {
-                FaultLog.aMinutePasses();
+                FaultClock.aMinutePasses();
                 tick(end);
                 h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "while it answers");
 
@@ -946,7 +946,7 @@ public final class AmbientProviderTests {
             tick(end);
             h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(737), "before it throws");
             try (Warnings log = seedFaults()) {
-                FaultLog.aMinutePasses();
+                FaultClock.aMinutePasses();
                 seed.failing = true;
                 int asked = seed.calls();
                 tick(end);
@@ -958,7 +958,7 @@ public final class AmbientProviderTests {
                 h.assertValueEqual(log.errors.size(), 1, "errors logged: " + log.errors);
                 h.assertTrue(log.errors.get(0).contains(id.toString()), log.errors.get(0));
 
-                FaultLog.aMinutePasses();
+                FaultClock.aMinutePasses();
                 tick(end);
                 h.assertValueEqual(log.errors.size(), 2, "errors logged a minute later: " + log.errors);
 

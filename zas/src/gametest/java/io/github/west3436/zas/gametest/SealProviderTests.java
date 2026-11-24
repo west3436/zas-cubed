@@ -5,6 +5,7 @@ import static io.github.west3436.zas.gametest.Rooms.STONE;
 import static io.github.west3436.zas.gametest.Rooms.oxygen;
 import static io.github.west3436.zas.gametest.Rooms.source;
 
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.capability.SealGeometry;
@@ -139,7 +140,7 @@ public final class SealProviderTests {
         joined(r, "before it throws");
         String source = TestSealBlock.ID.toString();
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             TestSealBlock.failing(pos, true);
             BlockGeometry.markDirty(r.level, pos);
             r.tick();
@@ -153,7 +154,7 @@ public final class SealProviderTests {
             apart(r, "as it goes on throwing");
             h.assertValueEqual(log.naming(source), 1, "errors logged about it");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             r.tick();
             h.assertValueEqual(log.naming(source), 2, "errors logged about it a minute later");
             h.assertFalse(r.dimension().isFaulted(), "the provider faulted the dimension");

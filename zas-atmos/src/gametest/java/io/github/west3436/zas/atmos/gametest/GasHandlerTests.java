@@ -5,6 +5,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -26,6 +27,7 @@ import io.github.west3436.zas.atmos.valve.ValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.gametest.FaultClock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -604,7 +606,7 @@ public final class GasHandlerTests {
         String source = TestGasHandler.ID.toString();
         try (FaultLog log = new FaultLog()) {
             // Its contents: nothing moves.
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             tank.duringContents = fail;
             threeSteps(a);
             tank.duringContents = fine;
@@ -614,7 +616,7 @@ public final class GasHandlerTests {
             a.close(tank.tank.moles(O2), 2, "the handler's O2 after its contents threw");
 
             // A fill: all it was offered comes back, and it isn't asked to drain as well.
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             tank.duringFill = fail;
             threeSteps(a);
             tank.duringFill = fine;
@@ -625,7 +627,7 @@ public final class GasHandlerTests {
             a.close(tank.tank.moles(O2), 2, "the handler's O2 after a fill threw");
 
             // A drain: the fill before it stands, and nothing comes back from it.
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             tank.duringDrain = fail;
             threeSteps(a);
             tank.duringDrain = fine;
@@ -635,7 +637,7 @@ public final class GasHandlerTests {
             a.close(tank.tank.moles(O2), 2, "the handler's O2 after a drain threw");
 
             // The lookup: the pipe's arm stays, or the pipe would have an open end and the gas would escape.
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             int drains = tank.drains;
             tank.failsLookup = true;
             threeSteps(a);

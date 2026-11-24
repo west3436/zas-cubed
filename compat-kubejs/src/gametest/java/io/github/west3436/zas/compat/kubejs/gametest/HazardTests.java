@@ -1,5 +1,6 @@
 package io.github.west3436.zas.compat.kubejs.gametest;
 
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.api.life.HazardExposure;
 import io.github.west3436.zas.api.life.HazardHandlers;
 import io.github.west3436.zas.compat.kubejs.gametest.Probe.Exposed;
@@ -117,7 +118,7 @@ public final class HazardTests {
             Breathers.checkAt(pig, t);
             h.assertValueEqual(Probe.exposed("a_broken", pig).size(), 0, "the calls at a check that charges nothing");
 
-            FaultLog.aMinutePasses();
+            KubeJsFaults.aMinutePasses();
             Probe.mode("hazard", "throw");
             for (int i = 1; i <= 3; i++) {
                 Breathers.checkAt(pig, t + 40L * i);
@@ -126,21 +127,21 @@ public final class HazardTests {
             }
             h.assertTrue(pig.isAlive(), "the pig died of a script's fault");
             h.assertValueEqual(log.by(ZAS, FAULT).size(), 1, "errors ZAS³ logged: " + log.all());
-            List<String> console = log.by(FaultLog.KUBEJS, FAULT);
+            List<String> console = log.by(KubeJsFaults.KUBEJS, FAULT);
             h.assertValueEqual(console.size(), 1, "errors in KubeJS's console: " + log.all());
             h.assertTrue(
                     console.get(0).contains("hazard_throws.js#")
                             && console.get(0).contains("the hazard script is broken"),
                     "the console's line doesn't name the script and what it threw: " + console.get(0));
 
-            FaultLog.aMinutePasses();
+            KubeJsFaults.aMinutePasses();
             Probe.mode("hazard", "mistake");
             Breathers.checkAt(pig, t + 160);
             h.assertValueEqual(Probe.exposed("a_broken", pig).size(), 4, "the calls to it a minute later");
             h.assertValueEqual(Probe.exposed("b_working", pig).size(), 4, "the calls to the one after a mistake");
             h.assertValueEqual(log.by(ZAS, FAULT).size(), 2, "errors ZAS³ logged a minute later: " + log.all());
             h.assertValueEqual(
-                    log.by(FaultLog.KUBEJS, FAULT).size(),
+                    log.by(KubeJsFaults.KUBEJS, FAULT).size(),
                     2,
                     "errors in KubeJS's console a minute later: " + log.all());
 

@@ -6,6 +6,8 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.west3436.ss13.testkit.FaultLog;
+import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -34,6 +36,7 @@ import io.github.west3436.zas.atmos.tank.GasVessels;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.command.ZasCommands;
+import io.github.west3436.zas.gametest.FaultClock;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
 import io.github.west3436.zas.provider.Frame;
@@ -848,7 +851,7 @@ public final class AnalyzerTests {
         BlockPos pos = a.abs(2, 1, 2);
         String source = TestGasHandler.ID.toString();
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             store.duringContents = () -> {
                 throw new IllegalStateException("the test store failing");
             };
@@ -857,7 +860,7 @@ public final class AnalyzerTests {
             store.duringContents = () -> {};
             h.assertValueEqual(log.naming(source), 1, "errors logged about its contents");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             store.failsLookup = true;
             airInFront(a, readOn(a, l, pos, Direction.EAST, "a store whose lookup throws"), pos, Direction.EAST, "it");
             store.failsLookup = false;
@@ -865,7 +868,7 @@ public final class AnalyzerTests {
 
             h.assertValueEqual(readOn(a, l, pos, Direction.EAST, "the store").kind(), Kind.STORE, "once it stops");
             AnalyzerMenu menu = menu(a, l);
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             store.failsLookup = true;
             h.assertFalse(menu.stillValid(p), "the window is valid on a store whose lookup throws");
             store.failsLookup = false;

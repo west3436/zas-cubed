@@ -89,6 +89,9 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // SS13 Framework's test kit: TestPlayers and FaultLog, which zas_atmos's GameTests share. Never
+    // nested: it loads as a GAMELIBRARY from the GameTest server's classpath.
+    gametestImplementation "io.github.west3436:ss13-framework-testkit:${framework_version}"
 
     implementation project(':engine')
     implementation project(':compat-adastra')

@@ -6,6 +6,7 @@ import static io.github.west3436.zas.gametest.Rooms.source;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -200,7 +201,7 @@ public final class ReactionTests {
                 source("nfr_013")));
         String definition = "zas_gametest:code_broken";
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             double gas = r.zone(2, 2, 2).mixture().moles(TEST_GAS);
             r.ticks(3);
             r.close(
@@ -209,7 +210,7 @@ public final class ReactionTests {
                     "test gas after 3 atmos ticks");
             h.assertValueEqual(log.naming(definition), 1, "errors logged about it");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             r.tick();
             h.assertValueEqual(log.naming(definition), 2, "errors logged about it a minute later");
             h.assertFalse(r.dimension().isFaulted(), "the broken type faulted the dimension");
