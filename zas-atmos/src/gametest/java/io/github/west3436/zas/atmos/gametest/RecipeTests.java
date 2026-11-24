@@ -227,7 +227,12 @@ public final class RecipeTests {
     public static void crafting_components_are_the_frameworks(GameTestHelper h) {
         ServerLevel level = h.getLevel();
         Set<Item> components = components();
-        h.assertValueEqual(components.size(), MovedItems.TO_FRAMEWORK.size(), "the framework's components");
+        // The framework has components of its own besides the ones that moved from here, such as the
+        // higher-tier parts of 0.3.0.
+        h.assertTrue(
+                components.size() >= MovedItems.TO_FRAMEWORK.size(),
+                "the framework has " + components.size() + " components, fewer than the "
+                        + MovedItems.TO_FRAMEWORK.size() + " that moved");
         for (String path : MovedItems.TO_FRAMEWORK) {
             Item item = BuiltInRegistries.ITEM.get(MovedItems.framework(path));
             h.assertTrue(components.contains(item), MovedItems.framework(path) + " isn't a framework component");
