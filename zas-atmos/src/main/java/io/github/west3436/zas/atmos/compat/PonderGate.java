@@ -35,9 +35,10 @@ import org.slf4j.Logger;
  *
  * <p>No {@code neoforge.mods.toml} gives Ponder a version range, since a range on an optional
  * dependency stops the game when the installed version is outside it. This class names nothing of
- * Ponder's, so a game without Ponder may load it. The framework's adapter loader has the same version
- * check; it is internal to {@code zas}, which this mod may not name (CONT-095), so the few lines are
- * repeated here, as in the Jade adapter.
+ * Ponder's, so a game without Ponder may load it. {@code zas}'s adapter loader has the same version
+ * check, but it is internal to {@code zas}: this mod compiles against {@code zas-api} and SS13
+ * Framework, never {@code zas} internals (CONT-095), so the few lines are repeated here, as in the
+ * Jade adapter.
  */
 public final class PonderGate {
     /** Ponder's mod id. */

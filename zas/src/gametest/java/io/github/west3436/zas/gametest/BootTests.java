@@ -15,8 +15,11 @@ import net.neoforged.neoforgespi.language.IModInfo;
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class BootTests {
-    /** All a GameTest server loads: the game, NeoForge and our own mods. */
-    private static final Set<String> REQUIRED = Set.of("minecraft", "neoforge", "zas", "zas_atmos");
+    /**
+     * All a GameTest server loads: the game, NeoForge, our own mods and SS13 Framework, which the
+     * release jar nests and zas_atmos's runs load.
+     */
+    private static final Set<String> REQUIRED = Set.of("minecraft", "neoforge", "zas", "zas_atmos", "ss13_framework");
 
     private BootTests() {}
 

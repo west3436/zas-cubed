@@ -1,0 +1,12 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "zas_example_framework"
+version = "1"
+displayName = "ZAS³ Example SS13 Framework consumer"
+description = '''
+A test mod that nests a newer SS13 Framework than the ZAS³ release jar does, for the check that one
+copy loads. Never published.
+'''

@@ -13,8 +13,9 @@ import org.slf4j.Logger;
  * annotation and loads it whatever its own version, so the plugin asks here before it registers
  * anything: outside the range it registers nothing, one warning says so, and the game goes on.
  *
- * <p>The framework's adapter loader has the same check for the adapters it starts. It is internal
- * to {@code zas}, which this mod may not name (CONT-095), so the few lines are repeated here.
+ * <p>{@code zas}'s adapter loader has the same check for the adapters it starts. It is internal to
+ * {@code zas}, and this adapter, like {@code zas_atmos}, compiles against {@code zas-api} and SS13
+ * Framework, never {@code zas} internals (CONT-095), so the few lines are repeated here.
  *
  * <p>This is the adapter's one class that names nothing of Jade's, so it also keeps the note of
  * whether Jade ever created the plugin, which a game without Jade can ask for.

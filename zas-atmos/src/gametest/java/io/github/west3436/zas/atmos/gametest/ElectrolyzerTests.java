@@ -605,7 +605,9 @@ public final class ElectrolyzerTests {
     public static void cont_050_gas_by_each_route(GameTestHelper h) {
         Set<String> mods = new HashSet<>();
         ModList.get().forEachModInOrder(m -> mods.add(m.getModId()));
-        Set<String> allowed = new HashSet<>(Set.of("minecraft", "neoforge", "zas", ZasAtmosMod.MOD_ID));
+        // SS13 Framework is part of ZAS³: the release jar nests it.
+        Set<String> allowed =
+                new HashSet<>(Set.of("minecraft", "neoforge", "zas", ZasAtmosMod.MOD_ID, "ss13_framework"));
         if (Boolean.getBoolean("zas.compatMatrix")) {
             allowed.addAll(MATRIX_MODS);
         }

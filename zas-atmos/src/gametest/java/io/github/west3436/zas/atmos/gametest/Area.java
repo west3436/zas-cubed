@@ -28,7 +28,7 @@ import net.minecraft.world.phys.Vec3;
  * steps themselves, all within one game tick (as the framework's {@code Rooms}). Numbered areas
  * are at z = 16384 in the Overworld, apart from the framework's tests.
  *
- * <p>Atmos ticks are run with the framework's {@link AtmosService#tickNow}: GameTests may use it,
+ * <p>Atmos ticks are run with {@code zas}'s {@link AtmosService#tickNow}: GameTests may use it,
  * the mod never does (CONT-095).
  */
 final class Area {

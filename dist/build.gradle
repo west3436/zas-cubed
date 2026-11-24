@@ -1,9 +1,9 @@
 apply plugin: 'net.neoforged.moddev'
 
-// The jar players install (D-88): the framework zas and the content mod zas_atmos, two mods in one
-// file, with the API nested once as zas nests it. Both are still built and tested as projects of their
-// own; this one only packs their jars together. The ZAS³ Ponder addon, which only nests Ponder and
-// Flywheel, stays a jar of its own.
+// The jar players install (D-88): the simulation zas and the content mod zas_atmos, two mods in one
+// file, with the API and SS13 Framework nested once, as zas nests them. Both mods are still built
+// and tested as projects of their own; this one only packs their jars together. The ZAS³ Ponder
+// addon, which only nests Ponder and Flywheel, stays a jar of its own.
 base { archivesName = 'zas' }
 
 evaluationDependsOn(':zas')
@@ -83,7 +83,7 @@ sourceSets {
 
 dependencies {
     releaseCheckCompileOnly project(':zas-atmos')
-    // MEK-001: the checks ask the framework which adapters it started, and the API which gases exist.
+    // MEK-001: the checks ask zas which adapters it started, and the API which gases exist.
     releaseCheckCompileOnly project(':zas')
     releaseCheckCompileOnly project(':zas-api')
 }
@@ -110,7 +110,7 @@ neoForge {
     }
 }
 
-// The release jar plus the checks, and the framework's empty GameTest structure for them to run in.
+// The release jar plus the checks, and zas's empty GameTest structure for them to run in.
 def releaseCheckJar = tasks.register('releaseCheckJar', Jar) {
     archiveClassifier = 'release-check'
     def releaseJar = tasks.named('jar', Jar)

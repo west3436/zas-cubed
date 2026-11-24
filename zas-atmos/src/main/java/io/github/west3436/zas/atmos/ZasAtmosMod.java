@@ -35,8 +35,9 @@ import org.slf4j.Logger;
 
 /**
  * ZAS³ Atmospherics: the SS13-style content mod, built on the public API (D-50). It compiles
- * against {@code zas-api} only (CONT-095); the design is in architecture §11. It ships in the
- * framework's jar (D-88), and its startup config can turn it off (CONT-155).
+ * against {@code zas-api} and SS13 Framework, never {@code zas} internals (CONT-095); the design is
+ * in architecture §11. It ships in {@code zas}'s jar (D-88), and its startup config can turn it off
+ * (CONT-155).
  */
 @Mod(ZasAtmosMod.MOD_ID)
 public final class ZasAtmosMod {
@@ -92,7 +93,7 @@ public final class ZasAtmosMod {
 
     /**
      * The content's recipes, loot, tags and thermal data are in a built-in data pack, not the mod's own
-     * data, because the framework shares the jar and its data loads either way (CONT-155). The pack is
+     * data, because {@code zas} shares the jar and its data loads either way (CONT-155). The pack is
      * always on and starts at the bottom, so any other data pack can override it.
      */
     private static void addContentPack(AddPackFindersEvent event) {
