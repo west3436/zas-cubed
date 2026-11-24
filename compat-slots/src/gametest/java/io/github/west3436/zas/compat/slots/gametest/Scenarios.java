@@ -1,5 +1,7 @@
 package io.github.west3436.zas.compat.slots.gametest;
 
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
@@ -9,9 +11,7 @@ import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.config.ProtectionConfig;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
@@ -60,7 +60,7 @@ final class Scenarios {
     static void adapterStarted(GameTestHelper h, Kit kit) {
         Status status = Slots.status(h, kit.modId());
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter's state");
-        h.assertTrue(Adapters.isActive(kit.modId()), "zas says the adapter is off");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(kit.modId()), "zas says the adapter is off");
         h.assertTrue(kit.adapterActive(), "the adapter says it didn't start");
         h.assertTrue(Slots.registered(kit.provider()), kit.provider() + " isn't registered");
     }
@@ -77,7 +77,7 @@ final class Scenarios {
     static void adapterOff(GameTestHelper h, String modId, ResourceLocation provider, boolean adapterActive) {
         Status status = Slots.status(h, modId);
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(modId), "zas says the adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(modId), "zas says the adapter is on");
         h.assertFalse(adapterActive, "the adapter says it started");
         h.assertFalse(Slots.registered(provider), provider + " is registered");
     }

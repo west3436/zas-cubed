@@ -1,9 +1,10 @@
 package io.github.west3436.zas.compat.aeronautics.gametest;
 
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.environment.AmbientSeeds;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.aeronautics.AeroSettings;
 import io.github.west3436.zas.compat.aeronautics.AeronauticsCompat;
 import io.github.west3436.zas.compat.aeronautics.AeronauticsVersions;
@@ -29,10 +30,7 @@ public final class AeroGateTests {
 
     /** The adapter's row in zas's table, as the loader found it. */
     static Status status(GameTestHelper h) {
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(AeronauticsVersions.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(AeronauticsVersions.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Create Aeronautics");
         return status;
     }
@@ -66,7 +64,7 @@ public final class AeroGateTests {
         h.assertValueEqual(status.row().range(), AeronauticsVersions.SUPPORTED, "the row's range");
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter's state");
-        h.assertTrue(Adapters.isActive(AeronauticsVersions.MOD_ID), "zas says the adapter is off");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(AeronauticsVersions.MOD_ID), "zas says the adapter is off");
         h.assertTrue(AeronauticsCompat.isActive(), "the adapter says it never started");
         h.assertTrue(AeronauticsMixinPlugin.loaded(), "Mixin never loaded the adapter's config");
         h.assertTrue(AeronauticsMixinPlugin.applies(), "the plugin keeps the hook from applying");

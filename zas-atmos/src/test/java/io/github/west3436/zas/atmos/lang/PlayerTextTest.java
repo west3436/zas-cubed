@@ -48,11 +48,11 @@ class PlayerTextTest {
             Set.of("zas:engine", "no reason given", "the engine failed:", "the engine couldn't be rebuilt:");
 
     /**
-     * Methods whose text stays in English for operators. A datapack problem is the line in the log,
-     * {@code /zas datapacks} repeats it, and much of it is the codecs' own English.
+     * Methods whose text stays in English for operators, which the scan doesn't follow. None now: the
+     * one there was, a datapack problem's line, which {@code /zas datapacks} repeats from the log, is
+     * SS13 Framework's ({@code DatapackErrors.Problem}), outside the classes scanned.
      */
-    private static final Set<String> OPERATOR_LINES =
-            Set.of("io/github/west3436/zas/data/DatapackErrors$Problem.toString");
+    private static final Set<String> OPERATOR_LINES = Set.of();
 
     @Test
     void client_007_no_hard_coded_player_text() {

@@ -3,6 +3,9 @@ package io.github.west3436.zas.compat.northstar.gametest;
 import com.lightning.northstar.world.oxygen.NorthstarOxygen;
 import com.lightning.northstar.world.sealer.ProgressiveBlockUpdater;
 import com.lightning.northstar.world.temperature.NorthstarTemperature;
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.atmosphere.AtmospherePreset;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -15,9 +18,7 @@ import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.northstar.NorthstarCompat;
 import io.github.west3436.zas.compat.northstar.NorthstarVersions;
 import io.github.west3436.zas.compat.northstar.mixin.NorthstarMixinPlugin;
@@ -144,10 +145,7 @@ public final class NorthstarTests {
         h.assertTrue(
                 installed != null && wanted.startsWith(installed),
                 "the Northstar installed is " + installed + ", not " + wanted);
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(NorthstarVersions.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(NorthstarVersions.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Northstar");
         h.assertValueEqual(status.row().entryClass(), NorthstarCompat.class.getName(), "the row's entry class");
         h.assertValueEqual(status.row().range(), NorthstarVersions.SUPPORTED, "the row's range");

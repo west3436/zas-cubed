@@ -1,8 +1,8 @@
 package io.github.west3436.zas.compat.slots.gametest;
 
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.life.ExtraSlotKind;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
 import io.github.west3436.zas.compat.accessories.AccessoriesCompat;
 import io.github.west3436.zas.compat.curios.CuriosCompat;
 import java.util.List;

@@ -55,6 +55,8 @@ dependencies {
     compileOnly project(':zas')
     compileOnly project(':engine')
     compileOnly project(':zas-api')
+    // SS13 Framework's PluginGate, behind which the plugin registers.
+    compileOnly "io.github.west3436:ss13-framework:${framework_version}"
     // Compile-only, never bundled: the plugin is optional (NFR-022).
     compileOnly("dev.emi:emi-neoforge:${emi_version}+${minecraft_version}:api") { transitive = false }
     // With AE2 too, the plugin gives AE2 a converter between gases in EMI and the AE2 adapter's gas

@@ -6,7 +6,7 @@
 // the mod is added to this project's own runs.
 
 // The CC: Tweaked the runs load: the oldest supported by default, the newest with
-// -Pcc.version=newest, or any published version by name. The range itself is in zas's Adapters.
+// -Pcc.version=newest, or any published version by name. The range itself is in zas's ZasAdapters.
 def chosen = providers.gradleProperty('cc.version').getOrElse('floor')
 def named = [floor: cc_version, newest: cc_newest_version]
 def ccRun = named.getOrDefault(chosen, chosen)
@@ -123,6 +123,8 @@ dependencies {
 
     // The tests alone may use the framework's adapter loader and its hook that drives atmos ticks.
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     gametestCompileOnly project(':engine')
 
     releaseJar project(':dist')

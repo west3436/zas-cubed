@@ -42,7 +42,7 @@ public final class JadeGateTests {
             "15.1.5+neoforge", false);
 
     /** What the one warning says, up to the versions. */
-    private static final String WARNING = "The adapter for jade is off";
+    private static final String WARNING = "The zas_atmos adapter for jade is off";
 
     private JadeGateTests() {}
 

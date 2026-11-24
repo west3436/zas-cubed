@@ -79,6 +79,8 @@ dependencies {
     // GameTests (only) ask the framework and the content what they did, and Nuclear Radiation what
     // armour keeps its gas out.
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     gametestCompileOnly project(':engine')
     gametestCompileOnly project(':zas-atmos')
     gametestCompileOnly(modrinth('nuclear-radiation', nuclear_radiation_floor_version)) { transitive = false }

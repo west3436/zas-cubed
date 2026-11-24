@@ -3,11 +3,12 @@ package io.github.west3436.zas.compat.slots.gametest;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.life.ExtraSlotKind;
 import io.github.west3436.zas.api.life.ExtraSlots;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.life.Internals;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,10 +66,7 @@ final class Slots {
         String installed = Adapters.installedVersion(modId).orElse(null);
         h.assertTrue(installed != null, modId + " isn't installed on this server");
         h.assertValueEqual(installed, asked(modId), "the " + modId + " installed");
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(modId))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(modId).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for " + modId);
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         return status;

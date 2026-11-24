@@ -1,15 +1,16 @@
 package io.github.west3436.zas.compat.jei.gametest;
 
 import com.mojang.serialization.JsonOps;
-import io.github.west3436.zas.compat.VersionGate;
-import io.github.west3436.zas.compat.VersionGate.Verdict;
+import io.github.west3436.ss13.compat.PluginGate;
+import io.github.west3436.ss13.compat.VersionGate;
+import io.github.west3436.ss13.compat.VersionGate.Verdict;
+import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.compat.jei.GasIngredients;
 import io.github.west3436.zas.compat.jei.ZasJeiPlugin;
 import io.github.west3436.zas.compat.viewer.GasEntry;
 import io.github.west3436.zas.compat.viewer.GasStack;
 import io.github.west3436.zas.compat.viewer.ReactionEntry;
 import io.github.west3436.zas.compat.viewer.ViewerData;
-import io.github.west3436.zas.compat.viewer.ViewerGate;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.reaction.ReactionDefinition;
 import io.github.west3436.zas.gas.ClientGasRegistry;
@@ -68,7 +69,7 @@ public final class JeiPluginTests {
                 .getVersion()
                 .toString();
         h.assertValueEqual(VersionGate.check(installed, ZasJeiPlugin.SUPPORTED), Verdict.SUPPORTED, "JEI " + installed);
-        ViewerGate gate = new ViewerGate(ZasJeiPlugin.JEI, ZasJeiPlugin.SUPPORTED);
+        PluginGate gate = new PluginGate(ZasMod.MOD_ID, ZasJeiPlugin.JEI, ZasJeiPlugin.SUPPORTED);
         h.assertTrue(gate.on(), "the plugin's gate is closed to JEI " + installed);
         h.assertValueEqual(gate.warnings(), 0, "warnings");
 
@@ -163,7 +164,7 @@ public final class JeiPluginTests {
      */
     @GameTest(template = "empty")
     public static void compat_002_outside_its_range_the_plugin_registers_nothing_and_warns_once(GameTestHelper h) {
-        ViewerGate closed = new ViewerGate(ZasJeiPlugin.JEI, "[1,2)");
+        PluginGate closed = new PluginGate(ZasMod.MOD_ID, ZasJeiPlugin.JEI, "[1,2)");
         ZasJeiPlugin plugin = new ZasJeiPlugin(closed);
         ClientGasRegistry.accept(GasDefinitionsPayload.of(ServerGasRegistry.current()));
         try {

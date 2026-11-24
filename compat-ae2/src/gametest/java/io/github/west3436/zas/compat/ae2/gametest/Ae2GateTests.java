@@ -3,9 +3,10 @@ package io.github.west3436.zas.compat.ae2.gametest;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEKeyType;
 import appeng.api.stacks.AEKeyTypes;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.ae2.Ae2Compat;
 import io.github.west3436.zas.compat.ae2.Ae2Settings;
 import io.github.west3436.zas.compat.ae2.GasCells;
@@ -34,10 +35,7 @@ public final class Ae2GateTests {
     }
 
     private static Status status(GameTestHelper h) {
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("ae2"))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status("ae2").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for AE2");
         return status;
     }
@@ -70,7 +68,7 @@ public final class Ae2GateTests {
             Status status = status(h);
             h.assertValueEqual(status.version(), installed, "the version the loader saw");
             h.assertValueEqual(status.state(), State.ACTIVE, "the adapter's state");
-            h.assertTrue(Adapters.isActive("ae2"), "zas says the adapter is off");
+            h.assertTrue(ZasAdapters.ADAPTERS.isActive("ae2"), "zas says the adapter is off");
             h.assertTrue(Ae2Compat.isActive(), "the adapter says it didn't start");
             h.assertTrue(Ae2Compat.registered(), "the buses weren't registered");
             h.assertTrue(ModConfigs.getFileMap().containsKey(Ae2Settings.FILE), "its config file isn't registered");
@@ -100,7 +98,7 @@ public final class Ae2GateTests {
             Status status = status(h);
             h.assertValueEqual(status.version(), installed, "the version the loader saw");
             h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-            h.assertFalse(Adapters.isActive("ae2"), "zas says the adapter is on");
+            h.assertFalse(ZasAdapters.ADAPTERS.isActive("ae2"), "zas says the adapter is on");
             h.assertFalse(Ae2Compat.isActive(), "the adapter says it started");
             h.assertFalse(Ae2Compat.registered(), "the buses were registered");
             h.assertFalse(ModConfigs.getFileMap().containsKey(Ae2Settings.FILE), "its config file is registered");

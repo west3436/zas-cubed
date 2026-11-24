@@ -1,9 +1,9 @@
 package io.github.west3436.zas.compat.mi.gametest;
 
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.gas.GasProperties;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.mi.ModernIndustrializationCompat;
 import java.util.List;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -36,7 +36,8 @@ public final class MiUnsupportedTests {
         Status status = MiGateTests.status(h);
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(ModernIndustrializationCompat.MOD_ID), "zas says the adapter is on");
+        h.assertFalse(
+                ZasAdapters.ADAPTERS.isActive(ModernIndustrializationCompat.MOD_ID), "zas says the adapter is on");
         h.assertFalse(ModernIndustrializationCompat.isActive(), "the adapter says it started");
 
         // Nothing the adapter adds is there, though Modern Industrialization's fluids are.

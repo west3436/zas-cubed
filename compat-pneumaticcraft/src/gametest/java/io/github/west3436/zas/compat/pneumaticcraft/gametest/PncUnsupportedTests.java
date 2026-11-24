@@ -1,9 +1,9 @@
 package io.github.west3436.zas.compat.pneumaticcraft.gametest;
 
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.capability.IInternalSupply;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.pneumaticcraft.PncSettings;
 import io.github.west3436.zas.compat.pneumaticcraft.PneumaticCraftCompat;
 import io.github.west3436.zas.life.Protections;
@@ -39,7 +39,7 @@ public final class PncUnsupportedTests {
         Status status = PncGateTests.status(h);
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(PneumaticCraftCompat.MOD_ID), "zas says the adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(PneumaticCraftCompat.MOD_ID), "zas says the adapter is on");
         h.assertFalse(PneumaticCraftCompat.isActive(), "the adapter says it started");
 
         // Nothing the adapter adds is there.

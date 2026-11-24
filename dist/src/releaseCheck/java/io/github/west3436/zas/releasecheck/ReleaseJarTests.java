@@ -1,5 +1,6 @@
 package io.github.west3436.zas.releasecheck;
 
+import io.github.west3436.ss13.compat.Adapters;
 import io.github.west3436.zas.api.environment.AmbientSeeds;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.GasTags;
@@ -7,7 +8,7 @@ import io.github.west3436.zas.api.life.ExtraSlots;
 import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.compat.PonderGate;
-import io.github.west3436.zas.compat.Adapters;
+import io.github.west3436.zas.compat.ZasAdapters;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -191,14 +192,11 @@ public final class ReleaseJarTests {
         }
 
         // zas went through its row and found no Mekanism, so it never loaded the entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("mekanism"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("mekanism").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Mekanism");
         h.assertValueEqual(status.row().entryClass(), MEKANISM_ADAPTER + ".MekanismCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Mekanism adapter's state");
-        h.assertFalse(Adapters.isActive("mekanism"), "the Mekanism adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("mekanism"), "the Mekanism adapter is on");
 
         // What the adapter would have added.
         MinecraftServer server = h.getLevel().getServer();
@@ -308,14 +306,11 @@ public final class ReleaseJarTests {
                 ReleaseJarTests.class.getClassLoader().getResource(entry) != null, "the release jar has no " + entry);
 
         // zas went through its row and found no CC: Tweaked, so it never loaded the entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("computercraft"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("computercraft").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for CC: Tweaked");
         h.assertValueEqual(status.row().entryClass(), CC_ADAPTER + ".CcCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the CC: Tweaked adapter's state");
-        h.assertFalse(Adapters.isActive("computercraft"), "the CC: Tweaked adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("computercraft"), "the CC: Tweaked adapter is on");
         h.succeed();
     }
 
@@ -333,14 +328,11 @@ public final class ReleaseJarTests {
         h.assertTrue(
                 ReleaseJarTests.class.getClassLoader().getResource(entry) != null, "the release jar has no " + entry);
 
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("ae2"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("ae2").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for AE2");
         h.assertValueEqual(status.row().entryClass(), AE2_ADAPTER + ".Ae2Compat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the AE2 adapter's state");
-        h.assertFalse(Adapters.isActive("ae2"), "the AE2 adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("ae2"), "the AE2 adapter is on");
         h.assertFalse(
                 ModConfigs.getFileMap().containsKey("zas-ae2-server.toml"),
                 "the AE2 adapter's config file is registered");
@@ -376,15 +368,12 @@ public final class ReleaseJarTests {
         }
 
         // zas went through its row and found no Aeronautics, so it never loaded the entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("aeronautics"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("aeronautics").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Create Aeronautics");
         h.assertValueEqual(
                 status.row().entryClass(), AERONAUTICS_ADAPTER + ".AeronauticsCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Aeronautics adapter's state");
-        h.assertFalse(Adapters.isActive("aeronautics"), "the Aeronautics adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("aeronautics"), "the Aeronautics adapter is on");
 
         // What the adapter would have added.
         ResourceLocation seed = ResourceLocation.fromNamespaceAndPath("zas", "sable_dimension_physics");
@@ -414,14 +403,11 @@ public final class ReleaseJarTests {
         }
 
         // zas went through its row and found no Sable, so it never loaded the entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("sable"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("sable").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Sable");
         h.assertValueEqual(status.row().entryClass(), SABLE_ADAPTER + ".SableCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Sable adapter's state");
-        h.assertFalse(Adapters.isActive("sable"), "the Sable adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("sable"), "the Sable adapter is on");
         h.succeed();
     }
 
@@ -444,15 +430,12 @@ public final class ReleaseJarTests {
         }
 
         // zas went through its row and found no PneumaticCraft, so it never loaded the entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("pneumaticcraft"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("pneumaticcraft").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for PneumaticCraft");
         h.assertValueEqual(
                 status.row().entryClass(), PNEUMATICCRAFT_ADAPTER + ".PneumaticCraftCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the PneumaticCraft adapter's state");
-        h.assertFalse(Adapters.isActive("pneumaticcraft"), "the PneumaticCraft adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("pneumaticcraft"), "the PneumaticCraft adapter is on");
 
         // What the adapter would have added.
         String pack = "mod/zas:datapacks/pneumaticcraft";
@@ -486,15 +469,12 @@ public final class ReleaseJarTests {
         }
 
         // zas went through its row and found no NuclearCraft, so it never loaded the entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("nuclearcraft"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("nuclearcraft").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for NuclearCraft");
         h.assertValueEqual(
                 status.row().entryClass(), NUCLEARCRAFT_ADAPTER + ".NuclearCraftCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the NuclearCraft adapter's state");
-        h.assertFalse(Adapters.isActive("nuclearcraft"), "the NuclearCraft adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("nuclearcraft"), "the NuclearCraft adapter is on");
 
         // What the adapter would have added.
         MinecraftServer server = h.getLevel().getServer();
@@ -537,15 +517,15 @@ public final class ReleaseJarTests {
 
         // zas went through its row and found no Modern Industrialization, so it never loaded the
         // entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("modern_industrialization"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status =
+                ZasAdapters.ADAPTERS.status("modern_industrialization").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Modern Industrialization");
         h.assertValueEqual(
                 status.row().entryClass(), MI_ADAPTER + ".ModernIndustrializationCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Modern Industrialization adapter's state");
-        h.assertFalse(Adapters.isActive("modern_industrialization"), "the Modern Industrialization adapter is on");
+        h.assertFalse(
+                ZasAdapters.ADAPTERS.isActive("modern_industrialization"),
+                "the Modern Industrialization adapter is on");
 
         // What the adapter would have added.
         MinecraftServer server = h.getLevel().getServer();
@@ -579,14 +559,11 @@ public final class ReleaseJarTests {
         }
 
         // zas went through its row and found no Ad Astra, so it never loaded the entry class.
-        Adapters.Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals("ad_astra"))
-                .findFirst()
-                .orElse(null);
+        Adapters.Status status = ZasAdapters.ADAPTERS.status("ad_astra").orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Ad Astra");
         h.assertValueEqual(status.row().entryClass(), AD_ASTRA_ADAPTER + ".AdAstraCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Ad Astra adapter's state");
-        h.assertFalse(Adapters.isActive("ad_astra"), "the Ad Astra adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("ad_astra"), "the Ad Astra adapter is on");
 
         // What the adapter would have added.
         MinecraftServer server = h.getLevel().getServer();
@@ -690,14 +667,11 @@ public final class ReleaseJarTests {
             h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
 
             // zas went through its row and found no such mod, so it never loaded the entry class.
-            Adapters.Status status = Adapters.statuses().stream()
-                    .filter(s -> s.row().modId().equals(modId))
-                    .findFirst()
-                    .orElse(null);
+            Adapters.Status status = ZasAdapters.ADAPTERS.status(modId).orElse(null);
             h.assertTrue(status != null, "zas has no adapter row for " + modId);
             h.assertValueEqual(status.row().entryClass(), entry, "the row's entry class");
             h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the " + modId + " adapter's state");
-            h.assertFalse(Adapters.isActive(modId), "the " + modId + " adapter is on");
+            h.assertFalse(ZasAdapters.ADAPTERS.isActive(modId), "the " + modId + " adapter is on");
         }
         h.assertValueEqual(ExtraSlots.registered(), List.of(), "the providers of extra equipment slots");
 

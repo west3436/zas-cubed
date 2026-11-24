@@ -97,11 +97,12 @@ dependencies {
     compileOnly sableCompanionJar
 
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters, and the device table
+    // and its sounds are the framework's too.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     gametestCompileOnly project(':engine')
     // The content's device table, for the device sounds on board. The adapter itself never names it.
     gametestCompileOnly project(':zas-atmos')
-    // SS13 Framework, which the device table and its sounds are part of.
-    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
 
     releaseJar project(':dist')
 

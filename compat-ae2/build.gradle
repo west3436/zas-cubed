@@ -119,6 +119,8 @@ dependencies {
     // The tests may use AE2's own classes, and the framework's, to build networks and read them.
     gametestCompileOnly "maven.modrinth:ae2:${ae2_version}"
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     gametestCompileOnly project(':engine')
     gametestCompileOnly project(':zas-atmos')
 
