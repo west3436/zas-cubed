@@ -2,7 +2,7 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:super_capacitor"
+      "item": "ss13_framework:super_capacitor"
     },
     {
       "type": "neoforge:item_exists",
@@ -13,7 +13,7 @@
   "category": "misc",
   "ingredients": [
     {
-      "item": "zas_atmos:super_capacitor"
+      "item": "ss13_framework:super_capacitor"
     },
     {
       "item": "minecraft:copper_ingot"

@@ -2,11 +2,11 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
       "type": "neoforge:item_exists",
@@ -14,20 +14,20 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     }
   ],
   "type": "minecraft:crafting_shapeless",
   "category": "equipment",
   "ingredients": [
     {
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     },
     {
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "item": "minecraft:iron_ingot"

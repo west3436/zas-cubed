@@ -3,11 +3,15 @@ package io.github.west3436.zas.atmos.gametest;
 import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.west3436.ss13.api.FrameworkApi;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -17,6 +21,7 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.CentralClaims;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
+import io.github.west3436.zas.atmos.registry.MovedItems;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
@@ -33,14 +38,19 @@ import java.math.MathContext;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.IntFunction;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.AfterBatch;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
@@ -50,6 +60,8 @@ import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -58,6 +70,8 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -78,7 +92,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * <p>The station's chunks are held loaded in full without ticking, as S-09's station is, so nothing
  * steps and the primed TTV's fuse doesn't burn: what is compared is what the files held. It has a
  * batch of its own, as it turns the central controllers' {@code force_load} off and the invariant
- * checker on.
+ * checker on. 1.2.0's chest of crafting components, in a chunk of its own, and its player's file
+ * load in the same batch; the build copies 1.2.0's {@code expected.json} in as {@code
+ * expected-1.2.0.json}.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -158,6 +174,11 @@ public final class SavedWorldTests {
                 .toPlainString();
     }
 
+    private static BlockPos pos(JsonArray xyz) {
+        return new BlockPos(
+                xyz.get(0).getAsInt(), xyz.get(1).getAsInt(), xyz.get(2).getAsInt());
+    }
+
     private static BlockPos pos(String xyz) {
         String[] p = xyz.split(" ");
         return new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
@@ -173,10 +194,15 @@ public final class SavedWorldTests {
 
     /** What the release's console said its world held, which the build put in this world's folder. */
     private static JsonObject expected(ServerLevel level) {
-        Path file = level.getServer().getWorldPath(LevelResource.ROOT).resolve("expected.json");
+        return expected(level, "expected.json", "0.1.0");
+    }
+
+    /** What a release said its world held, from a file the build put in this world's folder. */
+    private static JsonObject expected(ServerLevel level, String name, String release) {
+        Path file = level.getServer().getWorldPath(LevelResource.ROOT).resolve(name);
         if (!Files.exists(file)) {
-            throw new GameTestAssertException("this world wasn't started from 0.1.0's fixture: there's no " + file
-                    + ". :zas-atmos:runGameTestServer copies it in");
+            throw new GameTestAssertException("this world wasn't started from " + release + "'s fixture: there's no "
+                    + file + ". :zas-atmos:runGameTestServer copies it in");
         }
         try {
             return JsonParser.parseString(Files.readString(file)).getAsJsonObject();
@@ -295,6 +321,96 @@ public final class SavedWorldTests {
                     h.assertTrue(report.conserved(), "unexplained gas: " + report.violations());
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * A world saved by 1.2.0 loads with every crafting component it held, now SS13 Framework's
+     * (#534): a chest of the 19 components and a player whose inventory holds them, each stack under
+     * its old {@code zas_atmos:} id, come back as the framework's items, with their counts and in
+     * their slots. The chest's chunk is read as an upgraded server reads it when it loads, and the
+     * player's file as the server reads it when that player joins.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
+    public static void a_world_saved_by_1_2_0_keeps_its_crafting_components(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        JsonObject expected = expected(level, "expected-1.2.0.json", "1.2.0");
+        JsonArray at = expected.getAsJsonArray("chunks").get(0).getAsJsonArray();
+        ChunkPos chunk = new ChunkPos(at.get(0).getAsInt(), at.get(1).getAsInt());
+        BlockPos chestAt = pos(expected.getAsJsonArray("chest_at"));
+        h.assertFalse(level.getChunkSource().hasChunk(chunk.x, chunk.z), "chunk " + chunk + " loaded before this test");
+        PipeSaveTests.hold(level, chunk, true);
+        CLEANUP.add(() -> PipeSaveTests.hold(level, chunk, false));
+
+        h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(
+                        level.getChunkSource().hasChunk(chunk.x, chunk.z), "chunk " + chunk + " hasn't loaded"))
+                .thenExecute(() -> {
+                    if (!(level.getBlockEntity(chestAt) instanceof ChestBlockEntity chest)) {
+                        throw new GameTestAssertException("no chest at " + chestAt);
+                    }
+                    List<String> differ = new ArrayList<>();
+                    sameComponents(
+                            chest::getItem,
+                            chest.getContainerSize(),
+                            expected.getAsJsonArray("chest"),
+                            "the chest",
+                            differ);
+
+                    UUID id = UUID.fromString(expected.get("player").getAsString());
+                    FakePlayer player = FakePlayerFactory.get(level, new GameProfile(id, "Fixture"));
+                    player.getInventory().clearContent();
+                    Optional<CompoundTag> read =
+                            level.getServer().getPlayerList().load(player);
+                    h.assertTrue(read.isPresent(), "1.2.0's player " + id + " has no file");
+                    Inventory inventory = player.getInventory();
+                    sameComponents(
+                            inventory::getItem,
+                            inventory.getContainerSize(),
+                            expected.getAsJsonArray("inventory"),
+                            "the player's inventory",
+                            differ);
+                    inventory.clearContent();
+                    h.assertTrue(differ.isEmpty(), differ.size() + " stacks differ: " + differ);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Each slot a release listed holds the framework's item of the same name as the release's id, in
+     * the same count, and every other slot is empty. What differs goes to {@code differ}.
+     */
+    private static void sameComponents(
+            IntFunction<ItemStack> slot, int size, JsonArray told, String where, List<String> differ) {
+        Map<Integer, JsonObject> bySlot = new TreeMap<>();
+        told.forEach(e -> bySlot.put(e.getAsJsonObject().get("slot").getAsInt(), e.getAsJsonObject()));
+        Set<Item> components = new HashSet<>();
+        FrameworkItems.components().forEach(c -> components.add(c.get()));
+        for (int i = 0; i < size; i++) {
+            ItemStack stack = slot.apply(i);
+            JsonObject then = bySlot.get(i);
+            if (then == null) {
+                if (!stack.isEmpty()) {
+                    differ.add(where + " holds " + stack + " in slot " + i + ", which was empty");
+                }
+                continue;
+            }
+            ResourceLocation old = ResourceLocation.parse(then.get("id").getAsString());
+            ResourceLocation now = ResourceLocation.fromNamespaceAndPath(FrameworkApi.MOD_ID, old.getPath());
+            if (!old.getNamespace().equals(ZasAtmosMod.MOD_ID)) {
+                differ.add(where + "'s slot " + i + " was saved as " + old + ", not a zas_atmos id");
+            }
+            ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (!key.equals(now) || !components.contains(stack.getItem())) {
+                differ.add(where + "'s slot " + i + " held " + old + " and now holds " + stack + " (" + key + ")");
+            } else if (stack.getCount() != then.get("count").getAsInt()) {
+                differ.add(where + "'s slot " + i + " held " + then.get("count") + " " + old + " and now holds "
+                        + stack.getCount());
+            }
+        }
+        if (bySlot.size() != MovedItems.TO_FRAMEWORK.size()) {
+            differ.add(
+                    where + " was saved with " + bySlot.size() + " components, not " + MovedItems.TO_FRAMEWORK.size());
+        }
     }
 
     private static DimensionAtmos dimension(ServerLevel level) {

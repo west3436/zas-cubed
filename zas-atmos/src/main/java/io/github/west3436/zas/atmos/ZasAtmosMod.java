@@ -20,6 +20,7 @@ import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.atmos.registry.MovedItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
@@ -54,6 +55,7 @@ public final class ZasAtmosMod {
         // on a ZAS³ ship waits while it moves and is heard where the ship is, and the player's units.
         FrameworkHooks.register();
         contentEnabled = AtmosStartupConfig.register(container);
+        MovedItems.register(modBus);
         if (!contentEnabled) {
             LOGGER.info("ZAS³ Atmospherics' content is off in zas_atmos-startup.toml, so it loads nothing");
             return;

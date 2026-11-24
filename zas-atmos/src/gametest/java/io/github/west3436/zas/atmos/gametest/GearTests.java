@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.airflow.AirflowClass;
 import io.github.west3436.zas.airflow.AirflowImpulsePayload;
@@ -557,7 +558,7 @@ public final class GearTests {
         ItemStack soft = stack(AtmosItems.SOFTSUIT_CHESTPLATE);
         ItemStack tank = stack(AtmosItems.OXYGEN_TANK);
         SuitItem.setTank(soft, tank);
-        ItemStack plasteel = stack(AtmosItems.PLASTEEL_SHEET);
+        ItemStack plasteel = stack(FrameworkItems.PLASTEEL_SHEET);
         List<ItemStack> grid = new ArrayList<>(List.of(
                 plasteel,
                 ItemStack.EMPTY,

@@ -2,7 +2,7 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
@@ -10,23 +10,23 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:subspace_ansible"
+      "item": "ss13_framework:subspace_ansible"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:subspace_transmitter"
+      "item": "ss13_framework:subspace_transmitter"
     }
   ],
   "type": "minecraft:crafting_shaped",
@@ -38,22 +38,22 @@
   ],
   "key": {
     "F": {
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     "W": {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     "B": {
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     },
     "T": {
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     "A": {
-      "item": "zas_atmos:subspace_ansible"
+      "item": "ss13_framework:subspace_ansible"
     },
     "X": {
-      "item": "zas_atmos:subspace_transmitter"
+      "item": "ss13_framework:subspace_transmitter"
     }
   },
   "result": {

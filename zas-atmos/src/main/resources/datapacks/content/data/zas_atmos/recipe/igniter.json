@@ -2,7 +2,7 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
@@ -10,20 +10,20 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:igniter_assembly"
+      "item": "ss13_framework:igniter_assembly"
     }
   ],
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
     {
-      "item": "zas_atmos:igniter_assembly"
+      "item": "ss13_framework:igniter_assembly"
     },
     {
       "item": "minecraft:heavy_weighted_pressure_plate"
     },
     {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     }
   ],
   "result": {

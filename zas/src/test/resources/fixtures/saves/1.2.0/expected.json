@@ -1,0 +1,211 @@
+{
+  "release": "1.2.0",
+  "commit": "eff80485",
+  "recorded": "2026-11-24",
+  "chunks": [
+    [
+      64,
+      0
+    ]
+  ],
+  "chest_at": [
+    1030,
+    -60,
+    6
+  ],
+  "chest": [
+    {
+      "slot": 0,
+      "id": "zas_atmos:cable_coil",
+      "count": 1
+    },
+    {
+      "slot": 1,
+      "id": "zas_atmos:circuit_board",
+      "count": 2
+    },
+    {
+      "slot": 2,
+      "id": "zas_atmos:electronics",
+      "count": 3
+    },
+    {
+      "slot": 3,
+      "id": "zas_atmos:machine_frame",
+      "count": 4
+    },
+    {
+      "slot": 4,
+      "id": "zas_atmos:capacitor",
+      "count": 5
+    },
+    {
+      "slot": 5,
+      "id": "zas_atmos:advanced_capacitor",
+      "count": 6
+    },
+    {
+      "slot": 6,
+      "id": "zas_atmos:super_capacitor",
+      "count": 7
+    },
+    {
+      "slot": 7,
+      "id": "zas_atmos:scanning_module",
+      "count": 8
+    },
+    {
+      "slot": 8,
+      "id": "zas_atmos:micro_manipulator",
+      "count": 9
+    },
+    {
+      "slot": 9,
+      "id": "zas_atmos:micro_laser",
+      "count": 10
+    },
+    {
+      "slot": 10,
+      "id": "zas_atmos:console_screen",
+      "count": 11
+    },
+    {
+      "slot": 11,
+      "id": "zas_atmos:igniter_assembly",
+      "count": 12
+    },
+    {
+      "slot": 12,
+      "id": "zas_atmos:timer_assembly",
+      "count": 13
+    },
+    {
+      "slot": 13,
+      "id": "zas_atmos:ansible_crystal",
+      "count": 14
+    },
+    {
+      "slot": 14,
+      "id": "zas_atmos:subspace_ansible",
+      "count": 15
+    },
+    {
+      "slot": 15,
+      "id": "zas_atmos:subspace_transmitter",
+      "count": 16
+    },
+    {
+      "slot": 16,
+      "id": "zas_atmos:bluespace_crystal",
+      "count": 17
+    },
+    {
+      "slot": 17,
+      "id": "zas_atmos:plasteel_sheet",
+      "count": 18
+    },
+    {
+      "slot": 18,
+      "id": "zas_atmos:reinforced_glass",
+      "count": 19
+    }
+  ],
+  "player": "3f1c2b7e-1a20-4e6b-9d0c-5b2a7e120120",
+  "inventory": [
+    {
+      "slot": 0,
+      "id": "zas_atmos:cable_coil",
+      "count": 64
+    },
+    {
+      "slot": 1,
+      "id": "zas_atmos:circuit_board",
+      "count": 63
+    },
+    {
+      "slot": 2,
+      "id": "zas_atmos:electronics",
+      "count": 62
+    },
+    {
+      "slot": 3,
+      "id": "zas_atmos:machine_frame",
+      "count": 61
+    },
+    {
+      "slot": 4,
+      "id": "zas_atmos:capacitor",
+      "count": 60
+    },
+    {
+      "slot": 5,
+      "id": "zas_atmos:advanced_capacitor",
+      "count": 59
+    },
+    {
+      "slot": 6,
+      "id": "zas_atmos:super_capacitor",
+      "count": 58
+    },
+    {
+      "slot": 7,
+      "id": "zas_atmos:scanning_module",
+      "count": 57
+    },
+    {
+      "slot": 8,
+      "id": "zas_atmos:micro_manipulator",
+      "count": 56
+    },
+    {
+      "slot": 9,
+      "id": "zas_atmos:micro_laser",
+      "count": 55
+    },
+    {
+      "slot": 10,
+      "id": "zas_atmos:console_screen",
+      "count": 54
+    },
+    {
+      "slot": 11,
+      "id": "zas_atmos:igniter_assembly",
+      "count": 53
+    },
+    {
+      "slot": 12,
+      "id": "zas_atmos:timer_assembly",
+      "count": 52
+    },
+    {
+      "slot": 13,
+      "id": "zas_atmos:ansible_crystal",
+      "count": 51
+    },
+    {
+      "slot": 14,
+      "id": "zas_atmos:subspace_ansible",
+      "count": 50
+    },
+    {
+      "slot": 15,
+      "id": "zas_atmos:subspace_transmitter",
+      "count": 49
+    },
+    {
+      "slot": 16,
+      "id": "zas_atmos:bluespace_crystal",
+      "count": 48
+    },
+    {
+      "slot": 17,
+      "id": "zas_atmos:plasteel_sheet",
+      "count": 47
+    },
+    {
+      "slot": 18,
+      "id": "zas_atmos:reinforced_glass",
+      "count": 46
+    }
+  ]
+}

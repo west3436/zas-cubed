@@ -2,11 +2,11 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:reinforced_glass"
+      "item": "ss13_framework:reinforced_glass"
     },
     {
       "type": "neoforge:item_exists",
@@ -17,13 +17,13 @@
   "category": "building",
   "ingredients": [
     {
-      "item": "zas_atmos:reinforced_glass"
+      "item": "ss13_framework:reinforced_glass"
     },
     {
-      "item": "zas_atmos:reinforced_glass"
+      "item": "ss13_framework:reinforced_glass"
     },
     {
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     }
   ],
   "result": {

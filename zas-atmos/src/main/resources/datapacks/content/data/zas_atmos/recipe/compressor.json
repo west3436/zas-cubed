@@ -2,11 +2,11 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     },
     {
       "type": "neoforge:item_exists",
@@ -14,15 +14,15 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     }
   ],
   "type": "minecraft:crafting_shaped",
@@ -34,22 +34,22 @@
   ],
   "key": {
     "S": {
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     },
     "M": {
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     },
     "I": {
       "item": "minecraft:iron_ingot"
     },
     "F": {
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     "W": {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     "B": {
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     }
   },
   "result": {
