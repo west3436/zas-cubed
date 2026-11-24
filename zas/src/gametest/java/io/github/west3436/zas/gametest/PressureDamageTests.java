@@ -84,16 +84,16 @@ public final class PressureDamageTests {
     private static void under(GameTestHelper h, AtmospherePreset preset, Runnable body) {
         h.assertTrue(ZasServerConfig.SPEC.isLoaded(), "the server config isn't loaded");
         h.assertValueEqual(PresetOptions.overridden(), 0, "preset options overridden before the test");
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         boolean checker = ZasServerConfig.CONSERVATION_CHECKER.get();
         try {
-            ZasServerConfig.setPreset(preset);
+            AtmospherePreset.switchTo(preset);
             ZasServerConfig.CONSERVATION_CHECKER.set(true);
             Rooms.withoutHeat(body);
         } finally {
             PresetOptions.BLOCK_PRESSURE_DAMAGE.clearOverride();
             ZasServerConfig.CONSERVATION_CHECKER.set(checker);
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 

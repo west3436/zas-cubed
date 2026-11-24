@@ -1,6 +1,7 @@
 package io.github.west3436.zas.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
@@ -20,8 +21,6 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.HazardConfig;
-import io.github.west3436.zas.config.ZasServerConfig;
-import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.life.BreathState;
 import io.github.west3436.zas.life.BreathSyncPayload;
 import io.github.west3436.zas.life.Breathers;
@@ -341,10 +340,10 @@ public final class BreathingTests {
     public static void life_006_piglin_survives_the_hardcore_nether(GameTestHelper h) {
         ServerLevel nether = h.getLevel().getServer().getLevel(Level.NETHER);
         h.assertTrue(nether != null, "no Nether");
-        AtmospherePreset before = ZasServerConfig.PRESET.get();
+        AtmospherePreset before = AtmospherePreset.active();
         Rooms r = new Rooms(h, nether, new BlockPos(-7680, 100, 8704));
         try (Lab lab = new Lab(h, r)) {
-            ZasServerConfig.PRESET.set(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             r.clear(0, 6);
             Vec3 at = Vec3.atBottomCenterOf(r.abs(3, 1, 3));
             Piglin piglin = lab.mob(EntityType.PIGLIN, nether, at);
@@ -373,7 +372,7 @@ public final class BreathingTests {
             close(h, pig.getHealth(), pig.getMaxHealth() - 4, 1e-4, "the pig's health after 62 s");
             h.assertTrue(pig.getLastDamageSource().is(LifeDamage.TOXIC_GAS), "the pig's damage type");
         } finally {
-            ZasServerConfig.PRESET.set(before);
+            AtmospherePreset.switchTo(before);
         }
         h.succeed();
     }

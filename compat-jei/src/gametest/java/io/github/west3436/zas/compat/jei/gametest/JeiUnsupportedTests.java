@@ -45,7 +45,7 @@ public final class JeiUnsupportedTests {
     public static final String NAMESPACE = "zas_jei_off";
 
     /** What the one warning says, up to the versions. */
-    private static final String WARNING = "The adapter for jei is off";
+    private static final String WARNING = "The zas adapter for jei is off";
 
     private JeiUnsupportedTests() {}
 

@@ -264,7 +264,7 @@ public final class GeneratorTests {
     @GameTest(template = "empty", batch = "zas_atmos_core_056")
     public static void core_056_lit_generator_forms_no_zone_under_hardcore(GameTestHelper h) {
         Site s = new Site(h, 10);
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
             BlockState unlit = AtmosBlocks.GENERATOR.get().defaultBlockState();
             h.assertFalse(TriggerStates.isCombustion(unlit.setValue(GeneratorBlock.LIT, true)), "lit is combustion");
@@ -273,7 +273,7 @@ public final class GeneratorTests {
             s.room(0, 4);
             s.ticks(2);
 
-            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             GeneratorBlockEntity g = generator(s, 2, 1, 2);
             g.fuel().insertItem(0, new ItemStack(Items.COAL), false);
             g.serverTick();
@@ -283,7 +283,7 @@ public final class GeneratorTests {
                     Atmospheres.at(s.level, s.abs(2, 2, 2)).state(), AtmosphereState.AMBIENT, "lit under Hardcore");
             h.succeed();
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
             s.clear();
         }
     }

@@ -3,7 +3,7 @@ package io.github.west3436.zas.gas;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.engine.gas.GasPhaseData;
 import io.github.west3436.zas.engine.gas.GasVisibility;

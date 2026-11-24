@@ -328,10 +328,10 @@ public final class StationBlockTests {
     public static void cont_131_reinforced_glass_holds_above_the_threshold_that_breaks_glass(GameTestHelper h) {
         h.assertTrue(ZasServerConfig.SPEC.isLoaded(), "the server config isn't loaded");
         h.assertValueEqual(PresetOptions.overridden(), 0, "preset options overridden before the test");
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         Site s = new Site(h, 1310);
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             ZasServerConfig.overrideHeatForTest(HeatSettings.OFF); // so a pressure stays as set
             s.clear();
             s.room(0, 4);
@@ -356,7 +356,7 @@ public final class StationBlockTests {
         } finally {
             s.clear();
             ZasServerConfig.overrideHeatForTest(null);
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 

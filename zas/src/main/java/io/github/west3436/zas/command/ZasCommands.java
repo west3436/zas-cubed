@@ -10,6 +10,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
@@ -23,7 +24,6 @@ import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.config.ZasServerConfig;
-import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -69,8 +69,9 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
  * The {@code /zas} operator commands (OPS-003, OPS-004, OPS-005, OPS-009, OPS-010, OPS-011, OPS-017,
- * GEO-032, and with {@link PresetCommand} OPS-007, OPS-014 and OPS-015), documented on the wiki's
- * Commands page.
+ * GEO-032), documented on the wiki's Commands page. {@code /zas preset} (OPS-007, OPS-014,
+ * OPS-015) is SS13 Framework's preset command, which it adds under this root ({@code
+ * Presets.addCommandAlias}) behind the same permission check.
  *
  * <p>Every command needs the permission level in {@code [commands] permission_level} of the server
  * config, 2 by default (OPS-011). Other {@code /zas} subcommands registered elsewhere, such as the
@@ -243,8 +244,7 @@ public final class ZasCommands {
         // OPS-008: datapack problems.
         root.then(Commands.literal("datapacks").executes(ctx -> datapacks(ctx.getSource())));
 
-        // OPS-007, OPS-014, OPS-015: the preset and the options it sets.
-        root.then(PresetCommand.node());
+        // OPS-007, OPS-014, OPS-015: /zas preset is SS13 Framework's, added under this root later.
 
         // LIFE-010 to LIFE-036: an entity's breathing and hazards, and the hazard settings.
         root.then(LifeCommand.lifeNode());
@@ -993,6 +993,10 @@ public final class ZasCommands {
 
     // ---- Datapacks (OPS-008) ------------------------------------------------------------
 
+    /**
+     * The last load's datapack problems, every mod's: the record is SS13 Framework's, shared by each
+     * mod that nests it, and a problem names its file in the pack, not the mod that read it.
+     */
     private static int datapacks(CommandSourceStack source) {
         List<DatapackErrors.Problem> problems = DatapackErrors.recent();
         reply(source, Component.translatable("commands.zas.datapacks.header", problems.size()));

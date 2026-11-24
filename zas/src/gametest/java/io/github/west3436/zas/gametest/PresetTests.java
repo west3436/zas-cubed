@@ -1,9 +1,11 @@
 package io.github.west3436.zas.gametest;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-import com.electronwill.nightconfig.core.file.CommentedFileConfig;
-import com.electronwill.nightconfig.toml.TomlFormat;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.west3436.ss13.api.preset.PresetOption;
+import io.github.west3436.ss13.api.preset.PresetType;
+import io.github.west3436.ss13.api.preset.Presets;
+import io.github.west3436.ss13.preset.PresetService;
+import io.github.west3436.ss13.preset.WorldPresets;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -12,20 +14,15 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.PresetOption;
+import io.github.west3436.zas.config.PresetMigration;
 import io.github.west3436.zas.config.PresetOptions;
-import io.github.west3436.zas.config.WorldConfigCopy;
-import io.github.west3436.zas.config.WorldConfigCopy.Target;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.config.ZoneTrigger;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,20 +42,19 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * The atmosphere preset and the options it sets (OPS-007, OPS-014, OPS-015).
  *
- * <p>The preset and the overrides are the whole server's, so these tests run in a batch of their
- * own, and each sets them and restores them within one game tick: it drives the atmos ticks it
- * needs with {@link io.github.west3436.zas.simulation.AtmosService#tickNow}. Commands run with
- * {@link ZasServerConfig#holdSavesForTest}, so they don't write the config file, whose reload
- * would drop other tests' unsaved values. The exception is the test of the world's own copy
- * (OPS-007): its saves go to a new copy in the GameTest world, which NeoForge doesn't watch, and
- * it deletes the copy afterwards.
+ * <p>The preset is SS13 Framework's world-wide switch, and ZAS³'s options are registered with it as
+ * {@code zas:<key>}. The preset and the overrides are the whole server's, so these tests run in a
+ * batch of their own, and each sets them and restores them within one game tick: it drives the
+ * atmos ticks it needs with {@link io.github.west3436.zas.simulation.AtmosService#tickNow}. Each
+ * change is saved to the GameTest world's own {@code serverconfig/ss13_framework-presets.toml}, as
+ * in singleplayer; the world is new on every run.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -103,7 +99,7 @@ public final class PresetTests {
     public static void ops_007_option_defaults_follow_the_preset(GameTestHelper h) {
         requireNoOverrides(h);
         h.assertValueEqual(
-                PresetOptions.all().stream().map(PresetOption::key).toList(),
+                PresetOptions.all().stream().map(o -> o.id().getPath()).toList(),
                 List.copyOf(DEFAULTS.keySet()),
                 "the preset options");
         ServerLevel nether = level(h, Level.NETHER);
@@ -113,10 +109,10 @@ public final class PresetTests {
             withPreset(h, preset, () -> {
                 int index = preset == AtmospherePreset.NORMAL ? 0 : 1;
                 for (PresetOption<?> option : PresetOptions.all()) {
-                    Object expected = DEFAULTS.get(option.key()).get(index);
-                    String what = option.key() + " under " + preset;
+                    Object expected = DEFAULTS.get(option.id().getPath()).get(index);
+                    String what = option.id() + " under " + preset;
                     h.assertValueEqual(option.get(), expected, what);
-                    h.assertValueEqual(option.defaultFor(preset), expected, what + ", default");
+                    h.assertValueEqual(option.defaultFor(preset.preset()), expected, what + ", default");
                     h.assertValueEqual(option.source(), PresetOption.Source.PRESET, what + ", source");
                 }
                 boolean hardcore = preset == AtmospherePreset.HARDCORE;
@@ -183,10 +179,22 @@ public final class PresetTests {
         h.succeed();
     }
 
-    /** A world that hasn't chosen a preset is Normal (OPS-007, D-14). */
+    /**
+     * A world that hasn't chosen a preset is Normal, and the API says so (OPS-007, D-14). The options
+     * are registered with SS13 Framework's switch in ZAS³'s namespace.
+     */
     @GameTest(template = "empty", batch = BATCH)
     public static void ops_007_normal_is_the_default_preset(GameTestHelper h) {
-        h.assertValueEqual(ZasServerConfig.PRESET.getDefault(), AtmospherePreset.NORMAL, "the default preset");
+        requireNoOverrides(h);
+        h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.NORMAL, "the preset of a new world");
+        h.assertValueEqual(
+                Atmospheres.preset(),
+                io.github.west3436.zas.api.atmosphere.AtmospherePreset.NORMAL,
+                "the API's preset of a new world");
+        for (PresetOption<?> option : PresetOptions.all()) {
+            h.assertValueEqual(Presets.option(option.id()), Optional.of(option), option.id() + " in the framework");
+            h.assertValueEqual(option.id().getNamespace(), "zas", option.id() + "'s namespace");
+        }
         h.succeed();
     }
 
@@ -237,21 +245,21 @@ public final class PresetTests {
                             : AtmospherePreset.HARDCORE;
                     overrideWithDefault(option, value);
                     h.assertValueEqual(
-                            option.source(), PresetOption.Source.OVERRIDE, option.key() + " source after override");
+                            option.source(), PresetOption.Source.OVERRIDE, option.id() + " source after override");
                 }
                 h.assertValueEqual(
                         PresetOptions.overridden(), PresetOptions.all().size(), "overridden");
                 checkOverrides(h, "under Normal");
 
-                ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+                AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
                 checkOverrides(h, "after switching to Hardcore");
-                ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+                AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
                 checkOverrides(h, "after switching back to Normal");
 
                 // The wired options act on the override: the Nether stays Hardcore under Normal,
                 // and combustion stays off under Hardcore.
                 close(h, Ambients.ambient(Level.NETHER).temperature(), 340, "overridden Nether under Normal");
-                ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+                AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
                 h.assertFalse(ZoneTrigger.COMBUSTION.active(), "combustion forms zones despite its override");
 
                 // Overriding one option leaves the others alone; clearing it brings back the preset.
@@ -272,84 +280,97 @@ public final class PresetTests {
             }
         });
 
-        // Values parse as the config file writes them, and as an operator would type them.
-        h.assertValueEqual(PresetOption.BOOLEAN.parse(true), Optional.of(true), "boolean");
-        h.assertValueEqual(PresetOption.BOOLEAN.parse("False"), Optional.of(false), "boolean text");
-        h.assertValueEqual(PresetOption.BOOLEAN.parse("yes"), Optional.empty(), "not a boolean");
-        PresetOption.Type<?> rate = PresetOptions.CROP_PHOTOSYNTHESIS_RATE.type();
+        // Values parse as the preset file writes them, and as an operator would type them.
+        h.assertValueEqual(PresetType.BOOLEAN.parse(true), Optional.of(true), "boolean");
+        h.assertValueEqual(PresetType.BOOLEAN.parse("False"), Optional.of(false), "boolean text");
+        h.assertValueEqual(PresetType.BOOLEAN.parse("yes"), Optional.empty(), "not a boolean");
+        PresetType<?> rate = PresetOptions.CROP_PHOTOSYNTHESIS_RATE.type();
         h.assertValueEqual(rate.parse(1), Optional.of(1.0), "a TOML integer");
         h.assertValueEqual(rate.parse("0.25"), Optional.of(0.25), "a number as text");
         h.assertValueEqual(rate.parse(-1.0), Optional.empty(), "a negative rate");
-        PresetOption.Type<?> variant = PresetOptions.AMBIENT_VARIANT.type();
+        PresetType<?> variant = PresetOptions.AMBIENT_VARIANT.type();
         h.assertValueEqual(variant.parse("hardcore"), Optional.of(AtmospherePreset.HARDCORE), "a variant");
         h.assertValueEqual(variant.parse("preset"), Optional.empty(), "\"preset\" isn't a variant");
         h.succeed();
     }
 
     /**
-     * {@code /zas preset} switches the preset, overrides and clears options, and keeps overrides
-     * across a switch; its report marks each value as from the preset or an override (OPS-014,
-     * OPS-015).
+     * {@code /zas preset}, SS13 Framework's command under {@code /zas}, switches the preset, overrides
+     * and clears options by their bare keys, and keeps overrides across a switch; its report marks
+     * each value as from the preset or an override (OPS-014, OPS-015). {@code /ss13 preset} is the
+     * same switch, and both change {@link Atmospheres#preset()}.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void ops_014_preset_command_keeps_overrides(GameTestHelper h) {
         requireNoOverrides(h);
         Capture c = new Capture();
         CommandSourceStack op = stack(h, c);
-        AtmospherePreset before = ZasServerConfig.preset();
-        ZasServerConfig.holdSavesForTest(true);
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
             run(op, "zas preset");
             String report = c.text();
-            h.assertTrue(report.contains("Atmosphere preset: Normal, 0 of 7 options overridden"), report);
-            h.assertTrue(report.contains("  Server config: "), report);
             h.assertTrue(
-                    report.contains("  ambient_variant = NORMAL [preset] (Normal NORMAL, Hardcore HARDCORE)"), report);
-            // The zone triggers are wired (CORE-056), and block damage (FLOW-007), so they don't wait.
+                    report.contains("Preset: Normal, 0 of " + Presets.options().size() + " options overridden"),
+                    report);
+            h.assertTrue(report.contains("  Preset file: "), report);
             h.assertTrue(
-                    report.contains("  combustion_forms_zones = false [preset] (Normal false, Hardcore true)\n"),
+                    report.contains("  zas:ambient_variant = NORMAL [preset] (Normal NORMAL, Hardcore HARDCORE)"),
                     report);
             h.assertTrue(
-                    report.contains("  planting_forms_zones = false [preset] (Normal false, Hardcore true)\n"), report);
-            h.assertTrue(
-                    report.contains("  block_pressure_damage = false [preset] (Normal false, Hardcore true)\n"),
-                    report);
-            // Photosynthesis reads its rates (CONT-057), so they don't wait either.
-            h.assertTrue(
-                    report.contains("  crop_photosynthesis_rate = 0.125 [preset] (Normal 0.125, Hardcore 0.0625)\n"),
+                    report.contains("  zas:combustion_forms_zones = false [preset] (Normal false, Hardcore true)\n"),
                     report);
             h.assertTrue(
-                    report.contains("  leaf_photosynthesis_rate = 0.0625 [preset] (Normal 0.0625, Hardcore 0.03125)\n"),
+                    report.contains("  zas:planting_forms_zones = false [preset] (Normal false, Hardcore true)\n"),
                     report);
-            h.assertTrue(report.contains("Zone triggers under both presets (CORE-055)"), report);
+            h.assertTrue(
+                    report.contains("  zas:block_pressure_damage = false [preset] (Normal false, Hardcore true)\n"),
+                    report);
+            h.assertTrue(
+                    report.contains(
+                            "  zas:crop_photosynthesis_rate = 0.125 [preset] (Normal 0.125, Hardcore 0.0625)\n"),
+                    report);
+            h.assertTrue(
+                    report.contains(
+                            "  zas:leaf_photosynthesis_rate = 0.0625 [preset] (Normal 0.0625, Hardcore 0.03125)\n"),
+                    report);
 
             c.clear();
             run(op, "zas preset override ambient_variant hardcore");
-            h.assertTrue(c.text().contains("Overrode ambient_variant with HARDCORE under either preset"), c.text());
-            h.assertTrue(c.text().contains("  ambient_variant = HARDCORE [override]"), c.text());
+            h.assertTrue(c.text().contains("Overrode zas:ambient_variant with HARDCORE under either preset"), c.text());
+            h.assertTrue(c.text().contains("  zas:ambient_variant = HARDCORE [override]"), c.text());
             h.assertValueEqual(PresetOptions.AMBIENT_VARIANT.get(), AtmospherePreset.HARDCORE, "after override");
 
             c.clear();
             run(op, "zas preset hardcore");
-            h.assertTrue(c.text().contains("Switched the atmosphere preset to Hardcore; overrides kept: 1"), c.text());
-            run(op, "zas preset normal");
-            h.assertValueEqual(ZasServerConfig.preset(), AtmospherePreset.NORMAL, "preset");
+            h.assertTrue(c.text().contains("Switched every mod to the Hardcore preset; overrides kept: 1"), c.text());
+            h.assertValueEqual(
+                    Atmospheres.preset(),
+                    io.github.west3436.zas.api.atmosphere.AtmospherePreset.HARDCORE,
+                    "the API's preset after /zas preset hardcore");
+            h.assertTrue(PresetOptions.BLOCK_PRESSURE_DAMAGE.get(), "block damage under Hardcore");
+            run(op, "ss13 preset normal");
+            h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.NORMAL, "the preset after /ss13 preset");
+            h.assertValueEqual(
+                    Atmospheres.preset(),
+                    io.github.west3436.zas.api.atmosphere.AtmospherePreset.NORMAL,
+                    "the API's preset after /ss13 preset normal");
             h.assertValueEqual(PresetOptions.AMBIENT_VARIANT.get(), AtmospherePreset.HARDCORE, "kept override");
             c.clear();
             run(op, "zas preset");
-            h.assertTrue(c.text().contains("Atmosphere preset: Normal, 1 of 7 options overridden"), c.text());
-            h.assertTrue(c.text().contains("  ambient_variant = HARDCORE [override]"), c.text());
-            h.assertTrue(c.text().contains("  planting_forms_zones = false [preset]"), c.text());
+            h.assertTrue(c.text().contains("Preset: Normal, 1 of "), c.text());
+            h.assertTrue(c.text().contains("  zas:ambient_variant = HARDCORE [override]"), c.text());
+            h.assertTrue(c.text().contains("  zas:planting_forms_zones = false [preset]"), c.text());
 
             c.clear();
             run(op, "zas preset clear ambient_variant");
-            h.assertTrue(c.text().contains("ambient_variant follows the preset again, now Normal"), c.text());
+            h.assertTrue(c.text().contains("zas:ambient_variant follows the preset again, now Normal"), c.text());
             h.assertValueEqual(PresetOptions.AMBIENT_VARIANT.source(), PresetOption.Source.PRESET, "cleared");
 
             run(op, "zas preset override leaf_photosynthesis_rate 0.5");
             h.assertValueEqual(PresetOptions.LEAF_PHOTOSYNTHESIS_RATE.get(), 0.5, "rate override");
-            run(op, "zas preset clear leaf_photosynthesis_rate");
+            run(op, "ss13 preset clear zas:leaf_photosynthesis_rate");
+            h.assertValueEqual(PresetOptions.LEAF_PHOTOSYNTHESIS_RATE.get(), 0.0625, "rate after /ss13 preset clear");
 
             refused(op, "zas preset override combustion_forms_zones maybe");
             refused(op, "zas preset override no_such_option true");
@@ -357,129 +378,210 @@ public final class PresetTests {
             h.assertValueEqual(PresetOptions.overridden(), 0, "overrides after refused commands");
         } finally {
             clearOverrides();
-            ZasServerConfig.setPreset(before);
-            ZasServerConfig.holdSavesForTest(false);
+            AtmospherePreset.switchTo(before);
         }
         h.succeed();
     }
 
-    // ---- OPS-007: a world's own copy of the server config (#139) -------------------------
-
     /**
-     * Where {@code /zas preset} saves: a singleplayer world without a server config of its own gets
-     * a new copy, then the session's later saves go to it; a world with one, a dedicated server and
-     * a synced config save in place (OPS-007).
+     * The preset and an override set with {@code /zas preset} are saved to the world's preset file
+     * and read back from it, as a restart reads them (OPS-007, OPS-014).
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void ops_007_preset_save_target(GameTestHelper h) {
-        Path shared = Path.of("config", "zas-server.toml");
-        Path copy = Path.of("saves", "World", "serverconfig", "zas-server.toml");
-        h.assertValueEqual(WorldConfigCopy.target(false, shared, copy, null), Target.NEW_COPY, "no copy");
-        h.assertValueEqual(WorldConfigCopy.target(false, shared, copy, copy), Target.COPY, "after the copy");
-        h.assertValueEqual(WorldConfigCopy.target(false, copy, copy, null), Target.IN_PLACE, "its own copy");
-        h.assertValueEqual(
-                WorldConfigCopy.target(false, copy.toAbsolutePath(), copy, null),
-                Target.IN_PLACE,
-                "its own copy, as an absolute path");
-        h.assertValueEqual(WorldConfigCopy.target(true, shared, copy, null), Target.IN_PLACE, "dedicated");
-        h.assertValueEqual(WorldConfigCopy.target(true, copy, copy, null), Target.IN_PLACE, "dedicated, copy");
-        h.assertValueEqual(WorldConfigCopy.target(false, null, copy, null), Target.IN_PLACE, "synced");
-        h.succeed();
-    }
-
-    /**
-     * In a world without a server config of its own, the first {@code /zas preset} change writes
-     * the world's own copy, with the change, and says so; the shared file is untouched. Later
-     * changes go to the copy, and a reload of the shared file doesn't undo them (OPS-007, #139).
-     */
-    @GameTest(template = "empty", batch = BATCH)
-    public static void ops_007_first_preset_change_writes_a_world_copy(GameTestHelper h) {
+    public static void ops_007_the_preset_survives_a_restart(GameTestHelper h) {
         requireNoOverrides(h);
         MinecraftServer server = h.getLevel().getServer();
-        Path shared = ZasServerConfig.file().orElseThrow(() -> new GameTestAssertException("no config file"));
-        Path copy = server.getWorldPath(new LevelResource("serverconfig")).resolve("zas-server.toml");
-        h.assertFalse(Files.exists(copy), "the GameTest world already has its own server config");
-        h.assertTrue(WorldConfigCopy.active().isEmpty(), "a copy is already active");
-        byte[] sharedBefore = bytes(shared);
-        AtmospherePreset before = ZasServerConfig.preset();
-        AtmospherePreset other =
-                before == AtmospherePreset.NORMAL ? AtmospherePreset.HARDCORE : AtmospherePreset.NORMAL;
-        Capture c = new Capture();
-        CommandSourceStack op = stack(h, c);
+        CommandSourceStack op = stack(h, new Capture());
         try {
-            run(op, "zas preset " + other.id());
-            h.assertTrue(
-                    c.text().contains("This world had no server config of its own, so it now has one: "), c.text());
-            h.assertTrue(Files.exists(copy), "no copy at " + copy);
-            h.assertTrue(text(copy).contains("preset = \"" + other.name() + "\""), "the copy: " + text(copy));
-            h.assertTrue(Arrays.equals(bytes(shared), sharedBefore), "the shared file changed");
-            h.assertValueEqual(ZasServerConfig.file(), Optional.of(copy), "the config's file");
-            h.assertValueEqual(ZasServerConfig.preset(), other, "the preset");
-
-            c.clear();
-            run(op, "zas preset override ambient_variant HARDCORE");
-            h.assertFalse(c.text().contains("no server config of its own"), "a second copy: " + c.text());
-            h.assertTrue(text(copy).contains("ambient_variant = \"HARDCORE\""), "the copy: " + text(copy));
-            h.assertTrue(Arrays.equals(bytes(shared), sharedBefore), "the shared file changed");
-
-            // NeoForge reloading the shared file puts its values in the loaded config.
-            ModConfig config = ZasServerConfig.modConfig().orElseThrow();
-            CommentedConfig values = (CommentedConfig) config.getLoadedConfig().config();
-            try (CommentedFileConfig file = CommentedFileConfig.builder(shared, TomlFormat.instance())
-                    .sync()
-                    .build()) {
-                file.load();
-                values.putAll(file);
-            }
-            ZasServerConfig.SPEC.afterReload();
-            h.assertValueEqual(ZasServerConfig.preset(), before, "the preset after the shared file's reload");
-            WorldConfigCopy.reapply(config);
-            h.assertValueEqual(ZasServerConfig.preset(), other, "the preset once the copy is reapplied");
+            run(op, "zas preset hardcore");
+            run(op, "zas preset override crop_photosynthesis_rate 0.5");
+            WorldPresets reread = PresetService.reloadForTest(server);
+            h.assertTrue(reread.hasOwnCopy(), "the world has no preset file of its own: " + reread.file());
+            h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.HARDCORE, "the preset after the restart");
+            h.assertValueEqual(PresetOptions.CROP_PHOTOSYNTHESIS_RATE.get(), 0.5, "the override after the restart");
             h.assertValueEqual(
-                    PresetOptions.AMBIENT_VARIANT.source(), PresetOption.Source.OVERRIDE, "the copy's override");
+                    PresetOptions.CROP_PHOTOSYNTHESIS_RATE.source(), PresetOption.Source.OVERRIDE, "its source");
+            h.assertTrue(PresetOptions.COMBUSTION_FORMS_ZONES.get(), "combustion after the restart");
         } finally {
-            ZasServerConfig.holdSavesForTest(true);
             clearOverrides();
-            ZasServerConfig.setPreset(before);
-            ZasServerConfig.holdSavesForTest(false);
-            try {
-                Files.deleteIfExists(copy);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-            WorldConfigCopy.forgetForTest();
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
         }
         h.succeed();
     }
 
-    private static byte[] bytes(Path file) {
-        try {
-            return Files.readAllBytes(file);
-        } catch (IOException e) {
-            throw new GameTestAssertException("can't read " + file + ": " + e);
-        }
+    // ---- OPS-007: a 1.2.0 world's preset ------------------------------------------------
+
+    /**
+     * Where a 1.2.0 {@code zas-server.toml}'s preset goes: nowhere if it says Normal and nothing is
+     * overridden; carried over and reset if it is the world's own or a dedicated server's; carried
+     * over only if it is the shared file in singleplayer and the world has no preset file yet.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void ops_007_where_a_1_2_0_preset_goes(GameTestHelper h) {
+        Path shared = Path.of("config", "zas-server.toml");
+        Path own = Path.of("saves", "World", "serverconfig", "zas-server.toml");
+        h.assertValueEqual(PresetMigration.plan(false, false, own, own, false), PresetMigration.Plan.NOTHING, "Normal");
+        h.assertValueEqual(
+                PresetMigration.plan(true, false, own, own, true),
+                PresetMigration.Plan.CARRY_AND_RESET,
+                "the world's own");
+        h.assertValueEqual(
+                PresetMigration.plan(true, false, own.toAbsolutePath(), own, false),
+                PresetMigration.Plan.CARRY_AND_RESET,
+                "the world's own, as an absolute path");
+        h.assertValueEqual(
+                PresetMigration.plan(true, true, shared, own, true),
+                PresetMigration.Plan.CARRY_AND_RESET,
+                "a dedicated server");
+        h.assertValueEqual(
+                PresetMigration.plan(true, false, shared, own, false), PresetMigration.Plan.CARRY, "the shared file");
+        h.assertValueEqual(
+                PresetMigration.plan(true, false, shared, own, true),
+                PresetMigration.Plan.KEEP_THE_WORLDS,
+                "the shared file, beside the world's preset file");
+        h.assertValueEqual(PresetMigration.plan(true, false, null, own, false), PresetMigration.Plan.CARRY, "no file");
+        h.succeed();
     }
 
-    private static String text(Path file) {
-        return new String(bytes(file), StandardCharsets.UTF_8);
+    /**
+     * A world's own 1.2.0 {@code zas-server.toml} with Hardcore and overrides: as the server starts,
+     * the preset and each override go to the framework, a value the option doesn't accept is left
+     * out, and the old entries are set back to Normal and {@code "preset"} and saved (OPS-007).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void ops_007_a_1_2_0_world_keeps_its_preset_and_overrides(GameTestHelper h) {
+        requireNoOverrides(h);
+        MinecraftServer server = h.getLevel().getServer();
+        Path serverconfig = server.getWorldPath(new LevelResource("serverconfig"));
+        Path own = serverconfig.resolve("zas-server.toml");
+        Path presetFile = serverconfig.resolve(Presets.FILE_NAME);
+        List<Runnable> restore = new ArrayList<>();
+        int[] saves = {0};
+        try {
+            moved(restore, AtmospherePreset.HARDCORE, "ambient_variant", "NORMAL", "crop_photosynthesis_rate", 0.5);
+            moved(restore, null, "combustion_forms_zones", "maybe");
+
+            PresetMigration.Result result = PresetMigration.migrate(false, own, own, presetFile, () -> saves[0]++);
+
+            h.assertValueEqual(result.plan(), PresetMigration.Plan.CARRY_AND_RESET, "the plan");
+            h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.HARDCORE, "the preset carried over");
+            h.assertValueEqual(
+                    Atmospheres.preset(),
+                    io.github.west3436.zas.api.atmosphere.AtmospherePreset.HARDCORE,
+                    "the API's preset");
+            h.assertValueEqual(PresetOptions.AMBIENT_VARIANT.get(), AtmospherePreset.NORMAL, "ambient_variant");
+            h.assertValueEqual(
+                    PresetOptions.AMBIENT_VARIANT.source(), PresetOption.Source.OVERRIDE, "ambient_variant's source");
+            h.assertValueEqual(PresetOptions.CROP_PHOTOSYNTHESIS_RATE.get(), 0.5, "crop_photosynthesis_rate");
+            h.assertValueEqual(PresetOptions.overridden(), 2, "the overrides carried over");
+            h.assertValueEqual(
+                    PresetOptions.COMBUSTION_FORMS_ZONES.source(),
+                    PresetOption.Source.PRESET,
+                    "combustion_forms_zones, whose old value isn't one");
+            h.assertValueEqual(result.refused(), Map.of("combustion_forms_zones", "maybe"), "the values left out");
+
+            h.assertValueEqual(ZasServerConfig.MOVED_PRESET.get(), AtmospherePreset.NORMAL, "the old preset entry");
+            for (Map.Entry<String, ModConfigSpec.ConfigValue<Object>> e :
+                    ZasServerConfig.MOVED_PRESET_OPTIONS.entrySet()) {
+                h.assertValueEqual(e.getValue().get(), PresetOption.FOLLOW_PRESET, "the old entry " + e.getKey());
+            }
+            h.assertValueEqual(saves[0], 1, "saves of zas-server.toml");
+
+            // Reset, the old entries say nothing more: the next start carries nothing over.
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
+            PresetMigration.Result again = PresetMigration.migrate(false, own, own, presetFile, () -> saves[0]++);
+            h.assertValueEqual(again.plan(), PresetMigration.Plan.NOTHING, "the plan at the next start");
+            h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.NORMAL, "the preset at the next start");
+        } finally {
+            restore.forEach(Runnable::run);
+            clearOverrides();
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
+        }
+        h.succeed();
+    }
+
+    /**
+     * The shared 1.2.0 {@code config/zas-server.toml} in singleplayer: carried over into a world with
+     * no preset file of its own, which the carry-over writes, and left alone, since other worlds read
+     * it; a world that has its preset file keeps it (OPS-007).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void ops_007_a_shared_1_2_0_preset_carries_over_once_per_world(GameTestHelper h) {
+        requireNoOverrides(h);
+        MinecraftServer server = h.getLevel().getServer();
+        Path serverconfig = server.getWorldPath(new LevelResource("serverconfig"));
+        Path shared = Path.of("config", "zas-server.toml");
+        Path own = serverconfig.resolve("zas-server.toml");
+        Path presetFile = serverconfig.resolve(Presets.FILE_NAME);
+        List<Runnable> restore = new ArrayList<>();
+        int[] saves = {0};
+        try {
+            moved(restore, AtmospherePreset.HARDCORE, "block_pressure_damage", false);
+
+            // As in a world with no preset file of its own; this GameTest world may have one already.
+            Path none = serverconfig.resolve("none-" + Presets.FILE_NAME);
+            PresetMigration.Result result = PresetMigration.migrate(false, shared, own, none, () -> saves[0]++);
+            h.assertValueEqual(result.plan(), PresetMigration.Plan.CARRY, "the plan");
+            h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.HARDCORE, "the preset carried over");
+            h.assertFalse(PresetOptions.BLOCK_PRESSURE_DAMAGE.get(), "block_pressure_damage carried over");
+            h.assertValueEqual(ZasServerConfig.MOVED_PRESET.get(), AtmospherePreset.HARDCORE, "the shared entry");
+            h.assertValueEqual(saves[0], 0, "saves of the shared zas-server.toml");
+            WorldPresets world = PresetService.world().orElseThrow();
+            h.assertTrue(world.hasOwnCopy() && Files.exists(presetFile), "the world's preset file wasn't written");
+
+            // The world has its preset file now, so the next start keeps the world's choice.
+            clearOverrides();
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
+            PresetMigration.Result again = PresetMigration.migrate(false, shared, own, presetFile, () -> saves[0]++);
+            h.assertValueEqual(again.plan(), PresetMigration.Plan.KEEP_THE_WORLDS, "the plan at the next start");
+            h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.NORMAL, "the world's own preset");
+            h.assertValueEqual(PresetOptions.overridden(), 0, "the world's own overrides");
+        } finally {
+            restore.forEach(Runnable::run);
+            clearOverrides();
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
+        }
+        h.succeed();
+    }
+
+    /**
+     * Puts values in the old entries, in memory only, as a 1.2.0 file would hold them, and notes how
+     * to put them back.
+     *
+     * @param preset the old preset, or null to leave it
+     * @param options keys and values, in pairs
+     */
+    private static void moved(List<Runnable> restore, AtmospherePreset preset, Object... options) {
+        if (preset != null) {
+            AtmospherePreset was = ZasServerConfig.MOVED_PRESET.get();
+            restore.add(() -> ZasServerConfig.MOVED_PRESET.set(was));
+            ZasServerConfig.MOVED_PRESET.set(preset);
+        }
+        for (int i = 0; i < options.length; i += 2) {
+            ModConfigSpec.ConfigValue<Object> entry = ZasServerConfig.MOVED_PRESET_OPTIONS.get((String) options[i]);
+            Object was = entry.get();
+            restore.add(() -> entry.set(was));
+            entry.set(options[i + 1]);
+        }
     }
 
     // ---- Helpers ------------------------------------------------------------------------
 
     private static void requireNoOverrides(GameTestHelper h) {
-        h.assertTrue(ZasServerConfig.SPEC.isLoaded(), "the server config isn't loaded");
+        h.assertTrue(Presets.isLoaded(), "the world's presets aren't loaded");
         h.assertValueEqual(PresetOptions.overridden(), 0, "preset options overridden before the test");
     }
 
     /** Runs checks under a preset, then restores the configured one. */
     private static void withPreset(GameTestHelper h, AtmospherePreset preset, Runnable checks) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(preset);
-            h.assertValueEqual(ZasServerConfig.preset(), preset, "active preset");
+            AtmospherePreset.switchTo(preset);
+            h.assertValueEqual(AtmospherePreset.active(), preset, "active preset");
+            h.assertValueEqual(Presets.active(), preset.preset(), "the framework's preset");
             checks.run();
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 
@@ -490,15 +592,15 @@ public final class PresetTests {
     }
 
     private static <T> void overrideWithDefault(PresetOption<T> option, AtmospherePreset preset) {
-        option.setOverride(option.defaultFor(preset));
+        option.setOverride(option.defaultFor(preset.preset()));
     }
 
     /** Checks each option still has the override {@link #ops_014_overrides_survive_a_preset_change} gave it. */
     private static void checkOverrides(GameTestHelper h, String when) {
         for (PresetOption<?> option : PresetOptions.all()) {
             int index = option == PresetOptions.COMBUSTION_FORMS_ZONES ? 0 : 1;
-            h.assertValueEqual(option.get(), DEFAULTS.get(option.key()).get(index), option.key() + " " + when);
-            h.assertValueEqual(option.source(), PresetOption.Source.OVERRIDE, option.key() + " source " + when);
+            h.assertValueEqual(option.get(), DEFAULTS.get(option.id().getPath()).get(index), option.id() + " " + when);
+            h.assertValueEqual(option.source(), PresetOption.Source.OVERRIDE, option.id() + " source " + when);
         }
     }
 

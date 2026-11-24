@@ -1,13 +1,14 @@
 package io.github.west3436.zas.atmos.compat.cc;
 
 import dan200.computercraft.api.peripheral.PeripheralCapability;
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.Row;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
+import io.github.west3436.ss13.compat.VersionGate;
+import io.github.west3436.ss13.compat.VersionGate.Verdict;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.Row;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
-import io.github.west3436.zas.compat.VersionGate;
-import io.github.west3436.zas.compat.VersionGate.Verdict;
+import io.github.west3436.zas.compat.ZasAdapters;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -48,12 +49,10 @@ public final class CcGateTests {
     private CcGateTests() {}
 
     private static Status shipped() {
-        for (Status status : Adapters.statuses()) {
-            if (status.row().modId().equals(CC)) {
-                return status;
-            }
-        }
-        throw new GameTestAssertException("no adapter row for CC: Tweaked in " + Adapters.statuses());
+        return ZasAdapters.ADAPTERS
+                .status(CC)
+                .orElseThrow(() -> new GameTestAssertException(
+                        "no adapter row for CC: Tweaked in " + ZasAdapters.ADAPTERS.statuses()));
     }
 
     /**
@@ -73,7 +72,7 @@ public final class CcGateTests {
         h.assertValueEqual(status.row().range(), RANGE, "the range");
         h.assertValueEqual(status.version(), installed, "the version the gate read");
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter");
-        h.assertTrue(Adapters.isActive(CC), "the adapter isn't active");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(CC), "the adapter isn't active");
         h.assertValueEqual(
                 CcCompat.registered(), ZasAtmosMod.contentEnabled(), "whether the peripherals are registered");
         h.succeed();
@@ -123,7 +122,7 @@ public final class CcGateTests {
         for (String version : List.of("1.113.0", "1.113.1", "1.120.2", "1.121.0", "1.200.0", "2.0.0")) {
             h.assertValueEqual(VersionGate.check(version, RANGE), Verdict.SUPPORTED, version);
         }
-        h.assertTrue(Adapters.isActive(CC), "the versions given turned the real adapter off");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(CC), "the versions given turned the real adapter off");
         h.succeed();
     }
 

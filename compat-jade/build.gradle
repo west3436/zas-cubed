@@ -104,6 +104,10 @@ dependencies {
     // As zas_atmos itself: the public API to compile against (CONT-095), zas at run time.
     implementation project(':zas-api')
     implementation project(':zas-atmos')
+    // SS13 Framework's PluginGate, behind which the plugin registers, as zas_atmos compiles against
+    // the framework (CONT-095). Its runs get the framework from zas_atmos's.
+    compileOnly "io.github.west3436:ss13-framework:${framework_version}"
+    testCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
 
     // Compile-only, never bundled: the adapter is optional (NFR-022).
     compileOnly "maven.modrinth:jade:${jadeOldest}"

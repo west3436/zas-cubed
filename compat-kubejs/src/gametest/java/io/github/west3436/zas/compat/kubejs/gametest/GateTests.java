@@ -1,7 +1,7 @@
 package io.github.west3436.zas.compat.kubejs.gametest;
 
-import io.github.west3436.zas.compat.VersionGate;
-import io.github.west3436.zas.compat.VersionGate.Verdict;
+import io.github.west3436.ss13.compat.VersionGate;
+import io.github.west3436.ss13.compat.VersionGate.Verdict;
 import io.github.west3436.zas.compat.kubejs.KubeJsGate;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -59,8 +59,8 @@ public final class GateTests {
                 VersionGate.check(installed, KubeJsGate.SUPPORTED), Verdict.SUPPORTED, "the range's verdict");
         h.assertTrue(KubeJsGate.pluginStarted(), "KubeJS never created the plugin");
         h.assertTrue(KubeJsGate.isActive(), "the adapter is off");
-        h.assertValueEqual(logged("The adapter for kubejs " + installed + " is on"), 1L, "lines saying it is on");
-        h.assertValueEqual(logged("The adapter for kubejs is off"), 0L, "warnings that it is off");
+        h.assertValueEqual(logged("The zas adapter for kubejs " + installed + " is on"), 1L, "lines saying it is on");
+        h.assertValueEqual(logged("The zas adapter for kubejs is off"), 0L, "warnings that it is off");
         for (String script :
                 List.of("events.js", "calls.js", "hazard.js", "hazard_throws.js", "ambient.js", "ambient_throws.js")) {
             h.assertTrue(Probe.loads(script) >= 1, script + " didn't run to its end");

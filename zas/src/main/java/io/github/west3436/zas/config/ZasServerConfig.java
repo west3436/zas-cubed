@@ -1,5 +1,7 @@
 package io.github.west3436.zas.config;
 
+import io.github.west3436.ss13.api.preset.PresetOption;
+import io.github.west3436.ss13.api.preset.Presets;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.gas.Millibuckets;
 import io.github.west3436.zas.engine.classify.EnclosureFill;
@@ -7,26 +9,23 @@ import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.engine.zone.ZoneSettings;
-import java.nio.file.Path;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.config.ModConfigs;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The server config, {@code config/zas-server.toml}, which a world's {@code
  * serverconfig/zas-server.toml} overrides: the server tier of
  * OPS-001's three (with {@link ZasCommonConfig} and {@link ZasClientConfig}).
  *
- * <p>It holds the atmosphere preset (D-14, OPS-007) and, under {@code [preset_options]}, an entry
- * for each option the preset sets ({@link PresetOptions}), which either follows the preset or
- * overrides it (OPS-014); the dimensions excluded from simulation (ENV-007); the atmos scheduler's
+ * <p>It holds the dimensions excluded from simulation (ENV-007); the atmos scheduler's
  * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) and the venting model
  * (CORE-035, CORE-068) under {@code [atmos]}; conduction and radiation (HEAT-008, HEAT-011,
  * HEAT-015, HEAT-004) under {@code [heat]}; breathing (LIFE-003, LIFE-007, LIFE-042) under
@@ -41,15 +40,28 @@ import net.neoforged.neoforge.common.NeoForge;
  * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table and thresholds join
  * this file as their features land.
  *
+ * <p>The atmosphere preset and the options it sets (D-14, OPS-007, OPS-014) moved to SS13
+ * Framework's {@code ss13_framework-presets.toml} ({@link PresetOptions}). Their old entries, {@code
+ * preset} and {@code [preset_options]}, stay defined here, commented as moved, so NeoForge keeps a
+ * 1.2.0 file's values until {@link PresetMigration} has carried them over.
+ *
  * <p>Values are read from the loaded config on each call. NeoForge reloads the file when it
- * changes on disk, so an edit applies from the next read; commands that change a value write the
- * file with {@link #save}.
+ * changes on disk, so an edit applies from the next read.
  */
 public final class ZasServerConfig {
     public static final ModConfigSpec SPEC;
 
-    /** The atmosphere difficulty preset (D-14). */
-    public static final ModConfigSpec.EnumValue<AtmospherePreset> PRESET;
+    /**
+     * The atmosphere preset as 1.2.0 kept it, which moved to SS13 Framework's preset file: read once
+     * by {@link PresetMigration}, then reset to {@link AtmospherePreset#NORMAL}.
+     */
+    public static final ModConfigSpec.EnumValue<AtmospherePreset> MOVED_PRESET;
+
+    /**
+     * Each preset option's override as 1.2.0 kept it under {@code [preset_options]}, by key: {@code
+     * "preset"} or a value. Moved with {@link #MOVED_PRESET}.
+     */
+    public static final Map<String, ModConfigSpec.ConfigValue<Object>> MOVED_PRESET_OPTIONS;
 
     /** Dimension ids excluded from simulation (ENV-007), in addition to those datapacks exclude. */
     public static final ModConfigSpec.ConfigValue<List<? extends String>> EXCLUDED_DIMENSIONS;
@@ -108,16 +120,12 @@ public final class ZasServerConfig {
     /** {@code /zas checker on|off} until the server stops; null follows the config (OPS-010). */
     private static volatile Boolean checkerOverride;
 
-    /** Whether {@link #save} leaves the file alone, for GameTests. */
-    private static volatile boolean savesHeldForTest;
-
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
-        PRESET = builder.comment(
-                        "Atmosphere difficulty preset: NORMAL or HARDCORE.",
-                        "It sets the default of every option under [preset_options]. Options overridden there",
-                        "keep their values when the preset changes. /zas preset shows each option's value and",
-                        "whether it comes from the preset or an override.")
+        MOVED_PRESET = builder.comment(
+                        "Moved: the atmosphere preset is SS13 Framework's now, in " + Presets.FILE_NAME + ",",
+                        "which sets every mod's options at once; /zas preset and /ss13 preset change it. A",
+                        "HARDCORE left here by ZAS 1.2.0 is carried over once, then set back to NORMAL.")
                 .defineEnum("preset", AtmospherePreset.NORMAL);
         EXCLUDED_DIMENSIONS = builder.comment(
                         "Dimension ids excluded from simulation, such as \"minecraft:the_end\".",
@@ -128,12 +136,23 @@ public final class ZasServerConfig {
                         () -> "",
                         o -> o instanceof String s && ResourceLocation.tryParse(s) != null);
         builder.comment(
-                        "Options the preset sets. Each is \"" + PresetOption.FOLLOW_PRESET
-                                + "\" to take the active preset's default, or a value,",
-                        "which overrides the preset: it applies under either preset and stays when the preset",
-                        "changes. The comment on each gives its Normal and Hardcore defaults.")
+                        "Moved: the options the preset sets are in " + Presets.FILE_NAME + ", under",
+                        "[options.zas]. An override left here by ZAS 1.2.0 is carried over once, then set back",
+                        "to \"" + PresetOption.FOLLOW_PRESET + "\".")
                 .push("preset_options");
-        PresetOptions.define(builder);
+        Map<String, ModConfigSpec.ConfigValue<Object>> moved = new LinkedHashMap<>();
+        for (PresetOption<?> option : PresetOptions.all()) {
+            String key = option.id().getPath();
+            moved.put(
+                    key,
+                    builder.comment("Moved to " + Presets.FILE_NAME + " as " + option.id() + ".")
+                            .define(
+                                    key,
+                                    PresetOption.FOLLOW_PRESET,
+                                    raw -> PresetOption.followsPreset(raw)
+                                            || option.type().parse(raw).isPresent()));
+        }
+        MOVED_PRESET_OPTIONS = Collections.unmodifiableMap(moved);
         builder.pop();
         builder.push("atmos");
         PERIOD_TICKS = builder.comment(
@@ -243,69 +262,6 @@ public final class ZasServerConfig {
     /** Registers the config with the mod. */
     public static void register(ModContainer container) {
         container.registerConfig(ModConfig.Type.SERVER, SPEC);
-        IEventBus modBus = container.getEventBus();
-        if (modBus != null) {
-            WorldConfigCopy.register(modBus, NeoForge.EVENT_BUS);
-        }
-    }
-
-    /** The active preset; {@link AtmospherePreset#NORMAL} while no world's config is loaded. */
-    public static AtmospherePreset preset() {
-        return SPEC.isLoaded() ? PRESET.get() : AtmospherePreset.NORMAL;
-    }
-
-    /**
-     * Switches the preset in the loaded config. Overrides stay (OPS-014). Not written to the file:
-     * {@link #save} does that.
-     *
-     * @throws IllegalStateException if no world's config is loaded
-     */
-    public static void setPreset(AtmospherePreset preset) {
-        if (!SPEC.isLoaded()) {
-            throw new IllegalStateException("no world's server config is loaded");
-        }
-        PRESET.set(preset);
-    }
-
-    /**
-     * Writes the loaded config so a change made by command lasts: to the file it came from, or, in
-     * a singleplayer world without a server config of its own, to a new copy in the world's {@code
-     * serverconfig/}, leaving the shared file to the other worlds ({@link WorldConfigCopy},
-     * OPS-007). Server thread.
-     *
-     * @return what it wrote; empty while no world's config is loaded, or while saves are held
-     * @throws java.io.UncheckedIOException if the world's copy can't be written
-     */
-    public static Optional<WorldConfigCopy.Saved> save(MinecraftServer server) {
-        if (!SPEC.isLoaded() || savesHeldForTest) {
-            return Optional.empty();
-        }
-        return modConfig().map(config -> WorldConfigCopy.save(server, config));
-    }
-
-    /**
-     * For GameTests: makes {@link #save} leave the file alone, so commands under test don't write
-     * the config, whose reload would drop other tests' unsaved values.
-     */
-    public static void holdSavesForTest(boolean hold) {
-        savesHeldForTest = hold;
-    }
-
-    /**
-     * The file the loaded server config is kept in: the world's {@code serverconfig/zas-server.toml}
-     * if it has one, including one {@link #save} made this session, else {@code
-     * config/zas-server.toml}. Empty while none is loaded, or for a config a server synced to this
-     * client.
-     */
-    public static Optional<Path> file() {
-        if (!SPEC.isLoaded()) {
-            return Optional.empty();
-        }
-        Optional<Path> copy = WorldConfigCopy.active();
-        if (copy.isPresent()) {
-            return copy;
-        }
-        return modConfig().map(WorldConfigCopy::path);
     }
 
     /** NeoForge's record of this config. */

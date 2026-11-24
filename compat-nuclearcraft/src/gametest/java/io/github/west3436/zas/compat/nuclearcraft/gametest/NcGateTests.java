@@ -1,11 +1,12 @@
 package io.github.west3436.zas.compat.nuclearcraft.gametest;
 
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.GasTags;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.nuclearcraft.NuclearCraftCompat;
 import io.github.west3436.zas.compat.nuclearcraft.NuclearCraftSettings;
 import io.github.west3436.zas.life.Protections;
@@ -68,10 +69,7 @@ public final class NcGateTests {
 
     /** The adapter's row in zas's table, as the loader found it. */
     static Status status(GameTestHelper h) {
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(NuclearCraftCompat.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(NuclearCraftCompat.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for NuclearCraft");
         return status;
     }
@@ -97,7 +95,7 @@ public final class NcGateTests {
         h.assertValueEqual(status.row().entryClass(), NuclearCraftCompat.class.getName(), "the row's entry class");
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter's state");
-        h.assertTrue(Adapters.isActive(NuclearCraftCompat.MOD_ID), "zas says the adapter is off");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(NuclearCraftCompat.MOD_ID), "zas says the adapter is off");
         h.assertTrue(NuclearCraftCompat.isActive(), "the adapter says it never started");
         h.assertTrue(
                 ModConfigs.getFileMap().containsKey(NuclearCraftSettings.FILE), "its config file isn't registered");

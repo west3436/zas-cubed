@@ -5,8 +5,8 @@ apply plugin: 'net.neoforged.moddev'
 // the zas jar (zas/build.gradle's `bundled`), where only KubeJS ever reads the file and loads the
 // plugin it names, so the game runs the same without KubeJS (COMPAT-001, NFR-022). What scripts get
 // is the public API, which works with the content off, so the adapter compiles against the API, and
-// against zas for one thing only: the version check (VersionGate). KubeJS and Rhino are never in a
-// jar of ours: both are compiled against, and added to this project's own runs.
+// against SS13 Framework for one thing only: the version check (PluginGate). KubeJS and Rhino are
+// never in a jar of ours: both are compiled against, and added to this project's own runs.
 
 // What a run of the GameTests loads: the newest KubeJS by default, the oldest supported one with
 // -Pkubejs.version=floor, or the last one before it with -Pkubejs.version=unsupported. Each goes
@@ -69,9 +69,9 @@ sourceSets.gametest.resources.srcDir(emptyStructures)
 
 dependencies {
     implementation project(':zas-api')
-    // For VersionGate alone: KubeJS finds the plugin by itself, so the plugin checks KubeJS's
-    // version before it registers anything.
-    compileOnly project(':zas')
+    // For SS13 Framework's PluginGate alone: KubeJS finds the plugin by itself, so the plugin checks
+    // KubeJS's version before it registers anything.
+    compileOnly "io.github.west3436:ss13-framework:${framework_version}"
     // Compile-only, so no jar and no run but this project's own ever holds them. Both in the
     // oldest builds the adapter supports, so that it uses nothing newer. Neither brings what its
     // POM names: KubeJS nests its libraries in its jar, where the game finds them.

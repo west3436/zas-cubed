@@ -19,7 +19,6 @@ import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.environment.DimensionAmbient;
@@ -93,13 +92,13 @@ public final class EnvironmentRulesTests {
 
     /** Runs a body under the Normal preset, then restores the configured one. */
     private static void underNormal(GameTestHelper h, Runnable body) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
-            h.assertValueEqual(ZasServerConfig.preset(), AtmospherePreset.NORMAL, "the active preset");
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
+            h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.NORMAL, "the active preset");
             body.run();
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 

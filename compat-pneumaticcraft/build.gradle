@@ -82,6 +82,8 @@ dependencies {
 
     // GameTests (only) ask the framework what it loaded and drive its atmos ticks and breath checks.
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     gametestCompileOnly project(':engine')
 
     releaseJar project(':dist')

@@ -77,6 +77,8 @@ dependencies {
     // GameTests (only) ask the framework and the content what they did. They reach Modern
     // Industrialization's blocks and fluids by id, so nothing of it is compiled against.
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     gametestCompileOnly project(':engine')
     gametestCompileOnly project(':zas-atmos')
 

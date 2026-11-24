@@ -1,8 +1,8 @@
 package io.github.west3436.zas.compat.sable.gametest;
 
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.sable.SableCompat;
 import io.github.west3436.zas.compat.sable.SableVersions;
 import io.github.west3436.zas.compat.sable.mixin.SableMixinPlugin;
@@ -33,7 +33,7 @@ public final class SableUnsupportedTests {
         Status status = SableGateTests.status(h);
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(SableVersions.MOD_ID), "zas says the adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(SableVersions.MOD_ID), "zas says the adapter is on");
         h.assertFalse(SableCompat.isActive(), "the adapter says it started");
         // Mixin read the config, as Sable is there, and its plugin kept the hooks off.
         h.assertTrue(SableMixinPlugin.loaded(), "Mixin never loaded the adapter's config");

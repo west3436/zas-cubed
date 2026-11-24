@@ -1,9 +1,9 @@
 package io.github.west3436.zas.compat.nuclearcraft.gametest;
 
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.gas.GasProperties;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.nuclearcraft.NuclearCraftCompat;
 import io.github.west3436.zas.compat.nuclearcraft.NuclearCraftSettings;
 import io.github.west3436.zas.life.Protections;
@@ -39,7 +39,7 @@ public final class NcUnsupportedTests {
         Status status = NcGateTests.status(h);
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(NuclearCraftCompat.MOD_ID), "zas says the adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(NuclearCraftCompat.MOD_ID), "zas says the adapter is on");
         h.assertFalse(NuclearCraftCompat.isActive(), "the adapter says it started");
 
         // Nothing the adapter adds is there.

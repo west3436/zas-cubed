@@ -32,7 +32,6 @@ import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.PresetOptions;
-import io.github.west3436.zas.config.ZasServerConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -106,12 +105,12 @@ public final class ContainerFailureTests {
 
     /** Runs checks under a preset, then restores the configured one. */
     private static void withPreset(AtmospherePreset preset, Runnable checks) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(preset);
+            AtmospherePreset.switchTo(preset);
             checks.run();
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 

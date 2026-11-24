@@ -19,7 +19,6 @@ import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.io.ByteArrayInputStream;
@@ -367,12 +366,12 @@ public final class PlacedTransferValveTests {
     }
 
     private static void withPreset(AtmospherePreset preset, Runnable checks) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(preset);
+            AtmospherePreset.switchTo(preset);
             checks.run();
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 

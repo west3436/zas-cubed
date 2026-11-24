@@ -1,11 +1,12 @@
 package io.github.west3436.zas.compat.adastra.gametest;
 
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.Row;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
-import io.github.west3436.zas.compat.VersionGate;
-import io.github.west3436.zas.compat.VersionGate.Verdict;
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.Row;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
+import io.github.west3436.ss13.compat.VersionGate;
+import io.github.west3436.ss13.compat.VersionGate.Verdict;
+import io.github.west3436.zas.compat.ZasAdapters;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -36,12 +37,10 @@ public final class GateTests {
     private GateTests() {}
 
     private static Status shipped(GameTestHelper h) {
-        for (Status status : Adapters.statuses()) {
-            if (status.row().modId().equals(AD_ASTRA)) {
-                return status;
-            }
-        }
-        throw new GameTestAssertException("no adapter row for Ad Astra in " + Adapters.statuses());
+        return ZasAdapters.ADAPTERS
+                .status(AD_ASTRA)
+                .orElseThrow(() -> new GameTestAssertException(
+                        "no adapter row for Ad Astra in " + ZasAdapters.ADAPTERS.statuses()));
     }
 
     /**
@@ -61,7 +60,7 @@ public final class GateTests {
         h.assertValueEqual(status.version(), installed, "the version the gate read");
         h.assertValueEqual(installed, "1.16.26", "the Ad Astra this run installs");
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter");
-        h.assertTrue(Adapters.isActive(AD_ASTRA), "the adapter isn't active");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(AD_ASTRA), "the adapter isn't active");
         h.succeed();
     }
 
@@ -87,7 +86,7 @@ public final class GateTests {
         for (String version : List.of("1.16.26", "1.16.27", "1.16.100")) {
             h.assertValueEqual(VersionGate.check(version, RANGE), Verdict.SUPPORTED, version);
         }
-        h.assertTrue(Adapters.isActive(AD_ASTRA), "the mocked versions turned the real adapter off");
+        h.assertTrue(ZasAdapters.ADAPTERS.isActive(AD_ASTRA), "the mocked versions turned the real adapter off");
         h.succeed();
     }
 

@@ -1,9 +1,9 @@
 package io.github.west3436.zas.compat.northstar.gametest;
 
 import com.lightning.northstar.world.oxygen.NorthstarOxygen;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.northstar.NorthstarCompat;
 import io.github.west3436.zas.compat.northstar.NorthstarVersions;
 import io.github.west3436.zas.compat.northstar.mixin.NorthstarMixinPlugin;
@@ -26,13 +26,10 @@ public final class NorthstarOffTests {
 
     @GameTest(template = "empty")
     public static void compat_002_the_adapter_stays_off_with_an_older_northstar(GameTestHelper h) {
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(NorthstarVersions.MOD_ID))
-                .findFirst()
-                .orElse(null);
+        Status status = ZasAdapters.ADAPTERS.status(NorthstarVersions.MOD_ID).orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Northstar");
         h.assertValueEqual(status.state(), State.UNSUPPORTED, "the adapter's state");
-        h.assertFalse(Adapters.isActive(NorthstarVersions.MOD_ID), "zas says the adapter is on");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(NorthstarVersions.MOD_ID), "zas says the adapter is on");
         h.assertFalse(NorthstarCompat.isActive(), "the adapter started");
         h.assertTrue(NorthstarMixinPlugin.loaded(), "the adapter's mixin config wasn't loaded with Northstar");
         h.assertFalse(NorthstarMixinPlugin.applies(), "the adapter's mixins apply to an unsupported Northstar");

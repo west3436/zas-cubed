@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
-import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.engine.fire.CarbonCombustion;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.engine.gas.GasDefinition;
