@@ -1,5 +1,6 @@
 package io.github.west3436.zas.simulation;
 
+import io.github.west3436.ss13.api.area.Areas;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.event.BlocksMovedEvent;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -160,6 +161,15 @@ public final class Relocator {
             return done(RelocationOutcome.UNLOADED);
         }
         ApiEvents.post(new BlocksMovedEvent(ticket.level(), ticket.box(), destination, ticket.mover()));
+        // SS13 Framework's stored areas go with the blocks, so a mover that hands over here doesn't
+        // move them itself.
+        Areas.moved(
+                ticket.level(),
+                ticket.box(),
+                destination.level(),
+                destination.pivot(),
+                destination.target(),
+                destination.rotation());
         m.state = State.COMPLETING;
         m.completed = new CompletableFuture<>();
         m.target = target;

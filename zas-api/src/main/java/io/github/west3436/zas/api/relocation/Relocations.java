@@ -59,7 +59,9 @@ import net.minecraft.world.phys.Vec3;
  * <p><b>Events.</b> Each zone that arrives fires a {@link
  * io.github.west3436.zas.api.event.ZoneRelocatedEvent} in the destination's level, naming its id in
  * both places. {@link #complete} fires a {@link io.github.west3436.zas.api.event.BlocksMovedEvent}
- * before it returns, so a mod whose blocks link to each other by position can update the links.
+ * before it returns, so a mod whose blocks link to each other by position can update the links. It
+ * also carries SS13 Framework's stored areas wholly inside the box with the blocks ({@code
+ * Areas.moved}), so a mover that hands over here doesn't move them itself.
  *
  * <p><b>Limits.</b> A move fails whole, saying why ({@link RelocationOutcome}): when a zone in the
  * box is paused or already being moved, when the zones together have more cells than the server
