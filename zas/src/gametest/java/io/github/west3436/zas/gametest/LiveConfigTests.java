@@ -20,40 +20,27 @@ import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.mutation.ZonePins;
-import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.HazardConfig;
-import io.github.west3436.zas.config.WorldConfigCopy;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
-import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.life.HazardLevels;
 import io.github.west3436.zas.life.HazardProfile;
 import io.github.west3436.zas.life.HazardProfiles;
 import io.github.west3436.zas.life.HazardType;
 import io.github.west3436.zas.simulation.DimensionAtmos;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.UnaryOperator;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -63,14 +50,14 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * restart, unless it is marked restart-only.
  *
  * <p>A changed setting reaches every test running beside it. The tests in {@link #BATCH} change a
- * setting and put it back within one call, so nothing else sees it. The two that wait for real game
- * ticks have a batch each.
+ * setting and put it back within one call, so nothing else sees it. The one that waits for real game
+ * ticks has a batch of its own. The preset isn't in this file any more: it is SS13 Framework's, whose
+ * own tests cover a hand edit of its file.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class LiveConfigTests {
     private static final String BATCH = "ops_016_live_config";
-    private static final String COPY_BATCH = "ops_016_live_config_copy";
     private static final String PERIOD_BATCH = "ops_016_live_config_period";
 
     private LiveConfigTests() {}
@@ -546,7 +533,6 @@ public final class LiveConfigTests {
         List<Runnable> restore = new ArrayList<>();
         try {
             // Read first, so each one holds the cached value a reload must drop.
-            AtmospherePreset preset = ZasServerConfig.preset();
             ExchangeSettings.Venting venting = ZasServerConfig.venting();
             int period = ZasServerConfig.scheduler().periodTicks();
             double oxygen = BreathingConfig.oxygenMinimum();
@@ -554,12 +540,9 @@ public final class LiveConfigTests {
             h.assertFalse(ZasServerConfig.excludes(excluded), "excluded already");
             h.assertTrue(HazardConfig.enabled(Level.END, HazardType.BURNS), "burns are off in the End already");
 
-            AtmospherePreset otherPreset =
-                    preset == AtmospherePreset.NORMAL ? AtmospherePreset.HARDCORE : AtmospherePreset.NORMAL;
             ExchangeSettings.Venting otherVenting = venting == ExchangeSettings.Venting.VOLUME_AWARE
                     ? ExchangeSettings.Venting.FAITHFUL
                     : ExchangeSettings.Venting.VOLUME_AWARE;
-            put(values, restore, List.of("preset"), otherPreset.name());
             put(values, restore, List.of("atmos", "venting"), otherVenting.name());
             put(values, restore, List.of("atmos", "period_ticks"), period + 20);
             put(values, restore, List.of("breathing", "oxygen_minimum_kpa"), oxygen + 1);
@@ -568,7 +551,6 @@ public final class LiveConfigTests {
             put(values, restore, List.of("hazards", "dimension_overrides"), List.of("minecraft:the_end burns off"));
             ZasServerConfig.SPEC.afterReload();
 
-            h.assertValueEqual(ZasServerConfig.preset(), otherPreset, "the preset");
             h.assertValueEqual(ZasServerConfig.venting(), otherVenting, "the venting model");
             h.assertValueEqual(ZasServerConfig.scheduler().periodTicks(), period + 20, "the period");
             h.assertTrue(BreathingConfig.oxygenMinimum() == oxygen + 1, "the O2 minimum");
@@ -653,63 +635,6 @@ public final class LiveConfigTests {
         });
     }
 
-    /**
-     * A hand edit of a world's copy of the config, on disk, with real game ticks: NeoForge doesn't
-     * watch a copy made this session, so {@link WorldConfigCopy#pickUpEdits} applies it. A copy that
-     * doesn't parse leaves the values as they are, and a value the config wouldn't accept takes its
-     * default, as in NeoForge's own load, so neither can take the server down.
-     */
-    @GameTest(template = "empty", batch = COPY_BATCH, timeoutTicks = 200)
-    public static void ops_016_a_hand_edit_of_a_world_copy_applies_by_the_next_atmos_tick(GameTestHelper h) {
-        MinecraftServer server = h.getLevel().getServer();
-        Path copy = server.getWorldPath(new LevelResource("serverconfig")).resolve("zas-server.toml");
-        h.assertFalse(Files.exists(copy), "the GameTest world already has its own server config");
-        h.assertTrue(WorldConfigCopy.active().isEmpty(), "a copy is already active");
-        ExchangeSettings.Venting venting = ZasServerConfig.VENTING.get();
-        int period = ZasServerConfig.PERIOD_TICKS.get();
-        ExchangeSettings.Venting edited = venting == ExchangeSettings.Venting.VOLUME_AWARE
-                ? ExchangeSettings.Venting.FAITHFUL
-                : ExchangeSettings.Venting.VOLUME_AWARE;
-        Runnable restore = () -> {
-            ZasServerConfig.VENTING.set(venting);
-            ZasServerConfig.PERIOD_TICKS.set(period);
-            try {
-                Files.deleteIfExists(copy);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-            WorldConfigCopy.forgetForTest();
-        };
-        Optional<WorldConfigCopy.Saved> saved = ZasServerConfig.save(server);
-        h.assertTrue(saved.isPresent() && saved.get().newCopy(), "the save didn't make a copy: " + saved);
-        int wait = period + 1; // so an atmos tick closes in between
-
-        after(h, 1, restore, () -> {
-            h.assertValueEqual(ZasServerConfig.venting(), venting, "the venting model before the edit");
-            edit(h, copy, text -> text.replace("venting = \"" + venting.name(), "venting = \"" + edited.name()));
-        });
-        after(h, 1 + wait, restore, () -> {
-            h.assertValueEqual(ZasServerConfig.venting(), edited, "the venting model after the edit");
-            edit(h, copy, text -> text + "\n[atmos\nnot toml");
-        });
-        after(h, 1 + 2 * wait, restore, () -> {
-            h.assertValueEqual(ZasServerConfig.venting(), edited, "the venting model with a broken file");
-            edit(
-                    h,
-                    copy,
-                    text -> text.replace("\n[atmos\nnot toml", "")
-                            .replaceFirst("period_ticks = \\d+", "period_ticks = \"soon\""));
-        });
-        after(h, 1 + 3 * wait, restore, () -> {
-            int corrected = ZasServerConfig.scheduler().periodTicks();
-            ExchangeSettings.Venting kept = ZasServerConfig.venting();
-            restore.run();
-            h.assertValueEqual(corrected, SchedulerSettings.DEFAULT.periodTicks(), "a period that isn't a number");
-            h.assertValueEqual(kept, edited, "the venting model beside it");
-            h.succeed();
-        });
-    }
-
     /** Runs a step after a delay; if it fails, puts things back first, so later tests aren't affected. */
     private static void after(GameTestHelper h, int ticks, Runnable restore, Runnable step) {
         h.runAfterDelay(ticks, () -> {
@@ -720,23 +645,6 @@ public final class LiveConfigTests {
                 throw e;
             }
         });
-    }
-
-    /**
-     * Edits a file and moves its time on. This server's game ticks run far faster than real time, so
-     * two edits here can fall within one tick of a file system's clock, as no person's would.
-     */
-    private static void edit(GameTestHelper h, Path file, UnaryOperator<String> change) {
-        try {
-            String before = Files.readString(file, StandardCharsets.UTF_8);
-            String after = change.apply(before);
-            h.assertFalse(after.equals(before), "the edit changed nothing in:\n" + before);
-            FileTime later = FileTime.fromMillis(Files.getLastModifiedTime(file).toMillis() + 1000);
-            Files.writeString(file, after, StandardCharsets.UTF_8);
-            Files.setLastModifiedTime(file, later);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     /** The values NeoForge holds for the server config. */

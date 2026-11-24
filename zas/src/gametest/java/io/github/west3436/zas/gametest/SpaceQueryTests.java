@@ -27,7 +27,6 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.FireConfig;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
@@ -132,20 +131,20 @@ public final class SpaceQueryTests {
     /** The API's preset is the server's, from the next read after it changes (SPACE-004, OPS-007). */
     @GameTest(template = "empty")
     public static void space_004_the_api_reports_the_servers_preset(GameTestHelper h) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
             h.assertValueEqual(
                     Atmospheres.preset(),
                     io.github.west3436.zas.api.atmosphere.AtmospherePreset.NORMAL,
                     "under Normal");
-            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             h.assertValueEqual(
                     Atmospheres.preset(),
                     io.github.west3436.zas.api.atmosphere.AtmospherePreset.HARDCORE,
                     "under Hardcore");
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
         h.succeed();
     }

@@ -6,7 +6,6 @@ import io.github.west3436.zas.api.environment.AmbientProviders;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.compat.aeronautics.AeroSettings;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.environment.Ambients;
@@ -48,7 +47,7 @@ final class Bench {
         }
         AeroSettings.FOLLOW_AMBIENT.set(AeroSettings.DEFAULT_FOLLOW_AMBIENT);
         AeroSettings.SEED_FROM_DIMENSION_PHYSICS.set(AeroSettings.DEFAULT_SEED_FROM_DIMENSION_PHYSICS);
-        ZasServerConfig.PRESET.set(AtmospherePreset.NORMAL);
+        AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
         // The test server has no data pack of Sable's, so the only entries are a test's.
         sableEntries().clear();
     }

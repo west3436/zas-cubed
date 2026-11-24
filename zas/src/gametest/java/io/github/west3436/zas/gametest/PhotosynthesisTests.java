@@ -650,13 +650,13 @@ public final class PhotosynthesisTests {
 
     /** Runs a body under a preset, then restores the configured one. */
     private static void withPreset(GameTestHelper h, AtmospherePreset preset, Runnable body) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(preset);
-            h.assertValueEqual(ZasServerConfig.preset(), preset, "active preset");
+            AtmospherePreset.switchTo(preset);
+            h.assertValueEqual(AtmospherePreset.active(), preset, "active preset");
             body.run();
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 }

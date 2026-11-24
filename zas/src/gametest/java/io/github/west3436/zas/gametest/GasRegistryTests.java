@@ -437,20 +437,20 @@ public final class GasRegistryTests {
      */
     @GameTest(template = "empty")
     public static void api_059_container_explosions_follow_the_preset(GameTestHelper h) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
             h.assertFalse(Atmospheres.containerExplosionsBreakBlocks(), "under Normal");
-            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             h.assertTrue(Atmospheres.containerExplosionsBreakBlocks(), "under Hardcore");
             PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.setOverride(false);
             h.assertFalse(Atmospheres.containerExplosionsBreakBlocks(), "overridden off under Hardcore");
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
             PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.setOverride(true);
             h.assertTrue(Atmospheres.containerExplosionsBreakBlocks(), "overridden on under Normal");
         } finally {
             PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.clearOverride();
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
         h.succeed();
     }

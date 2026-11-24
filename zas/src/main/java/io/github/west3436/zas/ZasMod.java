@@ -1,10 +1,13 @@
 package io.github.west3436.zas;
 
+import io.github.west3436.ss13.api.preset.Presets;
 import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.change.TriggerStates;
 import io.github.west3436.zas.command.ZasCommands;
 import io.github.west3436.zas.compat.Adapters;
+import io.github.west3436.zas.config.PresetMigration;
+import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasClientConfig;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.debug.DebugOverlay;
@@ -55,6 +58,11 @@ public final class ZasMod {
         IgnitionEvents.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
         ServerReactions.register(modBus, NeoForge.EVENT_BUS);
+        // The preset is SS13 Framework's (OPS-007): ZAS³'s options join its switch, /zas preset is
+        // its command under /zas, and a 1.2.0 world's preset is carried over as the server starts.
+        PresetOptions.register();
+        Presets.addCommandAlias(MOD_ID);
+        PresetMigration.register(NeoForge.EVENT_BUS);
         Ambients.register(NeoForge.EVENT_BUS);
         ZasCommonConfig.register(container);
         ZasClientConfig.register(container);
