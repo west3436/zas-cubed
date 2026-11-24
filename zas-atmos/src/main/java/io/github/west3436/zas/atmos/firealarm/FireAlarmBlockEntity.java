@@ -1,15 +1,16 @@
 package io.github.west3436.zas.atmos.firealarm;
 
 import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
@@ -31,12 +32,15 @@ import net.minecraft.world.phys.Vec3;
  * <p>A client plays its alarm from its block state ({@link FireAlarmVoice}, CONT-128). All the server
  * plays is the click when it resets.
  */
-public class FireAlarmBlockEntity extends AtmosDevice implements PoweredDevice, Labelled {
+public class FireAlarmBlockEntity extends AtmosDevice implements PoweredPart, Labelled {
     /** vg's fire alarm trips above 473 K (CONT-044). */
     public static final double TRIGGER_KELVIN = 473.0;
 
     private final DevicePower power = new DevicePower(
-            PowerPriority.LIFE_SUPPORT, () -> AtmosServerConfig.get(AtmosServerConfig.FIRE_ALARM_DRAW), this::now);
+            PowerChannel.ENVIRONMENT,
+            PowerPriority.HIGH,
+            () -> AtmosServerConfig.get(AtmosServerConfig.FIRE_ALARM_DRAW),
+            this::now);
     private boolean triggered;
 
     public FireAlarmBlockEntity(BlockPos pos, BlockState state) {

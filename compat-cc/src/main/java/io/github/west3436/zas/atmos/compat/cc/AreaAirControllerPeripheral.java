@@ -206,7 +206,9 @@ public final class AreaAirControllerPeripheral extends DevicePeripheral<AreaAirC
     /**
      * Its parts at its last step: each a table of its {@code block}'s id, its {@code x}, {@code y}
      * and {@code z}, whether it is {@code inZone}, whether it is {@code linked}, whether it is
-     * {@code powered}, and the {@code label} a player gave it, left out if it has none.
+     * {@code powered}, whether another provider powers it ({@code byAnother}: an APC or an airlock
+     * controller, the controller only ordering it), and the {@code label} a player gave it, left
+     * out if it has none.
      */
     @LuaFunction(mainThread = true)
     public List<Map<String, Object>> getParts() throws LuaException {
@@ -220,6 +222,7 @@ public final class AreaAirControllerPeripheral extends DevicePeripheral<AreaAirC
             table.put("inZone", part.inZone());
             table.put("linked", part.linked());
             table.put("powered", part.powered());
+            table.put("byAnother", part.byAnother());
             if (!part.label().isEmpty()) {
                 table.put("label", part.label());
             }

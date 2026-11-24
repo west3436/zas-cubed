@@ -128,6 +128,8 @@
   "gui.zas_atmos.controller.from.zone_and_link": "Zone and linked",
   "gui.zas_atmos.controller.part_on": "On",
   "gui.zas_atmos.controller.part_off": "No power",
+  "gui.zas_atmos.controller.part_another": "By another",
+  "gui.zas_atmos.controller.part_another.tooltip": "Powered by another: a provider such as an APC or an airlock controller pays for this part. This controller still orders it, and powers it again when that one goes.",
   "gui.zas_atmos.controller.label.central": "Central",
   "gui.zas_atmos.controller.back": "Back",
   "gui.zas_atmos.central.label.range": "Range",
@@ -184,10 +186,6 @@
   "gui.zas_atmos.thermo.status.no_battery": "No battery",
   "gui.zas_atmos.thermo.status.battery_empty": "Battery empty",
   "gui.zas_atmos.thermo.status.no_room": "No room",
-  "item.zas_atmos.battery": "Battery",
-  "item.zas_atmos.high_capacity_battery": "High-Capacity Battery",
-  "item.zas_atmos.super_capacity_battery": "Super-Capacity Battery",
-  "item.zas_atmos.battery.charge": "%s / %s FE",
   "block.zas_atmos.recharger": "Recharger",
   "item.zas_atmos.dyed": "%s %s",
   "block.zas_atmos.firelock": "Firelock",
@@ -486,7 +484,6 @@
   "item.zas_atmos.bike_horn": "Bike Horn",
   "subtitles.zas_atmos.item.bike_horn.honk": "Honk",
   "config.jade.plugin_zas_atmos.readout": "Device Readouts",
-  "tag.item.zas_atmos.batteries": "Batteries",
   "tag.block.zas_atmos.no_fluid_view": "No fluid view",
   "tag.fluid.zas_atmos.never_gas": "Never gas"
 }

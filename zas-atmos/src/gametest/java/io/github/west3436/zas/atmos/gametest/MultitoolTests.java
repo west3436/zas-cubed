@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.airlock.AirlockBlock;
@@ -201,7 +202,7 @@ public final class MultitoolTests {
                     AtmosBlocks.FIRE_ALARM.get().defaultBlockState().setValue(FireAlarmBlock.FACING, Direction.SOUTH));
             placed.add(s.abs(13, 2, 1));
             RechargerBlockEntity recharger = s.entity(10, 1, 3, RechargerBlockEntity.class);
-            recharger.battery().setStackInSlot(0, new ItemStack(AtmosItems.BATTERY.get()));
+            recharger.battery().setStackInSlot(0, new ItemStack(FrameworkItems.BATTERY.get()));
             h.assertTrue(
                     s.level.getBlockState(recharger.getBlockPos()).getValue(RechargerBlock.BATTERY),
                     "the recharger doesn't show its battery");

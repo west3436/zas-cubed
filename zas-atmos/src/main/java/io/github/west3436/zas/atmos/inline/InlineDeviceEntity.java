@@ -2,6 +2,9 @@ package io.github.west3436.zas.atmos.inline;
 
 import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.ss13.device.RedstoneControlled;
@@ -15,9 +18,7 @@ import io.github.west3436.zas.atmos.pipe.PipeNode;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipePort;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.List;
 import java.util.function.Supplier;
@@ -53,7 +54,7 @@ import org.jetbrains.annotations.Nullable;
  * extends {@link InlineDeviceMenu}.
  */
 public abstract class InlineDeviceEntity extends AtmosDevice
-        implements PipeHost, PoweredDevice, MenuProvider, Labelled, RedstoneControlled {
+        implements PipeHost, PoweredPart, MenuProvider, Labelled, RedstoneControlled {
     private static final String PORTS = "Ports";
     private static final String ON = "On";
 
@@ -86,7 +87,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice
      * @param portCount its ports, as many as its block's {@link PortedBlock#portFaces}
      */
     protected InlineDeviceEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, int portCount) {
-        this(type, pos, state, portCount, PowerPriority.GAS_HANDLING);
+        this(type, pos, state, portCount, PowerChannel.ENVIRONMENT, PowerPriority.NORMAL);
     }
 
     /**
@@ -94,12 +95,18 @@ public abstract class InlineDeviceEntity extends AtmosDevice
      * @param pos its position
      * @param state its block state
      * @param portCount its ports, as many as its block's {@link PortedBlock#portFaces}
-     * @param priority its group when its controller runs short (CONT-064)
+     * @param channel the power channel it draws on (CONT-064)
+     * @param priority its priority in that channel when its controller runs short (CONT-064)
      */
     protected InlineDeviceEntity(
-            BlockEntityType<?> type, BlockPos pos, BlockState state, int portCount, PowerPriority priority) {
+            BlockEntityType<?> type,
+            BlockPos pos,
+            BlockState state,
+            int portCount,
+            PowerChannel channel,
+            PowerPriority priority) {
         super(type, pos, state);
-        power = new DevicePower(priority, this::currentDraw, this::now);
+        power = new DevicePower(channel, priority, this::currentDraw, this::now);
         ports = new PipePort[portCount];
         for (int i = 0; i < portCount; i++) {
             int index = i;

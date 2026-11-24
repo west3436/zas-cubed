@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -15,7 +16,6 @@ import io.github.west3436.zas.atmos.heater.HeaterMath;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.heater.ThermoStatus;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
 import java.util.Map;
@@ -173,7 +173,7 @@ public final class HeatStationTests {
                     "coal went in");
 
             // A full battery: 5 kW, 60 FE/t over the step.
-            BatteryTests.swap(heater.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(heater.battery(), FrameworkItems.BATTERY.get().full());
             double c = GasProperties.heatCapacity(s.zone(2, 2, 2).mixture().moles());
             double before = temperature(s, 2, 2, 2);
             s.cycle(heater);
@@ -221,7 +221,7 @@ public final class HeatStationTests {
                 menu.clickMenuButton(hand, HeaterMenu.SETPOINT_DOWN_10 + 3);
             }
             s.close(heater.setpoint(), HeaterMath.MAX_SETPOINT, 0, "the highest setpoint");
-            BatteryTests.swap(heater.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), 300));
+            BatteryTests.swap(heater.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), 300));
             s.cycle(heater);
             h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heater on its last 300 FE");
             s.close(
@@ -236,7 +236,7 @@ public final class HeatStationTests {
 
             // In open air it has no room, and leaves its battery alone.
             HeaterBlockEntity outside = heater(s, 8, 1, 2, Direction.NORTH);
-            BatteryTests.swap(outside.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(outside.battery(), FrameworkItems.BATTERY.get().full());
             outside.setSetpoint(HeaterMath.MAX_SETPOINT);
             outside.setOn(true);
             s.cycle(outside);
@@ -256,7 +256,7 @@ public final class HeatStationTests {
                             .getEntitiesOfClass(
                                     net.minecraft.world.entity.item.ItemEntity.class,
                                     new net.minecraft.world.phys.AABB(s.abs(8, 1, 2)).inflate(1),
-                                    e -> e.getItem().is(AtmosItems.BATTERY.get()))
+                                    e -> e.getItem().is(FrameworkItems.BATTERY.get()))
                             .isEmpty(),
                     "the broken heater dropped no battery");
             h.succeed();
@@ -347,7 +347,7 @@ public final class HeatStationTests {
             room(s, 2, 6, Blocks.WHITE_WOOL.defaultBlockState()); // interior x 3–5, y 1–3, z 1–3
             HeaterBlockEntity heater = heater(s, 4, 1, 2, Direction.EAST);
             BatteryTests.swap(
-                    heater.battery(), AtmosItems.HIGH_CAPACITY_BATTERY.get().full());
+                    heater.battery(), FrameworkItems.HIGH_CAPACITY_BATTERY.get().full());
             heater.setSetpoint(setpoint);
             heater.setOn(true);
             fillAir(s, 4, 2, 2, T);
@@ -397,7 +397,7 @@ public final class HeatStationTests {
             s.close(heater.roomTemperature(), t, 0.5, "the heater's reading of the room");
 
             // On 2,000 FE, about 20 s at the walls' loss, it holds the room, then stops.
-            BatteryTests.swap(heater.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), 2000));
+            BatteryTests.swap(heater.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), 2000));
             int heated = 0;
             for (int sec = 0; sec < 120 && heater.status() != ThermoStatus.BATTERY_EMPTY; sec++) {
                 s.cycle(heater);

@@ -4,7 +4,7 @@ package io.github.west3436.zas.atmos.controller;
  * Which area air controllers a central atmospherics controller pays first when it can't pay them all
  * (CONT-121): Critical, then Normal, then Low. Declared in that order, so {@link #compareTo} sorts
  * Critical first. Each area air controller then powers its own parts by {@link
- * io.github.west3436.zas.atmos.power.PowerPriority} (CONT-064).
+ * io.github.west3436.ss13.api.power.PowerPriority} (CONT-064).
  */
 public enum ZonePriority {
     CRITICAL("critical"),

@@ -1,13 +1,15 @@
 package io.github.west3436.zas.atmos.battery;
 
 import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.power.Batteries;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
@@ -30,7 +32,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * <p>It charges only on power paid for, so a lease its controller gave it while it drew nothing
  * charges nothing ({@link DevicePower#paidFor}).
  */
-public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, Labelled {
+public class RechargerBlockEntity extends AtmosDevice implements PoweredPart, Labelled {
     /** What the recharger did at its last atmos tick, which its sounds follow. */
     public enum Status {
         /** Its slot is empty. */
@@ -44,7 +46,8 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
     }
 
     private final Batteries.Slot battery = new Batteries.Slot(this::batteryChanged);
-    private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
+    private final DevicePower power =
+            new DevicePower(PowerChannel.EQUIPMENT, PowerPriority.NORMAL, this::currentDraw, this::now);
     private Status status = Status.NO_BATTERY;
 
     public RechargerBlockEntity(BlockPos pos, BlockState state) {

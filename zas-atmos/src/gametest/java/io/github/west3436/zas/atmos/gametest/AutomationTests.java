@@ -7,12 +7,13 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.power.Batteries;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.airlock.AirSensorBlock;
 import io.github.west3436.zas.atmos.airlock.AirSensorBlockEntity;
-import io.github.west3436.zas.atmos.battery.Batteries;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
@@ -398,7 +399,7 @@ public final class AutomationTests {
         }
         h.assertValueEqual(comparator(a, 1, 1, 2), 15, "a full holder");
 
-        ItemStack battery = new ItemStack(AtmosItems.BATTERY.get());
+        ItemStack battery = new ItemStack(FrameworkItems.BATTERY.get());
         int capacity = Batteries.energy(battery).getMaxEnergyStored();
         Batteries.energy(battery).receiveEnergy(capacity / 2, false);
         int half = Comparators.fill((double) (capacity / 2) / capacity);

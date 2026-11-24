@@ -497,7 +497,7 @@ final class Bench {
         int controllers = 0;
         for (Station.Room r : station.rooms) {
             for (BlockPos p : List.of(r.vent(), r.scrubber(), r.alarm())) {
-                if (level.getBlockEntity(p) instanceof io.github.west3436.zas.atmos.power.PoweredDevice) {
+                if (level.getBlockEntity(p) instanceof io.github.west3436.zas.atmos.power.PoweredPart) {
                     devices++;
                 }
             }

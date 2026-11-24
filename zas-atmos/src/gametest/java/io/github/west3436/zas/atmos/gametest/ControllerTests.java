@@ -19,7 +19,7 @@ import io.github.west3436.zas.atmos.controller.ScrubberOrder;
 import io.github.west3436.zas.atmos.controller.Thresholds;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
@@ -472,7 +472,7 @@ public final class ControllerTests {
      * orders before it pays its parts.
      *
      * <p>The game clock doesn't move during a GameTest, so a part supplied once counts as supplied
-     * for the rest of the test ({@code DevicePower#suppliedThisAtmosTick}); the test therefore checks
+     * for the rest of the test ({@code DevicePower#suppliedThisStep}); the test therefore checks
      * the vent's first covered tick, which is also its switch-on tick.
      */
     @GameTest(template = "empty", batch = BATCH)
@@ -600,7 +600,7 @@ public final class ControllerTests {
         Optional<ZoneId> zone = Atmospheres.at(s.level, c.airPoint()).zone();
         List<BlockPos> out = new ArrayList<>();
         for (AtmosDevice d : AtmosDevice.loaded(s.level)) {
-            if (d instanceof PoweredDevice p
+            if (d instanceof PoweredPart p
                     && (c.links().contains(d.getBlockPos())
                             || (zone.isPresent()
                                     && Atmospheres.at(s.level, p.airPoint())

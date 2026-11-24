@@ -13,8 +13,9 @@ import net.neoforged.neoforge.gametest.GameTestHooks;
 
 /**
  * A data pack that adds {@code zas_atmos:test_fe_item} ({@link TestParts#feItem}) to the {@code
- * zas_atmos:batteries} tag, as a pack would add another mod's battery, for {@link BatteryTests}
- * (CONT-112). It lives in the GameTest source set at {@code testpacks/battery_tag} and is added only
+ * zas_atmos:batteries} tag, as a pack written for ZAS³ 1.x would add another mod's battery, for
+ * {@link BatteryTests} (CONT-112). SS13 Framework's {@code ss13_framework:batteries}, which decides
+ * what is a battery now, takes in that tag where a pack defines it. It lives in the GameTest source set at {@code testpacks/battery_tag} and is added only
  * on the GameTest server.
  */
 @EventBusSubscriber(modid = ZasAtmosMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD)

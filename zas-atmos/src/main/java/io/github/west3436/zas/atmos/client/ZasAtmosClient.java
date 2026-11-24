@@ -5,7 +5,6 @@ import io.github.west3436.ss13.device.client.DeviceLoops;
 import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.api.client.LoopRequest;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.compat.PonderGate;
 import io.github.west3436.zas.atmos.gauge.GaugeReading;
@@ -278,9 +277,8 @@ public final class ZasAtmosClient {
 
     /**
      * A canister item shows its paint: {@code zas_atmos:color} is the colour's index over 32, which
-     * {@code models/item/canister.json}'s overrides map to each colour's model. A battery shows its
-     * charge: {@code zas_atmos:charge} is 0 empty, 0.5 part charged and 1 full, which each battery's
-     * item model maps to its {@code _partial} and {@code _full} models.
+     * {@code models/item/canister.json}'s overrides map to each colour's model. The batteries'
+     * charge is SS13 Framework's to show.
      */
     private static void setup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
@@ -290,12 +288,6 @@ public final class ZasAtmosClient {
                         CanisterColor color = state == null ? null : state.get(CanisterColor.PROPERTY);
                         return color == null ? 0 : color.ordinal() / 32f;
                     });
-            AtmosItems.batteries()
-                    .forEach(b ->
-                            ItemProperties.register(b.get(), ZasAtmosMod.id("charge"), (stack, level, entity, seed) -> {
-                                float charge = BatteryItem.charge(stack);
-                                return charge <= 0 ? 0 : charge >= 1 ? 1 : 0.5f;
-                            }));
             // A TTV shows its tanks: zas_atmos:tanks is 0, 0.5 or 1 for no tanks, one or two, which
             // models/item/tank_transfer_valve.json maps to its _one and _two models.
             ItemProperties.register(

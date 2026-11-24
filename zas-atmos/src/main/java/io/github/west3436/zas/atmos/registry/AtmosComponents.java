@@ -65,12 +65,6 @@ public final class AtmosComponents {
     public static final Supplier<DataComponentType<Boolean>> MAGNETIZED = COMPONENTS.registerComponentType(
             "magnetized", b -> b.persistent(ItemData.versioned(Codec.BOOL)).networkSynchronized(ByteBufCodecs.BOOL));
 
-    /** The FE a battery holds (CONT-111), read and written through its FE item capability. */
-    public static final Supplier<DataComponentType<Integer>> ENERGY = COMPONENTS.registerComponentType(
-            "energy",
-            b -> b.persistent(ItemData.versioned(ExtraCodecs.NON_NEGATIVE_INT))
-                    .networkSynchronized(ByteBufCodecs.VAR_INT));
-
     /** The sprays left in a fire extinguisher (CONT-037). */
     public static final Supplier<DataComponentType<Integer>> CHARGES = COMPONENTS.registerComponentType(
             "charges",

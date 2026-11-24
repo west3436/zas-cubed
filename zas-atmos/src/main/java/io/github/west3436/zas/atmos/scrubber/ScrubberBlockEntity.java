@@ -2,6 +2,9 @@ package io.github.west3436.zas.atmos.scrubber;
 
 import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.ss13.device.RedstoneControlled;
@@ -20,9 +23,7 @@ import io.github.west3436.zas.atmos.heater.ThermoCoil;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Map;
@@ -66,7 +67,7 @@ import net.minecraft.world.phys.Vec3;
  * world, as the air conditioner's does.
  */
 public class ScrubberBlockEntity extends PipeNodeEntity
-        implements PoweredDevice, ScrubberControl, ThermostatControl, MenuProvider, Labelled, RedstoneControlled {
+        implements PoweredPart, ScrubberControl, ThermostatControl, MenuProvider, Labelled, RedstoneControlled {
     /** Who a scrubber's changes are made by. */
     public static final SourceId SCRUBBER = SourceId.of(ZasAtmosMod.MOD_ID, "scrubber");
 
@@ -80,7 +81,8 @@ public class ScrubberBlockEntity extends PipeNodeEntity
 
     private final ZonePort port = new ZonePort(SCRUBBER);
     private final ThermoCoil coil = ThermoCoil.airConditioner(COOLER, this::now);
-    private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
+    private final DevicePower power =
+            new DevicePower(PowerChannel.ENVIRONMENT, PowerPriority.HIGH, this::currentDraw, this::now);
     private final RedstoneControl redstone = new RedstoneControl(this);
     private ScrubberMode mode = ScrubberMode.OFF;
     private GasSelection selection = GasSelection.DEFAULT;

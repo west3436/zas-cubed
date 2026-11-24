@@ -1,11 +1,12 @@
 package io.github.west3436.zas.atmos.igniter;
 
 import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
@@ -28,11 +29,12 @@ import net.minecraft.world.phys.Vec3;
  * lit for {@value #COMMAND_STEPS} atmos ticks whatever its signal and power, as a single spark that
  * draws nothing.
  */
-public class IgniterBlockEntity extends AtmosDevice implements PoweredDevice, Labelled {
+public class IgniterBlockEntity extends AtmosDevice implements PoweredPart, Labelled {
     /** Atmos ticks between its spark sounds while it stays lit, 3 s (CONT-127). */
     public static final int SPARK_STEPS = 3;
 
-    private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
+    private final DevicePower power =
+            new DevicePower(PowerChannel.EQUIPMENT, PowerPriority.NORMAL, this::currentDraw, this::now);
     private int sparkIn;
 
     /** Atmos ticks a commanded spark keeps it lit. */

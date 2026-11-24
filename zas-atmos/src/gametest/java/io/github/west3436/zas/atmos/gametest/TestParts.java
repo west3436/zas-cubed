@@ -1,16 +1,17 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.EnergyStore;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
+import io.github.west3436.ss13.registry.FrameworkComponents;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.controller.ScrubberControl;
 import io.github.west3436.zas.atmos.controller.ScrubberOrder;
 import io.github.west3436.zas.atmos.controller.VentControl;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.EnergyStore;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
-import io.github.west3436.zas.atmos.registry.AtmosComponents;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -44,7 +45,8 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  *   <li>{@code zas_atmos:test_battery}: an FE block holding 100,000 FE that gives it to any side;
  *   <li>{@code zas_atmos:test_fe_item} and {@code zas_atmos:test_untagged_fe_item}: FE items holding
  *       up to 50,000 FE, another mod's battery as far as ZAS³ can tell. The first is added to the
- *       {@code zas_atmos:batteries} tag by {@link BatteryTestPack}; the second never is (CONT-112).
+ *       {@code zas_atmos:batteries} tag, and so to the framework's, by {@link BatteryTestPack}; the
+ *       second never is (CONT-112).
  * </ul>
  *
  * The {@code test_heater} stand-in predates the heater running on a battery (D-73): it is kept as a
@@ -57,19 +59,21 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 public final class TestParts {
     /** One kind of stand-in part. */
     public enum Kind {
-        VENT("test_vent", PowerPriority.LIFE_SUPPORT, 10),
-        SCRUBBER("test_scrubber", PowerPriority.LIFE_SUPPORT, 15),
-        PUMP("test_pump", PowerPriority.GAS_HANDLING, 20),
-        HEATER("test_heater", PowerPriority.AUXILIARY, 60);
+        VENT("test_vent", PowerChannel.ENVIRONMENT, PowerPriority.HIGH, 10),
+        SCRUBBER("test_scrubber", PowerChannel.ENVIRONMENT, PowerPriority.HIGH, 15),
+        PUMP("test_pump", PowerChannel.ENVIRONMENT, PowerPriority.NORMAL, 20),
+        HEATER("test_heater", PowerChannel.EQUIPMENT, PowerPriority.NORMAL, 60);
 
         final String id;
+        final PowerChannel channel;
         final PowerPriority priority;
         final int draw;
         Block block;
         BlockEntityType<Part> type;
 
-        Kind(String id, PowerPriority priority, int draw) {
+        Kind(String id, PowerChannel channel, PowerPriority priority, int draw) {
             this.id = id;
+            this.channel = channel;
             this.priority = priority;
             this.draw = draw;
         }
@@ -145,7 +149,7 @@ public final class TestParts {
         event.registerItem(
                 Capabilities.EnergyStorage.ITEM,
                 (stack, context) -> new ComponentEnergyStorage(
-                        stack, AtmosComponents.ENERGY.get(), FE_ITEM_CAPACITY, FE_ITEM_CAPACITY, FE_ITEM_CAPACITY),
+                        stack, FrameworkComponents.ENERGY.get(), FE_ITEM_CAPACITY, FE_ITEM_CAPACITY, FE_ITEM_CAPACITY),
                 feItem,
                 untaggedFeItem);
     }
@@ -173,7 +177,7 @@ public final class TestParts {
     }
 
     /** A stand-in part: it counts the atmos ticks it ran with power. */
-    public static class Part extends AtmosDevice implements PoweredDevice {
+    public static class Part extends AtmosDevice implements PoweredPart {
         public final Kind kind;
         /** Atmos ticks it stepped with power. */
         public int poweredSteps;
@@ -186,7 +190,7 @@ public final class TestParts {
             super(kind.type, pos, state);
             this.kind = kind;
             this.draw = kind.draw;
-            this.power = new DevicePower(kind.priority, this::currentDraw, this::now);
+            this.power = new DevicePower(kind.channel, kind.priority, this::currentDraw, this::now);
         }
 
         /** What it draws now, in FE/t. */

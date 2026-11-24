@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Say;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Stage;
 import io.github.west3436.zas.atmos.portable.PortableBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
 import net.minecraft.core.BlockPos;
@@ -46,7 +46,7 @@ public final class HeaterScenes {
         Hand.use(scene, util, portable, Direction.UP, ItemStack.EMPTY);
         Say.at(scene, util.vector().topOf(portable), "portable.setpoint");
 
-        Hand.show(scene, util, portable, Direction.UP, new ItemStack(AtmosItems.BATTERY.get()));
+        Hand.show(scene, util, portable, Direction.UP, new ItemStack(FrameworkItems.BATTERY.get()));
         Say.at(scene, util.vector().topOf(portable), "portable.battery");
 
         Build.change(scene, portable, s -> s.setValue(PortableBlock.LIT, true));

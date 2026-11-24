@@ -3,9 +3,9 @@ package io.github.west3436.zas.atmos.heater;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.mutation.SourceId;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 

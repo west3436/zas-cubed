@@ -1,6 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.api.FrameworkApi;
+import io.github.west3436.ss13.power.Batteries;
+import io.github.west3436.ss13.registry.FrameworkComponents;
 import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
@@ -258,8 +260,46 @@ public final class RecipeTests {
     }
 
     /**
+     * The batteries are SS13 Framework's (#539): this mod registers none of them, each old {@code
+     * zas_atmos:} id names the framework's battery, {@code zas_atmos:energy} names the framework's
+     * charge, the batteries are in the framework's tag, and neither this mod's recipes nor its creative
+     * tab make or list one.
+     */
+    @GameTest(template = "empty")
+    public static void batteries_are_the_frameworks(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        Set<Item> batteries = new HashSet<>();
+        FrameworkItems.batteries().forEach(b -> batteries.add(b.get()));
+        for (String path : MovedItems.BATTERIES) {
+            Item item = BuiltInRegistries.ITEM.get(MovedItems.framework(path));
+            h.assertTrue(batteries.contains(item), MovedItems.framework(path) + " isn't a framework battery");
+            h.assertTrue(
+                    BuiltInRegistries.ITEM.get(ZasAtmosMod.id(path)) == item,
+                    ZasAtmosMod.id(path) + " doesn't name " + MovedItems.framework(path));
+            h.assertTrue(new ItemStack(item).is(Batteries.TAG), item + " isn't in " + Batteries.TAG.location());
+        }
+        h.assertTrue(
+                BuiltInRegistries.DATA_COMPONENT_TYPE.get(ZasAtmosMod.id("energy")) == FrameworkComponents.ENERGY.get(),
+                "zas_atmos:energy doesn't name the framework's charge");
+        for (DeferredHolder<Item, ? extends Item> entry : AtmosItems.ITEMS.getEntries()) {
+            h.assertFalse(MovedItems.BATTERIES.contains(entry.getId().getPath()), "the mod registers " + entry.getId());
+        }
+        for (RecipeHolder<?> r : modRecipes(h)) {
+            ItemStack out = r.value().getResultItem(level.registryAccess());
+            h.assertFalse(batteries.contains(out.getItem()), r.id() + " makes " + out);
+        }
+        CreativeModeTab tab = AtmosCreativeTab.TAB.get();
+        tab.buildContents(
+                new CreativeModeTab.ItemDisplayParameters(level.enabledFeatures(), false, level.registryAccess()));
+        for (ItemStack stack : tab.getDisplayItems()) {
+            h.assertFalse(batteries.contains(stack.getItem()), "the mod's creative tab lists " + stack);
+        }
+        h.succeed();
+    }
+
+    /**
      * Every recipe of the mod that takes a crafting component still crafts (#534): laid out in a
-     * grid, the first item of each of its ingredients makes what it made before. There are 44.
+     * grid, the first item of each of its ingredients makes what it made before. There are 41, now the batteries are SS13 Framework's (#539).
      */
     @GameTest(template = "empty")
     public static void recipes_that_take_a_component_still_craft(GameTestHelper h) {
@@ -291,7 +331,7 @@ public final class RecipeTests {
             }
         }
         h.assertTrue(failed.isEmpty(), failed.size() + " recipes don't craft: " + failed);
-        h.assertValueEqual(taking, 44, "the mod's recipes that take a crafting component");
+        h.assertValueEqual(taking, 41, "the mod's recipes that take a crafting component");
         h.succeed();
     }
 

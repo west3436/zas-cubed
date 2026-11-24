@@ -1,10 +1,11 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.power.DevicePower;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import net.minecraft.gametest.framework.GameTest;
@@ -40,7 +41,7 @@ public final class PowerChargeTests {
     private PowerChargeTests() {}
 
     /** The controller's own bill for one atmos tick. */
-    private static int own() {
+    static int own() {
         return AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
     }
 
@@ -49,14 +50,14 @@ public final class PowerChargeTests {
     }
 
     /** A test's site, its chunks force-loaded because it waits in real time, and cleared. */
-    private static Site site(GameTestHelper h, int index) {
+    static Site site(GameTestHelper h, int index) {
         Site s = new Site(h, index);
         forced(s, true);
         s.clear();
         return s;
     }
 
-    private static void forced(Site s, boolean on) {
+    static void forced(Site s, boolean on) {
         int cx = s.origin.getX() >> 4;
         int cz = s.origin.getZ() >> 4;
         s.level.setChunkForced(cx, cz, on);
@@ -64,7 +65,7 @@ public final class PowerChargeTests {
     }
 
     /** Runs a test's last checks, then releases its site even if they fail. */
-    private static void finish(GameTestSequence seq, Site s, Runnable checks) {
+    static void finish(GameTestSequence seq, Site s, Runnable checks) {
         seq.thenExecute(() -> {
                     try {
                         checks.run();
@@ -81,7 +82,7 @@ public final class PowerChargeTests {
     }
 
     /** Steps a controller until it covers a part in its zone, which takes a step to pin the zone. */
-    private static void formZone(GameTestHelper h, Site s, AreaAirControllerBlockEntity c, TestParts.Part part) {
+    static void formZone(GameTestHelper h, Site s, AreaAirControllerBlockEntity c, PoweredPart part) {
         for (int i = 0; i < 4 && !part.power().isPowered(); i++) {
             s.cycle(c);
         }

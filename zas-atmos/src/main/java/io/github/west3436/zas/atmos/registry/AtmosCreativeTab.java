@@ -100,10 +100,6 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.GAUGE.get());
         out.accept(AtmosItems.RECHARGER.get());
         out.accept(AtmosItems.IGNITER.get());
-        AtmosItems.batteries().forEach(b -> {
-            out.accept(b.get());
-            out.accept(b.get().full());
-        });
         out.accept(AtmosItems.ATMOS_ANALYZER.get());
         AtmosItems.stationBlocks().forEach(b -> out.accept(b.get()));
         out.accept(AtmosItems.MULTITOOL.get());

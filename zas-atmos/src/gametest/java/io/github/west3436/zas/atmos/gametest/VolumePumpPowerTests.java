@@ -1,5 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -12,9 +15,7 @@ import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
-import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.pump.PumpFlow;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -119,10 +120,12 @@ public final class VolumePumpPowerTests {
                     new GasParcel(Map.of(StandardAir.NITROGEN, 1.0), StandardAir.TEMPERATURE),
                     Site.SOURCE));
 
-            h.assertValueEqual(pump.power().priority(), PowerPriority.GAS_HANDLING, "the pump's group");
+            h.assertValueEqual(pump.power().channel(), PowerChannel.ENVIRONMENT, "the pump's channel");
+
+            h.assertValueEqual(pump.power().priority(), PowerPriority.NORMAL, "the pump's priority");
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.VOLUME_PUMP_DRAW), 20, "the pump's draw");
             h.assertValueEqual(pump.power().draw(), 0, "the draw of a pump that's off");
-            h.assertValueEqual(pump.power().drawPerAtmosTick(), 0L, "the bill of a pump that's off");
+            h.assertValueEqual(pump.power().drawPerStep(), 0L, "the bill of a pump that's off");
 
             // Plenty of gas for the seconds below, and well short of a burst.
             pump.input()
@@ -132,8 +135,7 @@ public final class VolumePumpPowerTests {
             pump.setOn(true);
             s.close(pump.setting(), PumpFlow.MAX_RATE, 1e-9, "a new pump's rate");
             h.assertValueEqual(pump.power().draw(), 20, "the draw of a pump that's on");
-            h.assertValueEqual(
-                    pump.power().drawPerAtmosTick(), 20L * DeviceTicks.PERIOD, "the bill of a pump that's on");
+            h.assertValueEqual(pump.power().drawPerStep(), 20L * DeviceTicks.PERIOD, "the bill of a pump that's on");
 
             // No controller: no power, on and beside a burning generator.
             s.cycles(3, pump);

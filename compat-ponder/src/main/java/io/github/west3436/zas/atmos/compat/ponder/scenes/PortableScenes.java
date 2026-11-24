@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Gas;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;
@@ -57,7 +58,7 @@ public final class PortableScenes {
     private static BlockPos switchOn(SceneBuilder scene, SceneBuildingUtil util, Block block) {
         BlockPos at = util.grid().at(2, 1, 2);
         Build.drop(scene, util, at, block.defaultBlockState().setValue(PortableBlock.FACING, Direction.NORTH));
-        Hand.use(scene, util, at, Direction.UP, new ItemStack(AtmosItems.BATTERY.get()));
+        Hand.use(scene, util, at, Direction.UP, new ItemStack(FrameworkItems.BATTERY.get()));
         Build.change(scene, at, s -> s.setValue(PortableBlock.LIT, true));
         Say.at(scene, util.vector().topOf(at), "portable.battery");
         return at;

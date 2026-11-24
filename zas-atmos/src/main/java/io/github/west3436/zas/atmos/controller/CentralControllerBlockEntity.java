@@ -2,11 +2,11 @@ package io.github.west3436.zas.atmos.controller;
 
 import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.api.power.EnergyStore;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.ArrayList;
 import java.util.HashMap;

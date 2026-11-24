@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.heater;
 
-import io.github.west3436.zas.atmos.battery.Batteries;
+import io.github.west3436.ss13.power.Batteries;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.world.entity.player.Inventory;

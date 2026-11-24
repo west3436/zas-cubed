@@ -2,15 +2,17 @@ package io.github.west3436.zas.atmos.airlock;
 
 import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
+import io.github.west3436.ss13.api.power.PowerProvider;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentFlow;
@@ -66,10 +68,13 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p><b>Power</b> (CONT-141). It is a part of an area air controller, in its zone or linked, as any
  * powered part is. It draws {@code [power] airlock_controller} and what its vents draw, and while it
- * is powered it powers them. Unpowered, a cycle waits. Its vents take its orders alone, off between
- * cycles (CONT-152).
+ * is powered it powers them, as a power provider under SS13 Framework's contract at {@link
+ * PowerProvider#DIRECT}: its vents' draw is part of its own, so no area air controller or APC that
+ * covers them pays for them too. Unpowered, a cycle waits. Its vents take its orders alone, off
+ * between cycles (CONT-152).
  */
-public class AirlockControllerBlockEntity extends AtmosDevice implements PoweredDevice, MenuProvider, Labelled {
+public class AirlockControllerBlockEntity extends AtmosDevice
+        implements PoweredPart, PowerProvider, MenuProvider, Labelled {
     /** Its slots, in the window's order. */
     public enum Slot {
         INNER_DOOR(true, "Airlock0"),
@@ -126,7 +131,8 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
         NOT_LINKABLE
     }
 
-    private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
+    private final DevicePower power =
+            new DevicePower(PowerChannel.ENVIRONMENT, PowerPriority.HIGH, this::currentDraw, this::now);
     /** What fills each slot, by {@link Slot#ordinal}. A door's is the airlock's origin. */
     private final BlockPos[] slots = new BlockPos[Slot.values().length];
     /**
@@ -165,6 +171,18 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
     @Override
     public DevicePower power() {
         return power;
+    }
+
+    /** {@link PowerProvider#DIRECT}: it powers its vents as part of its own draw. */
+    @Override
+    public int precedence() {
+        return DIRECT;
+    }
+
+    /** Until it is removed or unloaded, which ends its claims on its vents at once. */
+    @Override
+    public boolean providing() {
+        return !isRemoved();
     }
 
     /** The point whose zone it is in: the middle of its own block, in front of the wall. */

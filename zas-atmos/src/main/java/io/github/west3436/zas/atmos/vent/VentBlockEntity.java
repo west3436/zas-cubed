@@ -2,6 +2,9 @@ package io.github.west3436.zas.atmos.vent;
 
 import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
@@ -20,9 +23,7 @@ import io.github.west3436.zas.atmos.heater.ThermoCoil;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Map;
@@ -68,7 +69,7 @@ import net.minecraft.world.phys.Vec3;
  * the heater's cost for it.
  */
 public class VentBlockEntity extends PipeNodeEntity
-        implements PoweredDevice, VentControl, ThermostatControl, MenuProvider, Labelled, RedstoneControlled {
+        implements PoweredPart, VentControl, ThermostatControl, MenuProvider, Labelled, RedstoneControlled {
     /** Who a vent's changes are made by. */
     public static final SourceId VENT = SourceId.of(ZasAtmosMod.MOD_ID, "vent");
 
@@ -83,7 +84,8 @@ public class VentBlockEntity extends PipeNodeEntity
 
     private final ZonePort port = new ZonePort(VENT);
     private final ThermoCoil coil = ThermoCoil.heater(HEATER, this::now);
-    private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
+    private final DevicePower power =
+            new DevicePower(PowerChannel.ENVIRONMENT, PowerPriority.HIGH, this::currentDraw, this::now);
     private final RedstoneControl redstone = new RedstoneControl(this);
     private VentSettings settings = VentSettings.OFF;
     private long controlledUntil = Long.MIN_VALUE;

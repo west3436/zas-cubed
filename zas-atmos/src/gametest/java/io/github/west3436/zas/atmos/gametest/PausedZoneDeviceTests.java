@@ -5,6 +5,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -21,7 +22,6 @@ import io.github.west3436.zas.atmos.portable.PortableScrubberBlockEntity;
 import io.github.west3436.zas.atmos.portable.PortableScrubberMath;
 import io.github.west3436.zas.atmos.portable.PortableStatus;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMath;
@@ -366,7 +366,7 @@ public final class PausedZoneDeviceTests {
                             .setValue(PortableBlock.FACING, Direction.NORTH));
             r.a.tick();
             PortableScrubberBlockEntity s = r.a.entity(12, 1, 2);
-            BatteryTests.swap(s.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(s.battery(), FrameworkItems.BATTERY.get().full());
             s.setOn(true);
             r.settle();
             r.pause();

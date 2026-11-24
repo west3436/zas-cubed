@@ -10,7 +10,7 @@ import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
@@ -170,7 +170,7 @@ public class MultitoolItem extends Item {
         } else if (state.getBlock() instanceof FirelockBlock) {
             // Either half: the firelock is its lower half (CONT-043).
             part = FirelockBlock.lower(state, pos);
-        } else if (be instanceof PoweredDevice) {
+        } else if (be instanceof PoweredPart) {
             part = pos;
         } else {
             return InteractionResult.PASS;

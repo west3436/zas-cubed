@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;
@@ -10,7 +11,6 @@ import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import net.createmod.ponder.api.scene.SceneBuilder;
@@ -77,7 +77,7 @@ public final class PowerScenes {
         Power.multitool(scene, util, recharger);
 
         // A battery goes in, and its gauge fills while the line is up.
-        Hand.use(scene, util, recharger, Direction.UP, new ItemStack(AtmosItems.BATTERY.get()));
+        Hand.use(scene, util, recharger, Direction.UP, new ItemStack(FrameworkItems.BATTERY.get()));
         Build.change(scene, recharger, s -> s.setValue(RechargerBlock.BATTERY, true));
         Say.over(scene, Say.LINE + 4 * CHARGE_STEP, util.vector().topOf(recharger), "recharger.battery");
         for (int charge = 1; charge <= 4; charge++) {

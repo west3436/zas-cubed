@@ -17,7 +17,7 @@ import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
@@ -180,7 +180,7 @@ public final class PassiveVentTests {
             }
             PassiveVentBlockEntity v = a.entity(3, 3, 3);
             a.close(v.network().volume(), PipeVolumes.VENT + PipeVolumes.PIPE, "the passive vent and its one pipe");
-            h.assertFalse(v instanceof PoweredDevice, "a passive vent draws power");
+            h.assertFalse(v instanceof PoweredPart, "a passive vent draws power");
         }
         h.succeed();
     }

@@ -1,11 +1,11 @@
 package io.github.west3436.zas.atmos.heater;
 
+import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.mutation.HeatMutations;
 import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.DoubleSupplier;

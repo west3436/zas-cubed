@@ -21,7 +21,6 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.energy.ComponentEnergyStorage;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -32,9 +31,8 @@ import net.neoforged.neoforge.registries.DeferredItem;
  * the blocks it pulls from (CONT-062), and so does the central atmospherics controller's
  * (CONT-115). Devices expose no FE capability (CONT-069). The electrolyzer takes water through
  * the fluid capability on its back (CONT-056). Every pipe part is a gas handler on the faces
- * where a pipe joins it (API-021). The breathing gear gives ZAS³ its life support (API-022). A
- * battery is an FE item, its charge in its {@code zas_atmos:energy} component, so any mod's
- * charger and machine can use it (CONT-111).
+ * where a pipe joins it (API-021). The breathing gear gives ZAS³ its life support (API-022). The
+ * batteries are SS13 Framework's, which registers their FE item capability (CONT-111).
  */
 public final class AtmosCapabilities {
     /** The network protocol version of the content mod's payloads. */
@@ -97,14 +95,6 @@ public final class AtmosCapabilities {
                 ILifeSupport.ITEM,
                 (stack, ctx) -> SuitItem.lifeSupport(stack),
                 AtmosItems.gear().stream().map(DeferredItem::get).toArray(Item[]::new));
-        AtmosItems.batteries().forEach(battery -> {
-            int capacity = battery.get().capacity();
-            event.registerItem(
-                    Capabilities.EnergyStorage.ITEM,
-                    (stack, context) -> new ComponentEnergyStorage(
-                            stack, AtmosComponents.ENERGY.get(), capacity, capacity, capacity),
-                    battery.get());
-        });
     }
 
     private static void payloads(RegisterPayloadHandlersEvent event) {
