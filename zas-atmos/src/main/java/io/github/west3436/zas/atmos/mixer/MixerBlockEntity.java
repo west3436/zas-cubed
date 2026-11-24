@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.mixer;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.inline.SidePortEntity;
@@ -72,7 +72,7 @@ public class MixerBlockEntity extends SidePortEntity {
         GasStore back = networks[BACK].gas();
         GasStore side = networks[SIDE].gas();
         GasStore out = networks[FRONT].gas();
-        MixerMath.Flow flow = MixerMath.moles(back, side, out, backPercent / 100.0, target(), AtmosTicks.SECONDS);
+        MixerMath.Flow flow = MixerMath.moles(back, side, out, backPercent / 100.0, target(), DeviceTicks.SECONDS);
         if (flow.total() < PipeBlockEntity.MIN_FLOW) {
             boolean dry = (backPercent > 0 && runsDry(back)) || (backPercent < 100 && runsDry(side));
             return dry ? InlineStatus.INPUT_EMPTY : InlineStatus.TARGET_REACHED;

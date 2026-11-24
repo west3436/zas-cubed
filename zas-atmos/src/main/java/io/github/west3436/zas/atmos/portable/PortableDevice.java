@@ -1,10 +1,10 @@
 package io.github.west3436.zas.atmos.portable;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.battery.Batteries;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;

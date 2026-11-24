@@ -4,6 +4,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -13,7 +14,6 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterRelease;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.portable.PortableBlock;
@@ -60,7 +60,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class PausedZoneDeviceTests {
     private static final String BATCH = "zas_atmos_paused_zones";
     private static final ResourceLocation CO2 = ControllerPreset.CO2;
-    private static final double OPEN_END = 1 - Math.pow(1 - PipeBlockEntity.OPEN_END_RATIO, AtmosTicks.SECONDS);
+    private static final double OPEN_END = 1 - Math.pow(1 - PipeBlockEntity.OPEN_END_RATIO, DeviceTicks.SECONDS);
 
     private PausedZoneDeviceTests() {}
 
@@ -296,7 +296,7 @@ public final class PausedZoneDeviceTests {
                 double before = net.moles(CO2);
                 double want = ScrubberMath.take(
                                 r.known(),
-                                ScrubberMode.SCRUB.litres() * AtmosTicks.SECONDS,
+                                ScrubberMode.SCRUB.litres() * DeviceTicks.SECONDS,
                                 GasSelection.DEFAULT,
                                 net.mixture())
                         .get(CO2);

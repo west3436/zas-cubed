@@ -1,14 +1,14 @@
 package io.github.west3436.zas.atmos.inline;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.device.LoadedBlocks;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
 import io.github.west3436.zas.atmos.pipe.PipeNode;

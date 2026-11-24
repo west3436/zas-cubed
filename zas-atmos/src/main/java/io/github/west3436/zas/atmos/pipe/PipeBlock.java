@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.pipe;
 
 import com.mojang.serialization.MapCodec;
-import io.github.west3436.zas.atmos.device.BlockTurns;
+import io.github.west3436.ss13.device.BlockTurns;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -38,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
  * any neighbour that offers a connection back ({@link PipeConnector}) or provides a gas handler
  * ({@link GasHandlers}, API-025), and it can be dyed (CONT-114).
  */
-public class PipeBlock extends BaseEntityBlock implements PipeConnector {
+public class PipeBlock extends BaseEntityBlock implements PipeConnector, BlockTurns.Sides {
     public static final MapCodec<PipeBlock> CODEC = simpleCodec(PipeBlock::new);
 
     /** Whether the pipe connects on each face. */
@@ -310,5 +310,11 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
         return BlockTurns.mirror(state, mirror);
+    }
+
+    /** Its arms turn with it ({@link BlockTurns}). */
+    @Override
+    public Map<Direction, BooleanProperty> sideProperties() {
+        return CONNECTIONS;
     }
 }

@@ -1,7 +1,7 @@
 package io.github.west3436.zas.compat.mi.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;

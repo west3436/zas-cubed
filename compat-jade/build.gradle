@@ -104,10 +104,10 @@ dependencies {
     // As zas_atmos itself: the public API to compile against (CONT-095), zas at run time.
     implementation project(':zas-api')
     implementation project(':zas-atmos')
-    // SS13 Framework's PluginGate, behind which the plugin registers, as zas_atmos compiles against
-    // the framework (CONT-095). Its runs get the framework from zas_atmos's.
+    // SS13 Framework, for the compiler only: its PluginGate, behind which the plugin registers, and
+    // the readout and device base zas_atmos's devices are built on (CONT-095). Its runs get the
+    // framework from zas_atmos's.
     compileOnly "io.github.west3436:ss13-framework:${framework_version}"
-    testCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
 
     // Compile-only, never bundled: the adapter is optional (NFR-022).
     compileOnly "maven.modrinth:jade:${jadeOldest}"
@@ -123,6 +123,8 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // SS13 Framework, mod and API, as plain classes: the readout the tests read through.
+    testImplementation "io.github.west3436:ss13-framework:${framework_version}"
 }
 
 // The release jar plus the tests and their empty structures.

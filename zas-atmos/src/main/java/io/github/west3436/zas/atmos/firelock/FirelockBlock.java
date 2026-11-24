@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.firelock;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.ss13.api.label.LabelledPart;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import java.util.EnumMap;
@@ -60,7 +61,7 @@ import org.jetbrains.annotations.Nullable;
  * thud and a warning (CONT-093). A crowbar forces it either way, even locked down, with a bang
  * (CONT-094). Redstone doesn't move it.
  */
-public class FirelockBlock extends HorizontalDirectionalBlock implements EntityBlock {
+public class FirelockBlock extends HorizontalDirectionalBlock implements EntityBlock, LabelledPart {
     public static final MapCodec<FirelockBlock> CODEC = simpleCodec(FirelockBlock::new);
 
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
@@ -328,5 +329,11 @@ public class FirelockBlock extends HorizontalDirectionalBlock implements EntityB
     /** What a refused opening says; a component for each lockdown reason. */
     static Component lockedMessage(String reason) {
         return Component.translatable("block.zas_atmos.firelock.locked." + reason);
+    }
+
+    /** A firelock's label is kept by its lower half ({@link #lower}). */
+    @Override
+    public BlockPos labelledAt(BlockState state, BlockPos pos) {
+        return lower(state, pos);
     }
 }

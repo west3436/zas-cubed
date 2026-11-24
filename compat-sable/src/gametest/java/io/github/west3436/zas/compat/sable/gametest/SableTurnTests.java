@@ -2,14 +2,14 @@ package io.github.west3436.zas.compat.sable.gametest;
 
 import dev.ryanhcode.sable.api.SubLevelAssemblyHelper;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.SidePortBlock;
 import io.github.west3436.zas.atmos.inline.SidePortEntity;
-import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;

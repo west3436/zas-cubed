@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.SoundLog;
 import io.github.west3436.ss13.testkit.TestPlayers;
@@ -24,7 +25,6 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gear.Encumbrance;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
@@ -667,13 +667,13 @@ public final class GearTests {
             close(h, gasping.breath().orElseThrow().moles(CO), 0, 0, "CO in the breath without O2");
             close(h, masked.getHealth(), masked.getMaxHealth(), 0, "the masked player's health from the CO");
             int air0 = masked.getAirSupply();
-            for (int i = 0; i < AtmosTicks.PERIOD; i++) {
+            for (int i = 0; i < DeviceTicks.PERIOD; i++) {
                 masked.baseTick();
             }
             h.assertTrue(masked.getAirSupply() < air0, "the air meter didn't drain: " + masked.getAirSupply());
             masked.setAirSupply(0);
             masked.invulnerableTime = 0;
-            for (int i = 0; i < 2 * AtmosTicks.PERIOD && masked.getHealth() >= masked.getMaxHealth(); i++) {
+            for (int i = 0; i < 2 * DeviceTicks.PERIOD && masked.getHealth() >= masked.getMaxHealth(); i++) {
                 masked.baseTick();
             }
             h.assertTrue(masked.getHealth() < masked.getMaxHealth(), "no hypoxia without O2");

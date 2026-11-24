@@ -1,5 +1,9 @@
 package io.github.west3436.zas.atmos.miner;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -12,11 +16,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
@@ -279,7 +279,7 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider, Re
 
     /** The most it adds in one step, mol. */
     private static double mostPerStep() {
-        return AtmosServerConfig.get(AtmosServerConfig.GAS_MINER_RATE) * AtmosTicks.SECONDS;
+        return AtmosServerConfig.get(AtmosServerConfig.GAS_MINER_RATE) * DeviceTicks.SECONDS;
     }
 
     @Override
@@ -345,7 +345,7 @@ public class GasMinerBlockEntity extends AtmosDevice implements MenuProvider, Re
             if (result.outcome() == MutationOutcome.AMBIENT) {
                 openAirWait = Math.max(0, AtmosServerConfig.get(AtmosServerConfig.GAS_MINER_OPEN_AIR_WAIT))
                         * 20
-                        / AtmosTicks.PERIOD;
+                        / DeviceTicks.PERIOD;
                 status = GasMinerStatus.OPEN_AIR;
             }
         });

@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.client;
 
-import io.github.west3436.zas.atmos.device.ClientDeviceActivity;
+import io.github.west3436.ss13.device.ClientDeviceActivity;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.particle.GasJet;
 import io.github.west3436.zas.atmos.particle.GasJetKind;

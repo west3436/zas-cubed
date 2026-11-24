@@ -2,8 +2,10 @@ package io.github.west3436.zas.atmos.compat.jade;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.github.west3436.ss13.client.tgui.Readout;
 import io.github.west3436.zas.api.client.DisplayUnitProvider;
 import io.github.west3436.zas.api.client.DisplayUnits;
+import io.github.west3436.zas.atmos.device.FrameworkHooks;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -13,9 +15,13 @@ class ReadoutTextTest {
     /** Whether the player's units are psi and °F; otherwise the defaults, kPa and °C. */
     private static boolean imperial;
 
-    /** The API takes one provider, once, so this one switches units for the tests. */
+    /**
+     * The API takes one provider, once, so this one switches units for the tests. The readings go
+     * through SS13 Framework's readout, which ZAS³ gives the player's units when it loads.
+     */
     @BeforeAll
     static void installUnits() {
+        Readout.useUnits(FrameworkHooks.playerUnits());
         DisplayUnits.install(new DisplayUnitProvider() {
             @Override
             public double pressure(double kpa) {

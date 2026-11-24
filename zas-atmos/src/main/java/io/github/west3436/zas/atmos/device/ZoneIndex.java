@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.device;
 
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -31,6 +32,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -90,8 +93,19 @@ public final class ZoneIndex {
 
     private ZoneIndex() {}
 
-    /** Registers the zone event listeners. Called once, from {@link DeviceTicker#register}. */
-    static void register(IEventBus gameBus) {
+    /**
+     * Registers the zone event listeners, and forgets a level's index when it unloads and every
+     * index when the server stops. Called once, from the mod constructor.
+     *
+     * @param gameBus the game's event bus
+     */
+    public static void register(IEventBus gameBus) {
+        gameBus.addListener((ServerStoppedEvent e) -> clear());
+        gameBus.addListener((LevelEvent.Unload e) -> {
+            if (e.getLevel() instanceof ServerLevel level) {
+                forget(level.dimension());
+            }
+        });
         gameBus.addListener((ZoneCreatedEvent e) -> zonesChanged(e));
         gameBus.addListener((ZoneMergedEvent e) -> zonesChanged(e, e.absorbed()));
         gameBus.addListener((ZoneSplitEvent e) -> zonesChanged(e, e.remnant()));

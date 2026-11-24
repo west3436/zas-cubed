@@ -1,14 +1,14 @@
 package io.github.west3436.zas.atmos.teg;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.WorkToFe;
@@ -179,7 +179,7 @@ public class TegBlockEntity extends AtmosDevice implements MenuProvider, Redston
         } else {
             next = TegStatus.NO_DIFFERENCE;
         }
-        finish(level, next, ex.work() / jpf / (AtmosTicks.SECONDS * 20));
+        finish(level, next, ex.work() / jpf / (DeviceTicks.SECONDS * 20));
     }
 
     private static double temperatureOf(GasParcel stream, @Nullable CirculatorBlockEntity c, boolean inlet) {

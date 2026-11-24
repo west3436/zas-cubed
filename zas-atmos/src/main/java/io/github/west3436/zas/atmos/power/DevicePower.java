@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.power;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.ss13.device.DeviceTicks;
 import java.util.Objects;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
@@ -36,7 +36,7 @@ import net.minecraft.nbt.CompoundTag;
  */
 public final class DevicePower {
     /** How long one {@link #supply} powers a device: two atmos ticks, in game ticks. */
-    public static final int LEASE_TICKS = 2 * AtmosTicks.PERIOD;
+    public static final int LEASE_TICKS = 2 * DeviceTicks.PERIOD;
 
     private static final String TEST_POWERED = "TestPowered";
 
@@ -52,7 +52,7 @@ public final class DevicePower {
     /**
      * @param priority who the device is powered before or after when power runs short
      * @param draw what the device draws now, in FE/t; 0 while it is off
-     * @param clock the current game tick, as {@link AtmosTicks#now}
+     * @param clock the current game tick, as {@link DeviceTicks#now}
      */
     public DevicePower(PowerPriority priority, IntSupplier draw, LongSupplier clock) {
         this.priority = Objects.requireNonNull(priority, "priority");
@@ -70,9 +70,9 @@ public final class DevicePower {
         return Math.max(0, draw.getAsInt());
     }
 
-    /** What one atmos tick of power costs a provider now: {@link #draw()} × {@link AtmosTicks#PERIOD} FE. */
+    /** What one atmos tick of power costs a provider now: {@link #draw()} × {@link DeviceTicks#PERIOD} FE. */
     public long drawPerAtmosTick() {
-        return (long) draw() * AtmosTicks.PERIOD;
+        return (long) draw() * DeviceTicks.PERIOD;
     }
 
     /**
@@ -119,7 +119,7 @@ public final class DevicePower {
      * covering it a second time, through its zone and a link, needn't pay twice.
      */
     public boolean suppliedThisAtmosTick() {
-        return poweredUntil != Long.MIN_VALUE && clock.getAsLong() < poweredUntil - LEASE_TICKS + AtmosTicks.PERIOD;
+        return poweredUntil != Long.MIN_VALUE && clock.getAsLong() < poweredUntil - LEASE_TICKS + DeviceTicks.PERIOD;
     }
 
     /**

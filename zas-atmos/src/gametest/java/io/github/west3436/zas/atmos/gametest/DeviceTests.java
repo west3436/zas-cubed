@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicker;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import java.util.List;
 import java.util.Set;
@@ -46,12 +46,12 @@ public final class DeviceTests {
                 h.assertTrue(d.steps.size() >= 5 && d.steps.size() <= 6, "steps in 110 ticks: " + d.steps);
                 for (int i = 1; i < d.steps.size(); i++) {
                     h.assertValueEqual(
-                            d.steps.get(i) - d.steps.get(i - 1), (long) AtmosTicks.PERIOD, "ticks between steps");
+                            d.steps.get(i) - d.steps.get(i - 1), (long) DeviceTicks.PERIOD, "ticks between steps");
                 }
                 for (Thread t : d.threads) {
                     h.assertTrue(t == server, "stepped on " + t.getName() + ", not the server thread");
                 }
-                phases.add(d.steps.get(0) % AtmosTicks.PERIOD);
+                phases.add(d.steps.get(0) % DeviceTicks.PERIOD);
                 h.assertTrue(DeviceTicker.loaded(h.getLevel()).contains(d), "not in the level's schedule");
             }
             h.assertValueEqual(phases.size(), devices.size(), "devices placed together share a phase");
@@ -74,7 +74,7 @@ public final class DeviceTests {
         TestDevice.Entity d = place(h, new BlockPos(0, 1, 0));
         DevicePower power = d.power();
         h.assertFalse(power.isPowered(), "powered with no provider");
-        h.assertValueEqual(power.drawPerAtmosTick(), 10L * AtmosTicks.PERIOD, "FE per atmos tick");
+        h.assertValueEqual(power.drawPerAtmosTick(), 10L * DeviceTicks.PERIOD, "FE per atmos tick");
         Object provider = "test provider";
         power.supply(provider);
         h.assertTrue(power.isPowered(), "unpowered after a supply");

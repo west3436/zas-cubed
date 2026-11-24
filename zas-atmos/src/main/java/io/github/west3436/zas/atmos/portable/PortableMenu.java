@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.portable;
 
-import io.github.west3436.zas.atmos.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControl;
 import java.util.List;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;

@@ -10,6 +10,7 @@ import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.ss13.api.FrameworkApi;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
@@ -18,7 +19,6 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.CentralClaims;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.MovedItems;
@@ -102,7 +102,7 @@ public final class SavedWorldTests {
     private static final String BATCH = "zas_atmos_saved_world";
 
     /** Game ticks for a few atmos ticks to pass. */
-    private static final int SETTLE = 3 * AtmosTicks.PERIOD;
+    private static final int SETTLE = 3 * DeviceTicks.PERIOD;
 
     /** The area air controller in 0.1.0's room R, and the central controller that claimed it. */
     private static final BlockPos CONTROLLER = new BlockPos(643, -59, 2);

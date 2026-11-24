@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.compat.cc;
 
-import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.zas.atmos.miner.GasMinerBlock;
 import io.github.west3436.zas.atmos.miner.GasMinerBlockEntity;
 import io.github.west3436.zas.atmos.miner.GasMinerStatus;

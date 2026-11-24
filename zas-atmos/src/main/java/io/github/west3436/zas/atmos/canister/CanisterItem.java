@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.canister;
 
+import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
@@ -55,7 +55,7 @@ public class CanisterItem extends BlockItem {
     /** A mined canister's gas goes on reacting while it is carried (CONT-100). */
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
-        if (level instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+        if (level instanceof ServerLevel server && DeviceTicks.due(server, entity)) {
             ContainerReactions.react(stack, PipeVolumes.CANISTER);
         }
     }
@@ -63,7 +63,7 @@ public class CanisterItem extends BlockItem {
     /** A mined canister's gas goes on reacting while it lies dropped (CONT-100). */
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-        if (entity.level() instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+        if (entity.level() instanceof ServerLevel server && DeviceTicks.due(server, entity)) {
             ContainerReactions.react(stack, PipeVolumes.CANISTER);
         }
         return false;

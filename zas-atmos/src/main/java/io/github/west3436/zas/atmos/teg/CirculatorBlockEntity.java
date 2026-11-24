@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.teg;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
@@ -128,7 +128,7 @@ public class CirculatorBlockEntity extends InlineDeviceEntity {
                 to.volume(),
                 to.pressure(),
                 AtmosServerConfig.get(AtmosServerConfig.CIRCULATOR_FRICTION_KPA),
-                AtmosServerConfig.get(AtmosServerConfig.CIRCULATOR_MAX_FLOW) * AtmosTicks.SECONDS);
+                AtmosServerConfig.get(AtmosServerConfig.CIRCULATOR_MAX_FLOW) * DeviceTicks.SECONDS);
         if (n < PipeBlockEntity.MIN_FLOW) {
             lastDraw = from.isEmpty() ? InlineStatus.INPUT_EMPTY : InlineStatus.TARGET_REACHED;
             return GasParcel.EMPTY;

@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.ss13.device.DeviceTicks;
 import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 
@@ -27,10 +27,10 @@ class DevicePowerTest {
         assertSame(provider, p.source());
         assertTrue(p.suppliedThisAtmosTick());
 
-        clock[0] += AtmosTicks.PERIOD;
+        clock[0] += DeviceTicks.PERIOD;
         assertTrue(p.isPowered(), "one atmos tick later");
         assertFalse(p.suppliedThisAtmosTick());
-        clock[0] += DevicePower.LEASE_TICKS - AtmosTicks.PERIOD - 1;
+        clock[0] += DevicePower.LEASE_TICKS - DeviceTicks.PERIOD - 1;
         assertTrue(p.isPowered(), "the lease's last tick");
         clock[0]++;
         assertFalse(p.isPowered(), "after the lease");
@@ -52,7 +52,7 @@ class DevicePowerTest {
         Object provider = new Object();
         p.supply(provider);
         for (int i = 0; i < 10; i++) {
-            clock[0] += AtmosTicks.PERIOD;
+            clock[0] += DeviceTicks.PERIOD;
             p.hold();
             assertTrue(p.isPowered(), "held, after " + (i + 1) + " atmos ticks");
             assertTrue(p.paidFor(), "a held paid lease is paid for");
@@ -83,7 +83,7 @@ class DevicePowerTest {
         assertTrue(p.isPowered());
         assertFalse(p.paidFor(), "a lease taken at no cost");
 
-        clock[0] += AtmosTicks.PERIOD;
+        clock[0] += DeviceTicks.PERIOD;
         p.supply(new Object());
         assertTrue(p.paidFor(), "a lease paid for");
         clock[0] += DevicePower.LEASE_TICKS;
@@ -98,7 +98,7 @@ class DevicePowerTest {
         int[] draw = {10};
         DevicePower p = new DevicePower(PowerPriority.LIFE_SUPPORT, () -> draw[0], () -> 0L);
         assertEquals(10, p.draw());
-        assertEquals(10L * AtmosTicks.PERIOD, p.drawPerAtmosTick());
+        assertEquals(10L * DeviceTicks.PERIOD, p.drawPerAtmosTick());
         draw[0] = -5;
         assertEquals(0, p.draw());
         assertEquals(PowerPriority.LIFE_SUPPORT, p.priority());

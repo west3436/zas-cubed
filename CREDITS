@@ -3342,20 +3342,6 @@ path: example-addon/src/main/resources/assets/zas_example/models/item/oxygen_tan
 origin: original
 notes: Points at a model of vanilla's; adds no art of its own.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/font/dejavu_sans.ttf
-origin: other
-source: https://dejavu-fonts.github.io/ (DejaVu Sans 2.37)
-license: Bitstream-Vera
-attribution: Bitstream and the DejaVu fonts team; license text in META-INF/licenses/DejaVu-Fonts.txt
-adapted: Cut down to the Latin, Greek, punctuation, arrow, maths, shape and symbol ranges.
-
-path: zas-atmos/src/main/resources/assets/zas_atmos/font/dejavu_sans_bold.ttf
-origin: other
-source: https://dejavu-fonts.github.io/ (DejaVu Sans Bold 2.37)
-license: Bitstream-Vera
-attribution: Bitstream and the DejaVu fonts team; license text in META-INF/licenses/DejaVu-Fonts.txt
-adapted: Cut down to the Latin, Greek, punctuation, arrow, maths, shape and symbol ranges.
-
 # Station blocks (CONT-129 to CONT-131). Their block models and textures come with their art.
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/station_wall.json
 origin: original

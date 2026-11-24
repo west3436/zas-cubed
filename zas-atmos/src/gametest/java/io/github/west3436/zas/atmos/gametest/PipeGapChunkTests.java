@@ -5,12 +5,11 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
@@ -156,7 +155,7 @@ public final class PipeGapChunkTests {
          * chunk, would step their network.
          */
         void step(ChunkPos chunk) {
-            for (AtmosDevice d : DeviceTicker.loaded(a.level)) {
+            for (AtmosDevice d : AtmosDevice.loaded(a.level)) {
                 if (new ChunkPos(d.getBlockPos()).equals(chunk)) {
                     d.step();
                 }
@@ -228,7 +227,7 @@ public final class PipeGapChunkTests {
         List<PipeNode> sides = b.line();
         GameTestSequence seq =
                 h.startSequence().thenIdle(2); // the game's own onLoad calls dissolve the networks built above
-        for (int i = 0; i < AtmosTicks.PERIOD; i++) {
+        for (int i = 0; i < DeviceTicks.PERIOD; i++) {
             int phase = i;
             double[] n2 = new double[1];
             double[] o2 = new double[1];
@@ -245,7 +244,7 @@ public final class PipeGapChunkTests {
                     })
                     .thenWaitUntil(() -> h.assertFalse(b.full(b.chunkB), "chunk B is still loaded"))
                     .thenWaitUntil(() -> h.assertValueEqual(
-                            Math.floorMod(h.getLevel().getServer().getTickCount(), AtmosTicks.PERIOD),
+                            Math.floorMod(h.getLevel().getServer().getTickCount(), DeviceTicks.PERIOD),
                             phase,
                             "the game tick in the period"))
                     .thenExecute(() -> {
@@ -258,9 +257,9 @@ public final class PipeGapChunkTests {
                     .thenExecute(() -> b.step(b.chunkA))
                     .thenWaitUntil(() -> h.assertFalse(b.full(b.chunkB), "chunk B hasn't left again"))
                     .thenExecute(() -> b.step(b.chunkA))
-                    .thenIdle(AtmosTicks.PERIOD)
+                    .thenIdle(DeviceTicks.PERIOD)
                     .thenExecute(() -> b.step(b.chunkA))
-                    .thenIdle(AtmosTicks.PERIOD)
+                    .thenIdle(DeviceTicks.PERIOD)
                     .thenExecute(() -> {
                         h.assertFalse(b.full(b.chunkB), "chunk B came back by itself");
                         b.a.close(b.moles(N2, all), n2[0], "the line's N2 with chunk B away, at " + phase);
@@ -268,7 +267,7 @@ public final class PipeGapChunkTests {
                         b.hold(b.chunkB, true);
                     });
             b.bothTicking(seq);
-            seq.thenIdle(2 * AtmosTicks.PERIOD).thenExecute(() -> {
+            seq.thenIdle(2 * DeviceTicks.PERIOD).thenExecute(() -> {
                 b.assertJoined(
                         b.a.<PipeNodeEntity>entity(WEST, Y, Z),
                         b.a.<PipeNodeEntity>entity(EAST, Y, Z),
@@ -364,7 +363,7 @@ public final class PipeGapChunkTests {
                 })
                 .thenWaitUntil(() -> h.assertFalse(b.full(b.chunkB), "chunk B is still loaded"))
                 .thenExecute(() -> b.step(b.chunkA))
-                .thenIdle(AtmosTicks.PERIOD)
+                .thenIdle(DeviceTicks.PERIOD)
                 .thenExecute(() -> b.step(b.chunkA))
                 .thenExecute(() -> {
                     PipeNetwork net = west.currentNetwork();
@@ -375,7 +374,7 @@ public final class PipeGapChunkTests {
                 .thenExecute(() -> b.hold(b.chunkB, true))
                 .thenWaitUntil(() -> h.assertTrue(b.full(b.chunkB), "chunk B hasn't returned"))
                 .thenExecute(() -> b.step(b.chunkB))
-                .thenIdle(AtmosTicks.PERIOD)
+                .thenIdle(DeviceTicks.PERIOD)
                 .thenExecute(() -> b.step(b.chunkB))
                 .thenExecute(() -> {
                     PipeNetwork net = east.currentNetwork();
@@ -387,7 +386,7 @@ public final class PipeGapChunkTests {
                     b.hold(b.chunkA, true);
                 });
         b.bothTicking(seq);
-        seq.thenIdle(2 * AtmosTicks.PERIOD)
+        seq.thenIdle(2 * DeviceTicks.PERIOD)
                 .thenExecute(() -> {
                     b.assertJoined(west, east, all.size(), volume, 70.0, 35.0, "after both returned");
                     b.done();

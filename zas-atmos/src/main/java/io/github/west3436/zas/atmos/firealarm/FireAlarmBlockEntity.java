@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.firealarm;
 
+import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;

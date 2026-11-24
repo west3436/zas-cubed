@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.ttv;
 
+import io.github.west3436.ss13.device.DeviceData;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
@@ -316,7 +316,7 @@ public class PrimedTransferValve extends Entity {
             }
         }
         if (--nextStep <= 0) {
-            nextStep = AtmosTicks.PERIOD;
+            nextStep = DeviceTicks.PERIOD;
             TransferValve.Step step = valve.step(level, this, this);
             if (step == TransferValve.Step.DESTROYED) {
                 discard();

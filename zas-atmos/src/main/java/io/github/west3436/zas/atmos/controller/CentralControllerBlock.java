@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.controller;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.ss13.api.label.LabelledPart;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import java.util.EnumMap;
@@ -57,7 +58,7 @@ import org.jetbrains.annotations.Nullable;
  *       selection outline is the whole console.
  * </ul>
  */
-public class CentralControllerBlock extends HorizontalDirectionalBlock implements EntityBlock {
+public class CentralControllerBlock extends HorizontalDirectionalBlock implements EntityBlock, LabelledPart {
     public static final MapCodec<CentralControllerBlock> CODEC = simpleCodec(CentralControllerBlock::new);
 
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
@@ -310,5 +311,11 @@ public class CentralControllerBlock extends HorizontalDirectionalBlock implement
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** A central controller's label is kept by its lower left block ({@link #origin}). */
+    @Override
+    public BlockPos labelledAt(BlockState state, BlockPos pos) {
+        return origin(state, pos);
     }
 }

@@ -1,6 +1,12 @@
 package io.github.west3436.zas.compat.sable.gametest;
 
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import io.github.west3436.ss13.device.ClientDeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivityPayload;
+import io.github.west3436.ss13.device.DeviceActivitySync;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.client.DeviceLoops;
 import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.airflow.AirflowEffectsPayload;
 import io.github.west3436.zas.airflow.AirflowParticlePlan;
@@ -12,12 +18,6 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.relocation.Relocations;
-import io.github.west3436.zas.atmos.client.DeviceLoops;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.ClientDeviceActivity;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
-import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
-import io.github.west3436.zas.atmos.device.DeviceActivitySync;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.particle.JetEmitters;
@@ -332,7 +332,7 @@ public final class SableShownTests {
         BlockPos device = Deck.onBoard(sub, 2, 1, 3);
         Vec3 shownDevice = shown(sub, Vec3.atCenterOf(device));
         Vec3 ear = shown(sub, Vec3.atCenterOf(Deck.onBoard(sub, 2, 2, 1)));
-        long now = AtmosTicks.now(d.level);
+        long now = DeviceTicks.now(d.level);
         DeviceActivitySync.reportForTest(d.level, device, DeviceActivity.HARD, now);
         try {
             // The server tells the player in the cabin.

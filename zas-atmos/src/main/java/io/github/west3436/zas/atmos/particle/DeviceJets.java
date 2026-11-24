@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.particle;
 
+import io.github.west3436.ss13.device.DeviceActivity;
 import io.github.west3436.zas.api.relocation.Relocations;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import net.minecraft.core.BlockPos;

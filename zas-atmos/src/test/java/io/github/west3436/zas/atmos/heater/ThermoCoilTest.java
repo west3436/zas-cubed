@@ -3,8 +3,8 @@ package io.github.west3436.zas.atmos.heater;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.mutation.SourceId;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ class ThermoCoilTest {
         coil.order(1);
         assertEquals(1, coil.draw(), "a little rounds up to 1 FE/t");
         assertEquals(
-                HeaterMath.energy(1, AtmosTicks.SECONDS, 5000, 60, AtmosTicks.PERIOD),
+                HeaterMath.energy(1, DeviceTicks.SECONDS, 5000, 60, DeviceTicks.PERIOD),
                 1,
                 "the heater's own cost of 1 J");
     }
@@ -37,13 +37,13 @@ class ThermoCoilTest {
     /** What some FE pays for, ordered, costs no more than that FE. */
     @Test
     void cont_166_what_spare_fe_pays_for_costs_no_more() {
-        assertEquals(5000 * AtmosTicks.SECONDS, coil.joulesFor(1_000_000), "plenty");
+        assertEquals(5000 * DeviceTicks.SECONDS, coil.joulesFor(1_000_000), "plenty");
         assertEquals(0, coil.joulesFor(19), "less than 1 FE/t");
         for (long fe : new long[] {20, 300, 333, 1199}) {
             coil.order(coil.joulesFor(fe));
-            long paid = (long) coil.draw() * AtmosTicks.PERIOD;
+            long paid = (long) coil.draw() * DeviceTicks.PERIOD;
             assertTrue(paid <= fe, fe + " FE paid for " + paid);
-            assertTrue(paid > fe - AtmosTicks.PERIOD, fe + " FE bought only " + paid);
+            assertTrue(paid > fe - DeviceTicks.PERIOD, fe + " FE bought only " + paid);
         }
     }
 
@@ -51,7 +51,7 @@ class ThermoCoilTest {
     @Test
     void cont_166_an_order_is_clamped() {
         coil.order(1e9);
-        assertEquals(5000 * AtmosTicks.SECONDS, coil.ordered());
+        assertEquals(5000 * DeviceTicks.SECONDS, coil.ordered());
         coil.order(-5);
         assertEquals(0, coil.ordered());
         coil.order(Double.NaN);

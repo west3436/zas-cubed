@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.ss13.client.tgui.TguiScreen;
+import io.github.west3436.ss13.client.tgui.Ui;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
-import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;

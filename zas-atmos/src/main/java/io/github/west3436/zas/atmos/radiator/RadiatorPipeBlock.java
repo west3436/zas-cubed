@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.radiator;
 
 import com.mojang.serialization.MapCodec;
-import io.github.west3436.zas.atmos.device.BlockTurns;
+import io.github.west3436.ss13.device.BlockTurns;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import java.util.EnumMap;
@@ -30,7 +30,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * HEAT-021). It joins only radiator pipe and a radiator adaptor's radiator end, never pipe, a
  * device or a gas handler, and its free ends are closed (CONT-144). It isn't dyed.
  */
-public class RadiatorPipeBlock extends BaseEntityBlock implements PipeConnector {
+public class RadiatorPipeBlock extends BaseEntityBlock implements PipeConnector, BlockTurns.Sides {
     public static final MapCodec<RadiatorPipeBlock> CODEC = simpleCodec(RadiatorPipeBlock::new);
 
     /** Whether it connects on each face: the pipe's own properties. */
@@ -140,5 +140,11 @@ public class RadiatorPipeBlock extends BaseEntityBlock implements PipeConnector 
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
         return BlockTurns.mirror(state, mirror);
+    }
+
+    /** Its arms turn with it ({@link BlockTurns}). */
+    @Override
+    public Map<Direction, BooleanProperty> sideProperties() {
+        return CONNECTIONS;
     }
 }

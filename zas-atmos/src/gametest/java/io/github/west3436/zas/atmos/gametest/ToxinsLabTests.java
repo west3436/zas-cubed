@@ -5,6 +5,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -14,7 +15,6 @@ import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.ControllerMode;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.failure.ContainerBlast;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.gas.GasStore;
@@ -179,7 +179,7 @@ public final class ToxinsLabTests {
                     h.assertTrue(igniter.power().source() == controller, "the igniter isn't on the controller");
                 })
                 // A redstone signal lights it. Nothing burns until then.
-                .thenIdle(4 * AtmosTicks.PERIOD)
+                .thenIdle(4 * DeviceTicks.PERIOD)
                 .thenExecute(() -> {
                     h.assertValueEqual(a.zone(2, 2, 2).mixture().moles(H2O), 0.0, "water before the igniter fired");
                     a.set(0, 1, 2, Blocks.REDSTONE_BLOCK.defaultBlockState());
@@ -241,7 +241,7 @@ public final class ToxinsLabTests {
         trial.open();
         GasMixture mix = GasTankItem.contents(trial.second());
         h.assertTrue(mix.temperature() > AUTOIGNITION, "the mix is below autoignition: " + mix);
-        GasMixture burned = Reactions.applyStandalone(mix, AtmosTicks.SECONDS, false);
+        GasMixture burned = Reactions.applyStandalone(mix, DeviceTicks.SECONDS, false);
         ContainerFailure.Verdict verdict = ContainerFailure.tank(burned.pressure(), ContainerBlast.powerCap());
         h.assertValueEqual(verdict.kind(), ContainerFailure.Kind.EXPLODE, "what the burnt mix does: " + burned);
 

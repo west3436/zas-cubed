@@ -1,10 +1,10 @@
 package io.github.west3436.zas.atmos.battery;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
@@ -112,7 +112,7 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
             status = Status.UNPOWERED;
         } else {
             int rate = AtmosServerConfig.get(AtmosServerConfig.RECHARGER_RATE);
-            if (e.receiveEnergy(rate * AtmosTicks.PERIOD, false) > 0) {
+            if (e.receiveEnergy(rate * DeviceTicks.PERIOD, false) > 0) {
                 setChanged();
             }
             status = Status.CHARGING;

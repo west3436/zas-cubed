@@ -1,11 +1,11 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.west3436.ss13.device.DeviceData;
+import io.github.west3436.ss13.device.ItemData;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.DeviceData;
-import io.github.west3436.zas.atmos.device.ItemData;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;

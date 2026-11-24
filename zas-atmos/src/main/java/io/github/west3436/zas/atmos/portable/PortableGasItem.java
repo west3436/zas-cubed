@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.portable;
 
+import io.github.west3436.ss13.client.tgui.Readout;
 import io.github.west3436.zas.api.gas.GasParcel;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.List;

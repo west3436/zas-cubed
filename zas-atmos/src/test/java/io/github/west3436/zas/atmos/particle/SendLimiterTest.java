@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.ss13.device.DeviceTicks;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +46,7 @@ class SendLimiterTest {
     @Test
     void client_019_ends_sharing_a_game_tick_all_send_under_the_cap() {
         // A device's phase comes from the order it was added, so any few of them can share one.
-        SendLimiter limiter = new SendLimiter(GasJets.FLOWING_PER_SECOND, AtmosTicks.PERIOD);
+        SendLimiter limiter = new SendLimiter(GasJets.FLOWING_PER_SECOND, DeviceTicks.PERIOD);
         for (int end = 0; end < GasJets.FLOWING_PER_SECOND; end++) {
             assertTrue(limiter.allow(ONE, 100), "end " + end + " lost out with the cap not reached");
         }
@@ -55,10 +55,10 @@ class SendLimiterTest {
 
     @Test
     void data_006_a_large_station_stays_within_the_budget() {
-        SendLimiter limiter = new SendLimiter(GasJets.FLOWING_PER_SECOND, AtmosTicks.PERIOD);
+        SendLimiter limiter = new SendLimiter(GasJets.FLOWING_PER_SECOND, DeviceTicks.PERIOD);
         int seconds = 10;
         int sent = 0;
-        for (long tick = 0; tick < seconds * AtmosTicks.PERIOD; tick++) {
+        for (long tick = 0; tick < seconds * DeviceTicks.PERIOD; tick++) {
             for (int end = 0; end < 100; end++) {
                 if (limiter.allow(ONE, tick)) {
                     sent++;

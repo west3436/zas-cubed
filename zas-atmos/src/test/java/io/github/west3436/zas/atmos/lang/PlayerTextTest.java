@@ -7,7 +7,10 @@ import com.google.gson.JsonParser;
 import io.github.west3436.ss13.testkit.PlayerTextScan;
 import io.github.west3436.ss13.testkit.PlayerTextScan.Found;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -80,6 +83,8 @@ class PlayerTextTest {
         // zas_atmos requires zas, so it can name zas's keys too. zas can't name zas_atmos's.
         Set<String> atmos = new HashSet<>(zas);
         atmos.addAll(lang("zas_atmos.resources", "zas_atmos"));
+        // Its windows are built on SS13 Framework, which zas nests, so it can name the framework's too.
+        atmos.addAll(frameworkLang());
         // The Ponder scenes are part of zas_atmos, so they can name its keys and zas's, and their own.
         Set<String> ponder = new HashSet<>(atmos);
         ponder.addAll(lang("zas_atmos.ponderResources", "zas_ponder"));
@@ -163,6 +168,16 @@ class PlayerTextTest {
 
     private static Path classes(String property) {
         return Path.of(System.getProperty(property));
+    }
+
+    /** SS13 Framework's keys, from its jar on the classpath. */
+    private static Set<String> frameworkLang() throws IOException {
+        try (InputStream in = PlayerTextTest.class.getResourceAsStream("/assets/ss13_framework/lang/en_us.json")) {
+            assertTrue(in != null, "SS13 Framework's en_us.json isn't on the classpath");
+            return JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8))
+                    .getAsJsonObject()
+                    .keySet();
+        }
     }
 
     private static Set<String> lang(String property, String namespace) throws IOException {

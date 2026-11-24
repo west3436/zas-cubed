@@ -2,7 +2,7 @@ package io.github.west3436.zas.atmos.particle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.github.west3436.zas.atmos.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import org.junit.jupiter.api.Test;

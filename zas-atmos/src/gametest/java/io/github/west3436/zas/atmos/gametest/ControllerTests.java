@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.testkit.SoundLog;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -18,8 +19,6 @@ import io.github.west3436.zas.atmos.controller.ScrubberOrder;
 import io.github.west3436.zas.atmos.controller.Thresholds;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
@@ -486,8 +485,8 @@ public final class ControllerTests {
                     s.place(2, 1, 3, TestParts.Kind.VENT.block().defaultBlockState(), TestParts.Vent.class);
             vent.drawsOnlyWhenOn = true;
             h.assertValueEqual(vent.power().draw(), 0, "the vent's draw before any order");
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
-            int ventCost = TestParts.Kind.VENT.draw * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
+            int ventCost = TestParts.Kind.VENT.draw * DeviceTicks.PERIOD;
             // The first step pins the zone; the vent is covered, and ordered on, once it has formed.
             for (int i = 0; i < 4 && vent.orders.isEmpty(); i++) {
                 s.cycle(c);
@@ -600,7 +599,7 @@ public final class ControllerTests {
     private static List<BlockPos> asked(Site s, AreaAirControllerBlockEntity c) {
         Optional<ZoneId> zone = Atmospheres.at(s.level, c.airPoint()).zone();
         List<BlockPos> out = new ArrayList<>();
-        for (AtmosDevice d : DeviceTicker.loaded(s.level)) {
+        for (AtmosDevice d : AtmosDevice.loaded(s.level)) {
             if (d instanceof PoweredDevice p
                     && (c.links().contains(d.getBlockPos())
                             || (zone.isPresent()
@@ -626,7 +625,7 @@ public final class ControllerTests {
             s.clear();
             AreaAirControllerBlockEntity c = poweredRoom(s, 0);
             TestParts.Battery battery = s.entity(2, 2, 0, TestParts.Battery.class);
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             h.assertValueEqual(own, 100, "the controller's own draw per atmos tick");
             s.cycle(c);
             h.assertValueEqual(c.buffer().getMaxEnergyStored(), 10_000, "the buffer's size");

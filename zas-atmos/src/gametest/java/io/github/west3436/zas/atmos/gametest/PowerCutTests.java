@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -8,7 +9,6 @@ import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmStatus;
@@ -136,7 +136,7 @@ public final class PowerCutTests {
         IgniterBlockEntity ig = igniter;
         RechargerBlockEntity r = recharger;
         FireAlarmBlockEntity fa = alarm;
-        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * AtmosTicks.PERIOD, () -> {
+        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * DeviceTicks.PERIOD, () -> {
             try {
                 controller.step();
                 h.assertFalse(controller.powered(), "the controller has power with no generator");

@@ -5,13 +5,12 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.config.AtmosStartupConfig;
 import io.github.west3436.zas.atmos.controller.CentralChunks;
 import io.github.west3436.zas.atmos.controller.MovedDevices;
-import io.github.west3436.zas.atmos.device.DeviceActivitySync;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.device.FrameworkHooks;
+import io.github.west3436.zas.atmos.device.ZoneIndex;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
 import io.github.west3436.zas.atmos.fluid.FluidConnection;
 import io.github.west3436.zas.atmos.gear.Encumbrance;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
-import io.github.west3436.zas.atmos.label.LabelTag;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosCapabilities;
@@ -52,6 +51,9 @@ public final class ZasAtmosMod {
     private static boolean contentEnabled = true;
 
     public ZasAtmosMod(IEventBus modBus, ModContainer container) {
+        // What SS13 Framework asks ZAS³, content or not: where a moved block is, so any mod's device
+        // on a ZAS³ ship waits while it moves and is heard where the ship is, and the player's units.
+        FrameworkHooks.register();
         contentEnabled = AtmosStartupConfig.register(container);
         MovedItems.register(modBus);
         if (!contentEnabled) {
@@ -71,11 +73,11 @@ public final class ZasAtmosMod {
         AtmosServerConfig.register(container);
         CentralChunks.register(modBus);
         modBus.addListener(ZasAtmosMod::addContentPack);
-        DeviceTicker.register(NeoForge.EVENT_BUS);
+        // SS13 Framework's device base schedules the devices, syncs their activity and takes labels;
+        // the gas parts on top are ZAS³'s.
+        ZoneIndex.register(NeoForge.EVENT_BUS);
         CanisterFailure.register(NeoForge.EVENT_BUS);
-        DeviceActivitySync.register(NeoForge.EVENT_BUS);
         Encumbrance.register(NeoForge.EVENT_BUS);
-        LabelTag.register(NeoForge.EVENT_BUS);
         FluidConnection.init(modBus, NeoForge.EVENT_BUS);
         MovedDevices.register(NeoForge.EVENT_BUS);
     }

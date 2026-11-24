@@ -4,10 +4,10 @@ import static io.github.west3436.zas.atmos.gametest.Area.AIR;
 import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNode;

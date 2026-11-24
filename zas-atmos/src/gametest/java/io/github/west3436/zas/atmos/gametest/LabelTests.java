@@ -1,6 +1,10 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.LabelledMenu;
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.label.LabelPayload;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
@@ -23,10 +27,6 @@ import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockLogic;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
-import io.github.west3436.zas.atmos.label.LabelPayload;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.LabelledMenu;
-import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -453,7 +453,7 @@ public final class LabelTests {
             h.assertTrue(who.click(at).consumesAction(), "the click with a named tag passed");
             h.assertValueEqual(vent.label(), "Supply 1", "the label a name tag set");
             h.assertValueEqual(who.held().getCount(), 2, "name tags left after setting a label");
-            h.assertValueEqual(who.told(), "block.zas_atmos.label.set[Supply 1]", "what setting a label says");
+            h.assertValueEqual(who.told(), "message.ss13_framework.label.set[Supply 1]", "what setting a label says");
             h.assertFalse(who.windowOpen(), "the vent's window opened under a name tag");
 
             h.assertTrue(who.click(at).consumesAction(), "the second click with the tag passed");
@@ -491,7 +491,7 @@ public final class LabelTests {
             h.assertTrue(who.click(at).consumesAction(), "the click with a tag with no name passed");
             h.assertValueEqual(vent.label(), "", "the label after a tag with no name");
             h.assertValueEqual(who.held().getCount(), 2, "tags with no name left after clearing");
-            h.assertValueEqual(who.told(), "block.zas_atmos.label.cleared[]", "what clearing a label says");
+            h.assertValueEqual(who.told(), "message.ss13_framework.label.cleared[]", "what clearing a label says");
             h.assertFalse(who.windowOpen(), "the vent's window opened under a tag with no name");
 
             // With no label to clear, the tag does nothing and the vent gets the click.

@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceActivityPayload;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.zas.airflow.AirflowEffectsPayload;
 import io.github.west3436.zas.airflow.AirflowImpulsePayload;
@@ -8,7 +9,6 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
 import io.github.west3436.zas.atmos.particle.GasJet;
 import io.github.west3436.zas.debug.DebugLayer;
 import io.github.west3436.zas.debug.DebugOverlay;

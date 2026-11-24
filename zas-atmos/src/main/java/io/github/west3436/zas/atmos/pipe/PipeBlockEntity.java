@@ -1,14 +1,14 @@
 package io.github.west3436.zas.atmos.pipe;
 
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.particle.GasJets;
@@ -124,13 +124,13 @@ public class PipeBlockEntity extends PipeNodeEntity {
                 pipe.volume(),
                 sample.mixture(),
                 sample.state() == AtmosphereState.AMBIENT,
-                1 - Math.pow(1 - OPEN_END_RATIO, AtmosTicks.SECONDS));
+                1 - Math.pow(1 - OPEN_END_RATIO, DeviceTicks.SECONDS));
         exchange(level, port, Vec3.atCenterOf(worldPosition), flow);
         GasJets.openEnd(
                 level,
                 worldPosition,
                 PipeBlock.openFace(getBlockState()),
-                flow.net() / AtmosTicks.SECONDS,
+                flow.net() / DeviceTicks.SECONDS,
                 GasJets.PIPE_MOUTH);
     }
 

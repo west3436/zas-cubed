@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.portable.PortableBlock;
 import io.github.west3436.zas.atmos.portable.PortableGasDevice;
@@ -56,7 +56,7 @@ public final class PortableScrubberTests {
     private static final double T = 293.15;
 
     /** What a step of scrubbing costs the battery, FE. */
-    private static final int STEP = 15 * AtmosTicks.PERIOD;
+    private static final int STEP = 15 * DeviceTicks.PERIOD;
 
     private PortableScrubberTests() {}
 
@@ -388,7 +388,7 @@ public final class PortableScrubberTests {
             h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "it is a part");
             untilWorking(s, scrubber, c);
             c.toggleLink(scrubber.getBlockPos());
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             int before = scrubber.energy();
             int buffer = c.buffer().getEnergyStored();
             s.cycle(c, scrubber);

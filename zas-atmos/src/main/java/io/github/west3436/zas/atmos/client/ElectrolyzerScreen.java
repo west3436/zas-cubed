@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.ss13.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Ui.Face;
 import io.github.west3436.zas.api.gas.StandardAir;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMath;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMenu;

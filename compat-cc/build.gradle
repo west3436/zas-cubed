@@ -111,6 +111,9 @@ dependencies {
     // As zas_atmos itself: the public API to compile against (CONT-095), zas at run time.
     implementation project(':zas-api')
     implementation project(':zas-atmos')
+    // SS13 Framework, which zas_atmos's devices and windows are built on, for the compiler only:
+    // zas_atmos brings it to the runs.
+    compileOnly "io.github.west3436:ss13-framework:${framework_version}"
 
     // Compile-only, never bundled: the adapter is optional (COMPAT-001). Only CC: Tweaked's API,
     // and the oldest supported one, so the adapter can use nothing else of it.

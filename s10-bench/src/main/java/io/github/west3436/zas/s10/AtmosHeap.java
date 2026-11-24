@@ -109,8 +109,8 @@ final class AtmosHeap {
             "io.github.west3436.zas.life.Photosynthesis",
             "io.github.west3436.zas.life.Respiration",
             "io.github.west3436.zas.persistence.AtmosPersistence",
-            "io.github.west3436.zas.atmos.device.DeviceActivitySync",
-            "io.github.west3436.zas.atmos.device.DeviceTicker");
+            "io.github.west3436.ss13.device.DeviceActivitySync",
+            "io.github.west3436.ss13.device.DeviceTicker");
 
     private final IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
     private final EnumMap<Part, Long> bytes = new EnumMap<>(Part.class);

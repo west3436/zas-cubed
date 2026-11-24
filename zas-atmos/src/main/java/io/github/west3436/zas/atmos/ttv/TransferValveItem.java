@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.ttv;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.List;
@@ -328,7 +328,7 @@ public class TransferValveItem extends BlockItem {
 
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity holder, int slot, boolean selected) {
-        if (level instanceof ServerLevel server && AtmosTicks.due(server, holder) && step(stack, server, holder)) {
+        if (level instanceof ServerLevel server && DeviceTicks.due(server, holder) && step(stack, server, holder)) {
             stack.setCount(0);
         }
     }
@@ -336,7 +336,7 @@ public class TransferValveItem extends BlockItem {
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
         if (entity.level() instanceof ServerLevel server
-                && AtmosTicks.due(server, entity)
+                && DeviceTicks.due(server, entity)
                 && step(stack, server, entity)) {
             entity.discard();
             return true;

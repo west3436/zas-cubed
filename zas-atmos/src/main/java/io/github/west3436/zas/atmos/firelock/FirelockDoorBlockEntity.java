@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.firelock;
 
+import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.zas.atmos.airlock.AirlockFirelock;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;

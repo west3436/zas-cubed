@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.holder;
 
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.device.DeviceData;
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.DeviceData;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.TankKind;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;

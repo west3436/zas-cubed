@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.controller;
 
+import io.github.west3436.ss13.api.label.Labels;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.label.Labels;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;

@@ -22,7 +22,9 @@ final class Categories {
 
     static {
         String z = "io.github.west3436.zas.";
-        PREFIXES.put(z + "atmos.device.DeviceActivitySync", SYNC);
+        // SS13 Framework's device base, which steps zas_atmos's devices and tells clients how hard they work.
+        PREFIXES.put("io.github.west3436.ss13.device.DeviceActivitySync", SYNC);
+        PREFIXES.put("io.github.west3436.ss13.device.", DEVICES);
         PREFIXES.put(z + "atmos.particle.", SYNC);
         PREFIXES.put(z + "atmos.analyzer.", SYNC);
         PREFIXES.put(z + "atmos.", DEVICES);

@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.compat.jade;
 
-import io.github.west3436.zas.atmos.client.tgui.Readout;
+import io.github.west3436.ss13.client.tgui.Readout;
 
 /**
  * The numbers a reading is drawn with, as the device windows write them: in the player's units

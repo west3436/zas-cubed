@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.airlock;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.gauge.GaugeReading;
-import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import net.minecraft.core.BlockPos;

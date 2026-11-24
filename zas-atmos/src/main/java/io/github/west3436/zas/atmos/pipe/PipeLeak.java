@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.pipe;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -7,7 +8,6 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
@@ -140,7 +140,7 @@ public final class PipeLeak {
             }
         }
         Map<ResourceLocation, Double> out =
-                flow(net.gas().moles(), net.gas().volume(), cell, rate(), AtmosTicks.SECONDS);
+                flow(net.gas().moles(), net.gas().volume(), cell, rate(), DeviceTicks.SECONDS);
         if (out.isEmpty()) {
             return 0;
         }

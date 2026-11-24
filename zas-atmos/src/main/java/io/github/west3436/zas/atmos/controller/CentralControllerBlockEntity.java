@@ -1,12 +1,11 @@
 package io.github.west3436.zas.atmos.controller;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.ArrayList;
@@ -77,7 +76,7 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
         CentralClaims claims = CentralClaims.of(level);
         Map<BlockPos, AreaAirControllerBlockEntity> loaded = new HashMap<>();
         List<AreaAirControllerBlockEntity> inOrder = new ArrayList<>();
-        for (AtmosDevice d : DeviceTicker.loaded(level)) {
+        for (AtmosDevice d : AtmosDevice.loaded(level)) {
             if (d instanceof AreaAirControllerBlockEntity c && !c.isRemoved()) {
                 loaded.put(c.getBlockPos(), c);
                 inOrder.add(c);
@@ -225,7 +224,7 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
         }
 
         long intake = pull(level, (long) buffer.space() + room);
-        long own = (long) AtmosServerConfig.get(AtmosServerConfig.CENTRAL_DRAW) * AtmosTicks.PERIOD;
+        long own = (long) AtmosServerConfig.get(AtmosServerConfig.CENTRAL_DRAW) * DeviceTicks.PERIOD;
         CentralFeed.Plan plan = CentralFeed.plan(buffer.getEnergyStored(), intake, own, needs);
         long left = plan.left();
         for (int i = 0; i < zones.size(); i++) {
@@ -344,7 +343,7 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
         if (level instanceof ServerLevel server) {
             CentralClaims claims = CentralClaims.of(server);
             Map<BlockPos, AreaAirControllerBlockEntity> loaded = new HashMap<>();
-            for (AtmosDevice d : DeviceTicker.loaded(server)) {
+            for (AtmosDevice d : AtmosDevice.loaded(server)) {
                 if (d instanceof AreaAirControllerBlockEntity c && !c.isRemoved()) {
                     loaded.put(c.getBlockPos(), c);
                 }

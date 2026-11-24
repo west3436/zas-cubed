@@ -1,10 +1,10 @@
 package io.github.west3436.zas.atmos.compat.cc;
 
 import dan200.computercraft.api.lua.LuaException;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasTag;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import java.math.BigDecimal;
 import java.util.ArrayList;

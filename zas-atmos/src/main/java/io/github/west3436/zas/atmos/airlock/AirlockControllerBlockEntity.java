@@ -1,14 +1,13 @@
 package io.github.west3436.zas.atmos.airlock;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.Labels;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
@@ -424,7 +423,7 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
 
     /** The loaded controller that has the air sensor at {@code sensor} in a slot, if any. */
     public static Optional<AirlockControllerBlockEntity> linkingSensor(ServerLevel level, BlockPos sensor) {
-        for (AtmosDevice d : DeviceTicker.loaded(level)) {
+        for (AtmosDevice d : AtmosDevice.loaded(level)) {
             if (d instanceof AirlockControllerBlockEntity c && !c.isRemoved()) {
                 Slot s = c.slotOf(sensor);
                 if (s != null && !s.door()) {
@@ -440,7 +439,7 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
      * A controller has an airlock once, so the first found is the only one.
      */
     public static Optional<AirlockControllerBlockEntity> linking(ServerLevel level, BlockPos airlock) {
-        for (AtmosDevice d : DeviceTicker.loaded(level)) {
+        for (AtmosDevice d : AtmosDevice.loaded(level)) {
             if (d instanceof AirlockControllerBlockEntity c && !c.isRemoved()) {
                 Slot s = c.slotOf(airlock);
                 if (s != null && s.door()) {

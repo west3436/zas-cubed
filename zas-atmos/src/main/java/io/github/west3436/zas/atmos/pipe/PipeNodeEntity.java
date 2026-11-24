@@ -1,14 +1,14 @@
 package io.github.west3436.zas.atmos.pipe;
 
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
@@ -257,7 +257,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
     protected void exchange(ServerLevel level, ZonePort port, Vec3 point, PipeBlockEntity.Flow flow) {
         // Its loop goes with its jet, so a flow that has tailed off is silent as well as unseen.
         double net = flow.net();
-        if (JetPlan.showsFlow(net / AtmosTicks.SECONDS)) {
+        if (JetPlan.showsFlow(net / DeviceTicks.SECONDS)) {
             reportMoved(Math.abs(net));
         } else {
             reportStopped();

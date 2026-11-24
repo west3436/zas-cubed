@@ -1,11 +1,11 @@
 package io.github.west3436.zas.atmos.heater;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.mutation.HeatResult;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.portable.PortableDevice;
 import io.github.west3436.zas.atmos.portable.PortableMenu;
 import java.util.concurrent.CompletableFuture;
@@ -166,11 +166,11 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
         }
         double power = maxWatts();
         double c = GasProperties.heatCapacity(air.mixture().moles());
-        double joules = joules(c, air.temperature(), setpoint, AtmosTicks.SECONDS, power);
+        double joules = joules(c, air.temperature(), setpoint, DeviceTicks.SECONDS, power);
         if (joules <= 0) {
             return ThermoStatus.AT_SETPOINT;
         }
-        int cost = HeaterMath.energy(joules, AtmosTicks.SECONDS, power, drawPerTick(), AtmosTicks.PERIOD);
+        int cost = HeaterMath.energy(joules, DeviceTicks.SECONDS, power, drawPerTick(), DeviceTicks.PERIOD);
         if (cost > 0) {
             int paid = energy.extractEnergy(cost, simulate);
             if (paid <= 0) {
@@ -181,7 +181,7 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
         if (!simulate) {
             setChanged();
             pending = move(level, joules);
-            watts = joules / AtmosTicks.SECONDS;
+            watts = joules / DeviceTicks.SECONDS;
         }
         return working();
     }

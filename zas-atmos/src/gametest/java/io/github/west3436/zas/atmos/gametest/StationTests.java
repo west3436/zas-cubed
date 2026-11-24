@@ -1,6 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.device.DeviceTicker;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.airflow.AirflowImpulsePayload;
@@ -29,8 +31,6 @@ import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.firelock.Lockdown;
@@ -134,7 +134,7 @@ public final class StationTests {
     /** Atmos ticks with a generator burning: each burns it for a second, then steps the devices. */
     private static void seconds(Site s, GeneratorBlockEntity g, int n, AtmosDevice... devices) {
         for (int i = 0; i < n; i++) {
-            burn(g, AtmosTicks.PERIOD);
+            burn(g, DeviceTicks.PERIOD);
             s.cycle(devices);
         }
     }
@@ -234,8 +234,8 @@ public final class StationTests {
                 g.serverTick();
             }
             int fe = g.energy().getEnergyStored();
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
-            int ventDraw = AtmosServerConfig.get(AtmosServerConfig.VENT_DRAW) * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
+            int ventDraw = AtmosServerConfig.get(AtmosServerConfig.VENT_DRAW) * DeviceTicks.PERIOD;
             h.assertValueEqual(own, 100, "the controller's 5 FE/t per atmos tick");
             h.assertValueEqual(ventDraw, 200, "the vent's 10 FE/t per atmos tick");
             h.assertValueEqual(vent.power().drawPerAtmosTick(), (long) ventDraw, "the blowing vent's draw");
@@ -319,7 +319,7 @@ public final class StationTests {
         AreaAirControllerBlockEntity controller = c;
         VentBlockEntity v = vent;
         VentMenu gui = menu;
-        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * AtmosTicks.PERIOD, () -> {
+        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * DeviceTicks.PERIOD, () -> {
             try {
                 h.assertFalse(controller.powered(), "the controller has power with no generator");
                 h.assertValueEqual(controller.status(), ControllerStatus.UNPOWERED, "the controller's panel");
@@ -392,7 +392,7 @@ public final class StationTests {
             h.assertValueEqual(Atmospheres.at(end, s.abs(4, 2, 2)).pressure(), 0.0, "the room before the controller");
 
             Runnable second = () -> {
-                burn(g, AtmosTicks.PERIOD);
+                burn(g, DeviceTicks.PERIOD);
                 DeviceTicker.stepNow(end);
                 s.tick();
             };
@@ -470,9 +470,9 @@ public final class StationTests {
             for (int sec = 0; sec < 60; sec++) {
                 second.run();
                 if (sec % 2 == 0) {
-                    Breathers.checkAt(player, t0 + (long) AtmosTicks.PERIOD * sec);
+                    Breathers.checkAt(player, t0 + (long) DeviceTicks.PERIOD * sec);
                 }
-                for (int i = 0; i < AtmosTicks.PERIOD; i++) {
+                for (int i = 0; i < DeviceTicks.PERIOD; i++) {
                     player.baseTick();
                 }
             }
@@ -714,7 +714,7 @@ public final class StationTests {
             exposed.setAirSupply(0);
             exposed.invulnerableTime = 0; // a player's own tick counts it down; a fake player's doesn't
             float before = exposed.getHealth();
-            for (int i = 0; i < 2 * AtmosTicks.PERIOD; i++) {
+            for (int i = 0; i < 2 * DeviceTicks.PERIOD; i++) {
                 exposed.baseTick();
             }
             h.assertTrue(exposed.getHealth() < before, "no hypoxia damage with an empty air meter");
@@ -844,7 +844,7 @@ public final class StationTests {
             h.assertValueEqual(gasping.reason(), BreathReason.LOW_OXYGEN, "hypoxia once the tank is dry");
             // The air meter drains at the underwater rate, then hypoxia hurts (LIFE-003).
             int air0 = p.getAirSupply();
-            for (int i = 0; i < AtmosTicks.PERIOD; i++) {
+            for (int i = 0; i < DeviceTicks.PERIOD; i++) {
                 p.baseTick();
             }
             h.assertTrue(p.getAirSupply() < air0, "the air meter didn't drain: " + p.getAirSupply());

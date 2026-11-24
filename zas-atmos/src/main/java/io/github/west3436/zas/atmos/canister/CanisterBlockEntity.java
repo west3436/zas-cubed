@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.canister;
 
+import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
@@ -109,7 +109,7 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
 
     /** What a comparator reads (CONT-174): its pressure over its rating, 15 just short of it. */
     public int signal() {
-        return Comparators.pressure(pressure(), RATED_KPA);
+        return Comparators.fill(pressure() / RATED_KPA);
     }
 
     /** Whether it stands on a connector port, as its GUI shows it. */

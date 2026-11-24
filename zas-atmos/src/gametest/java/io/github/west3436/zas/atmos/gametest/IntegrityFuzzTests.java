@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.gametest;
 
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.zas.api.event.OpenAirGasEvent;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -9,7 +10,6 @@ import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentSettings;
@@ -722,7 +722,7 @@ public final class IntegrityFuzzTests {
                     return false;
                 }
             }
-            for (AtmosDevice device : DeviceTicker.loaded(a.level)) {
+            for (AtmosDevice device : AtmosDevice.loaded(a.level)) {
                 if (isOurs(device.getBlockPos()) && !device.readyToStep()) {
                     return false;
                 }

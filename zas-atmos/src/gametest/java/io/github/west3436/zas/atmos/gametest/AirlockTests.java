@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -22,7 +23,6 @@ import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.ConsoleSide;
 import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
@@ -1825,7 +1825,7 @@ public final class AirlockTests {
             s.set(2, 2, 0, Site.STONE);
             lock.area().buffer().set(0);
         });
-        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * AtmosTicks.PERIOD, () -> {
+        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * DeviceTicks.PERIOD, () -> {
             try {
                 Lock lock = built[0];
                 lock.area().step();

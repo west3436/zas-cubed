@@ -5,6 +5,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.REL;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -38,8 +39,6 @@ import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import io.github.west3436.zas.atmos.controller.ZonePriority;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlock;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
@@ -179,7 +178,7 @@ public final class StationSaveTests {
     private static final ResourceLocation H2 = ControllerPreset.H2;
 
     /** Game ticks for the station's devices to step a few times: three atmos ticks. */
-    private static final int SETTLE = 3 * AtmosTicks.PERIOD;
+    private static final int SETTLE = 3 * DeviceTicks.PERIOD;
 
     /** What the station batch's end undoes, even if the test failed or timed out. */
     private static final List<Runnable> CLEANUP = new ArrayList<>();
@@ -424,11 +423,11 @@ public final class StationSaveTests {
             if (cAway && full(2)) {
                 cCame = true;
             }
-            if (AtmosTicks.now(a.level) % AtmosTicks.PERIOD != 0) {
+            if (DeviceTicks.now(a.level) % DeviceTicks.PERIOD != 0) {
                 return;
             }
             List<ChunkPos> station = Arrays.asList(chunks);
-            for (AtmosDevice d : DeviceTicker.loaded(a.level)) {
+            for (AtmosDevice d : AtmosDevice.loaded(a.level)) {
                 if (station.contains(new ChunkPos(d.getBlockPos()))) {
                     d.step(); // one in a chunk that isn't loaded in full waits
                 }
@@ -1304,7 +1303,7 @@ public final class StationSaveTests {
 
     /** An atmos tick's own draw for an FE key. */
     private static int own(ModConfigSpec.IntValue draw) {
-        return AtmosServerConfig.get(draw) * AtmosTicks.PERIOD;
+        return AtmosServerConfig.get(draw) * DeviceTicks.PERIOD;
     }
 
     static ItemStack tank(Map<ResourceLocation, Double> moles, double kelvin) {
@@ -1743,7 +1742,7 @@ public final class StationSaveTests {
             }
             this.nodes = count;
             this.valve = a.entity(valveX, 1, 2);
-            for (AtmosDevice d : DeviceTicker.loaded(a.level)) {
+            for (AtmosDevice d : AtmosDevice.loaded(a.level)) {
                 BlockPos p = d.getBlockPos().subtract(a.origin);
                 if (p.getX() >= 0 && p.getX() <= 31 && p.getZ() >= 0 && p.getZ() <= 2 * rows + 2 && p.getY() == 1) {
                     devices.add(d);

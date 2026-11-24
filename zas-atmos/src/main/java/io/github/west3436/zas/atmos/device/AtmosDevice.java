@@ -1,195 +1,63 @@
 package io.github.west3436.zas.atmos.device;
 
-import io.github.west3436.zas.api.relocation.Relocations;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.Labels;
+import io.github.west3436.ss13.device.DeviceBlockEntity;
+import io.github.west3436.ss13.device.DeviceTicker;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.SectionPos;
-import net.minecraft.core.component.DataComponentMap;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * The base of every block entity that steps once per atmos tick (D-31, CONT-006): devices, and
- * pipe segments that leak through an open end.
+ * The base of every ZAS³ block entity that steps once per atmos tick (D-31, CONT-006): devices, and
+ * pipe segments that leak through an open end. It is SS13 Framework's {@link DeviceBlockEntity},
+ * which keeps its place in the schedule, its save format, its label and how hard it reads as
+ * working, with the gas parts on top.
  *
  * <p>While it is loaded on a server, the block entity is a member of its level's {@link
- * DeviceTicker} schedule, which calls {@link #atmosTick} once per atmos tick on the server thread,
- * spread across game ticks. It joins when it loads or is placed and leaves when it is removed or its
- * chunk unloads, so a device in an unloaded chunk never steps. The schedule steps it only while its
- * chunk ticks block entities, as vanilla's block entities tick ({@link #ticking()}); otherwise it
- * waits as it is.
+ * io.github.west3436.ss13.device.DeviceTicker} schedule, which calls {@link #atmosTick} once per
+ * atmos tick on the server thread, spread across game ticks. It joins when it loads or is placed and
+ * leaves when it is removed or its chunk unloads, so a device in an unloaded chunk never steps; a
+ * powered part joins and leaves its level's {@link ZoneIndex} with it. The schedule steps it only
+ * while its chunk ticks block entities, as vanilla's block entities tick ({@link #ticking()});
+ * otherwise it waits as it is.
  *
  * <p>Everything a device does to zones goes through the public API (D-50, CONT-071): queries with
  * {@link io.github.west3436.zas.api.atmosphere.Atmospheres} and changes with {@link
  * io.github.west3436.zas.api.mutation.GasMutations}, through a {@link ZonePort} per port so that each
  * port has at most one mutation outstanding (CONT-072). A device that draws power implements {@link
- * io.github.west3436.zas.atmos.power.PoweredDevice}.
+ * PoweredDevice}.
  *
- * <p>A device a player can label names {@link Labelled}, and this keeps its label: saved with the
- * block, sent to the clients that have it loaded, taken from the name of the item that placed it and
- * given back as an item's name, as the game does for a chest. A device that doesn't name it never
- * has one.
+ * <p>A device a player can label names {@link io.github.west3436.ss13.api.label.Labelled}, and the
+ * base keeps its label.
  */
-public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.Member {
-    private static final String LABEL = "Label";
-
-    /** How hard it reads as working (DATA-017): made by its first report, so most pay nothing. */
-    private @Nullable DeviceActivity activity;
-
-    private @Nullable LevelChunk chunk;
-
-    /** What a player called it, as {@link Labels#clean} leaves it; empty for none. */
-    private String label = "";
-
+public abstract class AtmosDevice extends DeviceBlockEntity {
     protected AtmosDevice(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
-    /** Writes the format version of what this block entity saves (DATA-003), and its label if it has one. */
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        DeviceData.writeVersion(tag);
-        writeLabel(tag);
-    }
-
-    /** Brings an older save forward (DATA-012), before any subclass reads it. */
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        DeviceData.migrate(tag);
-        readLabel(tag);
-    }
-
-    // ---- Its label --------------------------------------------------------------------------
-
-    /** The label a player gave it, or the empty string: always empty for a device that takes none. */
-    public final String label() {
-        return label;
-    }
-
     /**
-     * Sets the label, on the server: saved, and sent to the clients that have the block loaded. The
-     * text goes through {@link Labels#clean} first, so nothing else is ever kept. A device that isn't
-     * {@link Labelled} takes none.
+     * The ZAS³ devices loaded in a level, in the order they joined its schedule: {@link
+     * DeviceTicker#loaded}'s, without other mods' devices. A firelock and a central controller look
+     * here for the area air controllers; an area air controller finds its parts through the {@link
+     * ZoneIndex} (architecture §11.3).
      *
-     * @param text what a player typed; null or nothing left of it clears the label
-     * @return whether the label changed
+     * @param level the level
+     * @return a new list; empty if the level has none
      */
-    public final boolean setLabel(@Nullable String text) {
-        String cleaned = this instanceof Labelled ? Labels.clean(text) : "";
-        if (cleaned.equals(label)) {
-            return false;
+    public static List<AtmosDevice> loaded(ServerLevel level) {
+        List<AtmosDevice> devices = new ArrayList<>();
+        for (DeviceBlockEntity device : DeviceTicker.loaded(level)) {
+            if (device instanceof AtmosDevice atmos) {
+                devices.add(atmos);
+            }
         }
-        label = cleaned;
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
-        }
-        return true;
-    }
-
-    private void writeLabel(CompoundTag tag) {
-        if (!label.isEmpty()) {
-            tag.putString(LABEL, label);
-        }
-    }
-
-    /** Reads a label as saved or sent, cleaned again: a save or a server could hold anything. */
-    private void readLabel(@Nullable CompoundTag tag) {
-        label = tag != null && this instanceof Labelled ? Labels.clean(tag.getString(LABEL)) : "";
-    }
-
-    /** An item renamed in an anvil gives the block it places its name as a label, as it does a chest. */
-    @Override
-    protected void applyImplicitComponents(BlockEntity.DataComponentInput input) {
-        super.applyImplicitComponents(input);
-        if (!(this instanceof Labelled)) {
-            return; // asking for the name would take it from a device that keeps its item's components
-        }
-        Component name = input.get(DataComponents.CUSTOM_NAME);
-        if (name != null) {
-            label = Labels.clean(name.getString());
-        }
-    }
-
-    /** An item that copies the block, as a creative player's pick does, is named by its label. */
-    @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder components) {
-        super.collectImplicitComponents(components);
-        if (!label.isEmpty()) {
-            components.set(DataComponents.CUSTOM_NAME, Component.literal(label));
-        }
-    }
-
-    /** The label is the item's name there, not also in its copy of the block's data. */
-    @Override
-    @SuppressWarnings("deprecation")
-    public void removeComponentsFromTag(CompoundTag tag) {
-        super.removeComponentsFromTag(tag);
-        tag.remove(LABEL);
-    }
-
-    /** Clients are sent the label, and nothing else. */
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        CompoundTag tag = super.getUpdateTag(registries);
-        writeLabel(tag);
-        return tag;
-    }
-
-    /** Only a device that takes a label has anything to send when its block is updated. */
-    @Override
-    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
-        return this instanceof Labelled ? ClientboundBlockEntityDataPacket.create(this) : null;
-    }
-
-    /** A client reads only the label from what it is sent, with its chunk. */
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        readLabel(tag);
-    }
-
-    /** And when the block is updated: nothing sent is a label cleared. */
-    @Override
-    public void onDataPacket(
-            Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
-        readLabel(packet.getTag());
-    }
-
-    // ---- Its place in the schedule ----------------------------------------------------------
-
-    /**
-     * The chunk that saves this block entity, on a server. It is kept from the first time it is asked
-     * for, because the level stops handing out a chunk that has left full status, though it still
-     * saves the block entity when it unloads. Asking loads nothing.
-     *
-     * @return the chunk, or null if it isn't in a server level or hasn't been in a chunk in full status
-     */
-    public @Nullable LevelChunk savedIn() {
-        if (chunk == null && level instanceof ServerLevel server) {
-            chunk = server.getChunkSource()
-                    .getChunkNow(
-                            SectionPos.blockToSectionCoord(worldPosition.getX()),
-                            SectionPos.blockToSectionCoord(worldPosition.getZ()));
-        }
-        return chunk;
+        return devices;
     }
 
     /**
@@ -201,138 +69,16 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
      * @param moles the moles it moves in this step; more than one call adds up
      */
     protected final void reportMoved(double moles) {
-        if (moles > 0) {
-            if (activity == null) {
-                activity = new DeviceActivity();
-            }
-            activity.moved(moles);
-        }
+        reportActivity(moles);
     }
 
     /**
-     * Says a device that moves no gas, such as a heater, is running in this step, from {@link
-     * #atmosTick}. It reads as {@linkplain DeviceActivity#WORKING working} for as long as it says so.
-     */
-    protected final void reportRunning() {
-        reportMoved(DeviceActivity.RUNNING_MOLES);
-    }
-
-    /**
-     * Says the device is off, has no power, or moves too little to show, from {@link #atmosTick}: it
-     * reads as idle after this step, with no hold, so its sound stops when it does. A device switched
-     * between steps follows this with {@link #finishActivity}, so it reads as idle at once.
-     */
-    protected final void reportStopped() {
-        if (activity != null) {
-            activity.stopNow();
-        }
-    }
-
-    /**
-     * Ends what has been reported so far and passes the level on, if this device has ever reported any.
-     * The base does this at the end of each step. A device switched between steps does it too, so that
-     * its level changes when its switch does.
-     */
-    protected final void finishActivity(ServerLevel server) {
-        if (activity != null) {
-            DeviceActivitySync.report(server, worldPosition, activity.finishStep(), AtmosTicks.now(server));
-        }
-    }
-
-    /**
-     * One atmos tick of work, {@link AtmosTicks#SECONDS} seconds. Called on the server thread,
+     * One atmos tick of work, {@link DeviceTicks#SECONDS} seconds. Called on the server thread,
      * once per atmos tick, only while the block entity is loaded and {@link #readyToStep()}.
      *
      * @param level the level, a server level
      */
     protected abstract void atmosTick(ServerLevel level);
-
-    /**
-     * Whether the device can step now. The default is true. A device returns false while a port
-     * has a mutation outstanding, and is then asked again next game tick (CONT-072).
-     */
-    @Override
-    public boolean readyToStep() {
-        return true;
-    }
-
-    /**
-     * Whether the schedule steps the device when it is due (architecture §11.2): its chunk ticks
-     * block entities now ({@link LoadedBlocks#ticking}), and so does the chunk of the device that
-     * last powered it, if that is still loaded. A chunk at the edge of what is loaded, kept in full
-     * only by its neighbour, doesn't tick, and a device there waits as it is: a step there read its
-     * neighbours and its own block through the level, which kept the chunk loaded after every player
-     * had gone (S-10). A part waits with its provider, as the provider powers nothing while it waits;
-     * a part that waits keeps its power ({@link DevicePower#hold}), so the wait never reads as a power
-     * cut. Asking loads nothing.
-     */
-    @Override
-    public final boolean ticking() {
-        if (isRemoved() || !(level instanceof ServerLevel)) {
-            return true; // the step does nothing
-        }
-        if (stepping()) {
-            return true;
-        }
-        if (this instanceof PoweredDevice part) {
-            part.power().hold();
-        }
-        return false;
-    }
-
-    /**
-     * Whether the device is working now: it is in a server level, and the schedule steps it when it
-     * is due, as {@link #ticking} decides, without holding a waiting part's power. What needs to know
-     * whether a device works, rather than whether its block can be read, asks this: a device in a
-     * chunk loaded in full that doesn't tick is there to read, but waits (architecture §11.2).
-     * Asking loads nothing.
-     */
-    public final boolean stepping() {
-        return !isRemoved()
-                && level instanceof ServerLevel server
-                && LoadedBlocks.ticking(server, worldPosition)
-                && !providerWaits();
-    }
-
-    /** Whether the device that last powered this one is loaded and waiting. */
-    private boolean providerWaits() {
-        return this instanceof PoweredDevice part
-                && part.power().source() instanceof AtmosDevice provider
-                && provider != this
-                && !provider.isRemoved()
-                && DeviceTicker.isScheduled(provider)
-                && provider.level instanceof ServerLevel there
-                && !LoadedBlocks.ticking(there, provider.worldPosition);
-    }
-
-    /**
-     * Called by the schedule, and by tests and an alarm that step a device at once; runs {@link
-     * #atmosTick} if the block entity is still in a server level and its chunk is loaded in full. A
-     * chunk next to a loaded one that drops out of full status keeps its block entities in memory
-     * without unloading them; a device there waits, since reading its own block would load the chunk
-     * again.
-     *
-     * <p>A device whose block is being moved ({@link Relocations#isMoving}) waits too (CONT-157). A
-     * mover that takes a box away or sets it down over several ticks leaves the device beside air
-     * where a neighbour was or will be: a pipe would drop its arm on that side and vent the network
-     * through the open end it made. It steps again once the move is over, with its neighbours back.
-     */
-    @Override
-    public final void step() {
-        if (!isRemoved()
-                && level instanceof ServerLevel server
-                && server.isLoaded(worldPosition)
-                && !Relocations.isMoving(server, worldPosition)) {
-            ZoneIndex.mark(server, this);
-            beforeAtmosTick(server);
-            if (!isRemoved()) {
-                atmosTick(server);
-            }
-            if (!isRemoved()) {
-                finishActivity(server);
-            }
-        }
-    }
 
     /**
      * Runs before each {@link #atmosTick}, for what every device of a kind does whatever its own
@@ -343,9 +89,39 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
      */
     protected void beforeAtmosTick(ServerLevel level) {}
 
-    /** The current game tick, as {@link AtmosTicks#now}; only on the server. */
-    protected long now() {
-        return level instanceof ServerLevel server ? AtmosTicks.now(server) : 0L;
+    /** Has the {@link ZoneIndex} ask a part's zone again, since it steps, then runs {@link #beforeAtmosTick}. */
+    @Override
+    protected final void beforeDeviceTick(ServerLevel level) {
+        ZoneIndex.mark(level, this);
+        beforeAtmosTick(level);
+    }
+
+    @Override
+    protected final void deviceTick(ServerLevel level) {
+        atmosTick(level);
+    }
+
+    /**
+     * A part waits with the device that last powered it, if that is loaded and waiting (architecture
+     * §11.2), as the provider powers nothing while it waits. Asking loads nothing.
+     */
+    @Override
+    protected final boolean waitsForAnother() {
+        return this instanceof PoweredDevice part
+                && part.power().source() instanceof AtmosDevice provider
+                && provider != this
+                && !provider.isRemoved()
+                && DeviceTicker.isScheduled(provider)
+                && provider.level instanceof ServerLevel there
+                && !LoadedBlocks.ticking(there, provider.worldPosition);
+    }
+
+    /** A part that waits keeps its power ({@link DevicePower#hold}), so the wait never reads as a power cut. */
+    @Override
+    protected final void whilePassedOver() {
+        if (this instanceof PoweredDevice part) {
+            part.power().hold();
+        }
     }
 
     /** A block changed in place, as when it is turned, may have moved the device's air point. */
@@ -362,7 +138,7 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     public void onLoad() {
         super.onLoad();
         if (level instanceof ServerLevel server) {
-            DeviceTicker.add(server, this);
+            ZoneIndex.join(server, this);
         }
     }
 
@@ -370,8 +146,7 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     public void setRemoved() {
         super.setRemoved();
         if (level instanceof ServerLevel server) {
-            DeviceTicker.remove(server, this);
-            forgetActivity(server);
+            ZoneIndex.leave(server, this);
         }
     }
 
@@ -379,14 +154,7 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     public void onChunkUnloaded() {
         super.onChunkUnloaded();
         if (level instanceof ServerLevel server) {
-            DeviceTicker.remove(server, this);
-            forgetActivity(server);
-        }
-    }
-
-    private void forgetActivity(ServerLevel server) {
-        if (activity != null) {
-            DeviceActivitySync.remove(server, worldPosition);
+            ZoneIndex.leave(server, this);
         }
     }
 }

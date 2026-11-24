@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scene;
 
-import io.github.west3436.zas.atmos.client.tgui.Readout;
+import io.github.west3436.ss13.client.tgui.Readout;
 import java.util.ArrayList;
 import java.util.List;
 import net.createmod.ponder.api.PonderPalette;

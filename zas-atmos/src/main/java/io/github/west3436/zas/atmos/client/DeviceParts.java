@@ -1,14 +1,11 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Ui.Face;
+import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.label.Labels;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.IntConsumer;
 import net.minecraft.client.Minecraft;
@@ -19,10 +16,14 @@ import net.minecraft.world.level.Level;
 /**
  * What the device windows share. They hold to labels, values and graphics: a status is a dot and a
  * few words, a bar stands in for a sentence, and a state that's fine says nothing.
+ *
+ * <p>The parts every device window has, such as the switch and the redstone row, are SS13
+ * Framework's ({@link io.github.west3436.ss13.client.tgui.DeviceParts}); this calls them with ZAS³'s
+ * text and menu data, and adds the gas parts.
  */
 final class DeviceParts {
     /** The column of labels in a window's rows. */
-    static final int LABEL_WIDTH = 34;
+    static final int LABEL_WIDTH = io.github.west3436.ss13.client.tgui.DeviceParts.LABEL_WIDTH;
 
     /** What a stepper's buttons add, whatever unit its value shows in (CLIENT-006). */
     static final String KPA = "kPa";
@@ -33,13 +34,8 @@ final class DeviceParts {
     /** A rate in moles a second, as a stepper's unit. */
     static final String MOL_PER_SECOND = "mol/s";
 
-    static final String[] BIG_STEPS = {"−100", "−10", "+10", "+100"};
-    static final String[] SMALL_STEPS = {"−10", "−1", "+1", "+10"};
-
-    /** The redstone row's dot, lit while the device gets a signal, as redstone dust is. */
-    private static final int SIGNAL_ON = 0xFFFF2020;
-
-    private static final int SIGNAL_OFF = 0xFF4A1010;
+    static final String[] BIG_STEPS = io.github.west3436.ss13.client.tgui.DeviceParts.BIG_STEPS;
+    static final String[] SMALL_STEPS = io.github.west3436.ss13.client.tgui.DeviceParts.SMALL_STEPS;
 
     private static final int LOW_CHARGE_PERCENT = 15;
     private static final int LOCK_ROOM = 8;
@@ -66,14 +62,14 @@ final class DeviceParts {
         return Component.literal(at.getX() + ", " + at.getY() + ", " + at.getZ());
     }
 
-    /** A row's label. */
+    /** A row's label, by its key under {@code gui.zas_atmos.device}. */
     static void label(Ui ui, String key, int x, int y, int height) {
-        ui.line(text(key), x, y, height, Ui.LABEL, Face.BODY);
+        io.github.west3436.ss13.client.tgui.DeviceParts.label(ui, text(key), x, y, height);
     }
 
     /** A status: a dot in its colour, then its word. */
     static void status(Ui ui, Component word, int colour, int x, int y, int height) {
-        ui.line(Component.literal("● ").append(word), x, y, height, colour, Face.BODY);
+        io.github.west3436.ss13.client.tgui.DeviceParts.status(ui, word, colour, x, y, height);
     }
 
     /**
@@ -91,9 +87,12 @@ final class DeviceParts {
 
     /** The switch, ending at {@code right}. */
     static void onOff(Ui ui, int right, int y, boolean on, Runnable toggle) {
-        Component label = text(on ? "on" : "off");
-        int w = ui.buttonWidth(text("off"));
-        ui.button(right - w, y, w, Ui.BUTTON_HEIGHT, label, on ? Tone.SELECTED : Tone.DEFAULT, toggle);
+        io.github.west3436.ss13.client.tgui.DeviceParts.onOff(ui, right, y, on, toggle);
+    }
+
+    /** How wide {@link #onOff} draws, as wide as its "Off": the framework's text. */
+    static int onOffWidth(Ui ui) {
+        return ui.buttonWidth(Component.translatable("gui.ss13_framework.device.off"));
     }
 
     /**
@@ -104,34 +103,19 @@ final class DeviceParts {
      * @param press presses a button by its id
      */
     static void redstone(Ui ui, int x, int y, int w, int data, IntConsumer press) {
-        int labelX = x + Ui.PAD;
-        label(ui, "redstone", labelX, y, Ui.BUTTON_HEIGHT);
-        List<Component> labels = new ArrayList<>();
-        for (RedstoneControl.Mode mode : RedstoneControl.Mode.values()) {
-            labels.add(mode.label());
-        }
-        RedstoneControl.Mode mode = RedstoneControl.mode(data);
-        int end = ui.choice(
-                labelX + LABEL_WIDTH,
+        io.github.west3436.ss13.client.tgui.DeviceParts.redstone(
+                ui,
+                x,
                 y,
-                labels,
-                mode.ordinal(),
-                -1,
+                w,
+                RedstoneControl.mode(data).ordinal(),
+                RedstoneControl.signal(data),
                 i -> press.accept(RedstoneControl.FIRST_BUTTON + i));
-        if (mode != RedstoneControl.Mode.IGNORED) {
-            int size = 4;
-            ui.fill(
-                    end + Ui.PAD + 1,
-                    y + (Ui.BUTTON_HEIGHT - size) / 2,
-                    size,
-                    size,
-                    RedstoneControl.signal(data) ? SIGNAL_ON : SIGNAL_OFF);
-        }
     }
 
     /** What a device's state row says while redstone holds it. */
     static Component held() {
-        return text("redstone.held");
+        return io.github.west3436.ss13.client.tgui.DeviceParts.held();
     }
 
     /** A battery's or a buffer's charge. With no capacity, an empty bar and a dash. */

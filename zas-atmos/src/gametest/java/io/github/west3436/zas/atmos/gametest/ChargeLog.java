@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.ss13.device.DeviceTicks;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -63,7 +63,7 @@ final class ChargeLog {
             GameTestSequence seq, GameTestHelper h, int atmosTicks, Runnable eachTick, ChargeLog... logs) {
         long[] end = new long[1];
         return seq.thenExecute(() -> {
-                    end[0] = now(h) + (long) atmosTicks * AtmosTicks.PERIOD;
+                    end[0] = now(h) + (long) atmosTicks * DeviceTicks.PERIOD;
                     for (ChargeLog log : logs) {
                         log.last = log.store.getAsInt();
                     }
@@ -113,7 +113,7 @@ final class ChargeLog {
         for (int i = 1; i < charges.size(); i++) {
             h.assertValueEqual(
                     charges.get(i).tick() - charges.get(i - 1).tick(),
-                    (long) AtmosTicks.PERIOD,
+                    (long) DeviceTicks.PERIOD,
                     name + "'s game ticks between charges at " + ticks());
         }
     }

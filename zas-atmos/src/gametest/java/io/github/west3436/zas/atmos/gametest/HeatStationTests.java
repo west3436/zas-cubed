@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -8,7 +9,6 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
@@ -119,11 +119,11 @@ public final class HeatStationTests {
     /** The FE a step of heat at this power costs the battery (CONT-087). */
     private static int cost(double watts) {
         return HeaterMath.energy(
-                watts * AtmosTicks.SECONDS,
-                AtmosTicks.SECONDS,
+                watts * DeviceTicks.SECONDS,
+                DeviceTicks.SECONDS,
                 AtmosServerConfig.get(AtmosServerConfig.HEATER_WATTS),
                 AtmosServerConfig.get(AtmosServerConfig.HEATER_DRAW),
-                AtmosTicks.PERIOD);
+                DeviceTicks.PERIOD);
     }
 
     /**
@@ -147,7 +147,7 @@ public final class HeatStationTests {
             h.assertValueEqual(
                     AtmosServerConfig.get(AtmosServerConfig.HEATER_WATTS), 5000, "the configured power (CONT-087)");
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.HEATER_DRAW), 60, "the configured draw");
-            h.assertValueEqual(cost(HeaterMath.DEFAULT_MAX_WATTS), 60 * AtmosTicks.PERIOD, "a step at full power");
+            h.assertValueEqual(cost(HeaterMath.DEFAULT_MAX_WATTS), 60 * DeviceTicks.PERIOD, "a step at full power");
 
             // Off, it does nothing.
             s.cycle(heater);
@@ -179,12 +179,12 @@ public final class HeatStationTests {
             s.cycle(heater);
             h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heating heater's status");
             s.close(heater.watts(), HeaterMath.DEFAULT_MAX_WATTS, 1e-9, "the heater's power");
-            h.assertValueEqual(heater.energy(), 100_000 - 60 * AtmosTicks.PERIOD, "the battery after a step");
+            h.assertValueEqual(heater.energy(), 100_000 - 60 * DeviceTicks.PERIOD, "the battery after a step");
             h.assertTrue(
                     s.level.getBlockState(heater.getBlockPos()).getValue(HeaterBlock.LIT), "not lit while heating");
             s.close(
                     temperature(s, 2, 2, 2) - before,
-                    HeaterMath.DEFAULT_MAX_WATTS * AtmosTicks.SECONDS / c,
+                    HeaterMath.DEFAULT_MAX_WATTS * DeviceTicks.SECONDS / c,
                     0.02,
                     "the room's rise over a step of 5 kJ");
             h.assertValueEqual(menu.energy(), heater.energy(), "the GUI's charge");
@@ -226,7 +226,7 @@ public final class HeatStationTests {
             h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heater on its last 300 FE");
             s.close(
                     heater.watts(),
-                    HeaterMath.DEFAULT_MAX_WATTS * 300 / (60.0 * AtmosTicks.PERIOD),
+                    HeaterMath.DEFAULT_MAX_WATTS * 300 / (60.0 * DeviceTicks.PERIOD),
                     1e-6,
                     "the power 300 FE pays for");
             h.assertValueEqual(heater.energy(), 0, "the battery after its last step");

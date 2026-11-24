@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.gear;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.StandardAir;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.List;
 import java.util.Optional;
@@ -221,7 +221,7 @@ public class SuitItem extends ArmorItem {
     }
 
     private void tankAtmosTick(ItemStack suit, Level level, Entity holder) {
-        if (tankSlot && level instanceof ServerLevel server && AtmosTicks.due(server, holder)) {
+        if (tankSlot && level instanceof ServerLevel server && DeviceTicks.due(server, holder)) {
             ItemStack tank = tank(suit);
             if (tank.getItem() instanceof GasTankItem && GasTankItem.atmosTick(tank, server, holder)) {
                 setTank(suit, tank);

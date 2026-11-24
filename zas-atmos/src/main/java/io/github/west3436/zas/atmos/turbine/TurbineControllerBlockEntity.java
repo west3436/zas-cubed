@@ -1,5 +1,9 @@
 package io.github.west3436.zas.atmos.turbine;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.LoadedBlocks;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -7,10 +11,6 @@ import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.power.EnergyStore;

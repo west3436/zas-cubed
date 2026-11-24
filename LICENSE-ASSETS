@@ -13,10 +13,9 @@ adapted from other sources under licenses that allow it, are licensed under the 
 International license (CC BY-SA 4.0), reproduced in full below and available
 at https://creativecommons.org/licenses/by-sa/4.0/legalcode.
 
-The one exception is a font, which may keep its own license (D-76). DejaVu Sans
-and DejaVu Sans Bold, under `zas-atmos/src/main/resources/assets/zas_atmos/font/`,
-are under the Bitstream Vera license, reproduced in
-`zas-atmos/src/main/resources/META-INF/licenses/DejaVu-Fonts.txt`, not CC BY-SA.
+The one exception would be a font, which may keep its own license (D-76).
+ZAS³ has none of its own: the DejaVu fonts its windows use are SS13
+Framework's, which carries them with their Bitstream Vera license.
 
 The origin, source, license and attribution of each asset file are listed
 in CREDITS.

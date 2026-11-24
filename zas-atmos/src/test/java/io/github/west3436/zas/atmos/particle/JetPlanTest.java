@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -151,8 +151,8 @@ class JetPlanTest {
     @Test
     void client_019_a_flowing_end_runs_into_its_next_atmos_tick() {
         JetPlan plan = JetPlan.of(GasJetKind.OPEN_END, 1);
-        assertTrue(plan.ticks() > AtmosTicks.PERIOD, "there would be a gap each atmos tick");
-        assertTrue(plan.ticks() <= AtmosTicks.PERIOD + 5, "it would run on too long after the flow stops");
+        assertTrue(plan.ticks() > DeviceTicks.PERIOD, "there would be a gap each atmos tick");
+        assertTrue(plan.ticks() <= DeviceTicks.PERIOD + 5, "it would run on too long after the flow stops");
         assertEquals(plan.distance(), travelled(plan), EPS);
     }
 

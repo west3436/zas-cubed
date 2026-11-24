@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.portable;
 
-import io.github.west3436.zas.atmos.device.BlockTurns;
+import io.github.west3436.ss13.device.BlockTurns;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;

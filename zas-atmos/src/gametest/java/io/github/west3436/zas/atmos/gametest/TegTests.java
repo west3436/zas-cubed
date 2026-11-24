@@ -3,11 +3,11 @@ package io.github.west3436.zas.atmos.gametest;
 import static io.github.west3436.zas.atmos.gametest.Area.N2;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
@@ -182,7 +182,7 @@ public final class TegTests {
             double jpf = AtmosServerConfig.get(AtmosServerConfig.JOULES_PER_FE);
             a.close(
                     teg.heatFromHot(),
-                    teg.heatToCold() + teg.powerPerTick() * 20 * AtmosTicks.SECONDS * jpf,
+                    teg.heatToCold() + teg.powerPerTick() * 20 * DeviceTicks.SECONDS * jpf,
                     "heat out = heat in + work");
             h.assertTrue(work(teg) > 0, "no FE made");
             h.assertValueEqual(teg.status(), TegStatus.RUNNING, "the core's status");
@@ -325,8 +325,8 @@ public final class TegTests {
         double sum = 0;
         int counted = 0;
         for (int i = 0; i < 10; i++) {
-            add(in(a, LEFT), hotMolPerS * AtmosTicks.SECONDS, hotK);
-            add(in(a, RIGHT), coldMolPerS * AtmosTicks.SECONDS, coldK);
+            add(in(a, LEFT), hotMolPerS * DeviceTicks.SECONDS, hotK);
+            add(in(a, RIGHT), coldMolPerS * DeviceTicks.SECONDS, coldK);
             a.step();
             teg.energy().set(0);
             for (int x : new int[] {LEFT, RIGHT}) {

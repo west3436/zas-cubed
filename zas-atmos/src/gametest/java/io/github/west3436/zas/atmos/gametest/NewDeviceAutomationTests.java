@@ -3,13 +3,13 @@ package io.github.west3436.zas.atmos.gametest;
 import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.STONE;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.miner.GasMinerBlock;
 import io.github.west3436.zas.atmos.miner.GasMinerBlockEntity;

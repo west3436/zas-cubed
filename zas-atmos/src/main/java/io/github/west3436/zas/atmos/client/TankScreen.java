@@ -1,11 +1,11 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.client.tgui.TguiWindow;
+import io.github.west3436.ss13.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Ui.Face;
+import io.github.west3436.ss13.client.tgui.Ui.Tone;
 import io.github.west3436.zas.api.gas.GasParcel;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
-import io.github.west3436.zas.atmos.client.tgui.TguiWindow;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
