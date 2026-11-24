@@ -118,7 +118,7 @@ final class Spot {
         }
     }
 
-    /** One atmos tick of the framework, now. Only tests may ask for one (CONT-095). */
+    /** One atmos tick of {@code zas}, now. Only tests may ask for one (CONT-095). */
     void tick() {
         AtmosService service = AtmosService.current();
         if (service == null) {

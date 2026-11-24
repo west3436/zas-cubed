@@ -98,12 +98,18 @@ tasks.matching { it.name == 'runGameTestServer' }.configureEach {
 }
 
 dependencies {
-    // Compile against the public API only (D-50); zas is required at runtime.
+    // CONT-095: compile against zas-api and SS13 Framework, never zas's internals (D-50). zas is
+    // required at runtime, so it is runtimeOnly: a zas class in src/main fails to compile.
     implementation project(':zas-api')
     runtimeOnly project(':zas')
+    // SS13 Framework, mod and API, which zas nests in the release jar. Dev runs load the mod's jar,
+    // which nests the API: the API is never on the classpath by itself, since a second copy would be
+    // a second module of the same name.
+    compileOnly "io.github.west3436:ss13-framework:${framework_version}"
+    runtimeOnly("io.github.west3436:ss13-framework:${framework_version}") { transitive = false }
     gametestRuntimeOnly project(':zas').sourceSets.gametest.output
-    // GameTests (only) may use the framework's test hooks: driving atmos ticks (tickNow), the
-    // preset, ambient overrides and the published zones' pins. main stays API-only (CONT-095).
+    // GameTests (only) may use zas's test hooks: driving atmos ticks (tickNow), the preset, ambient
+    // overrides and the published zones' pins. main never names zas (CONT-095).
     gametestCompileOnly project(':zas')
     gametestCompileOnly project(':engine')
     // The GameTest helpers zas shares, such as TestPlayers.

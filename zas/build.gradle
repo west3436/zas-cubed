@@ -111,6 +111,23 @@ dependencies {
             prefer api_version
         }
     }
+
+    // SS13 Framework, the mod and its API, nested as the framework's README says, so the release
+    // jar carries them and players never install them. zas_atmos compiles against them (CONT-095);
+    // zas doesn't. The mod nests the API too, but naming the API here makes its range zas's own.
+    jarJar('io.github.west3436:ss13-framework') {
+        transitive = false
+        version {
+            strictly framework_range
+            prefer framework_version
+        }
+    }
+    jarJar('io.github.west3436:ss13-framework-api') {
+        version {
+            strictly framework_range
+            prefer framework_version
+        }
+    }
 }
 
 configurations.named('jarJar') {

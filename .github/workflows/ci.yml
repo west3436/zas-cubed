@@ -89,8 +89,11 @@ jobs:
             exit 1
           fi
       # API-007: the built release jar and a built copy of the example addon,
-      # each nesting the API, on one server. They must share one copy.
-      - name: API-007 one copy of the API (built jars)
+      # each nesting the API, on one server. They must share one copy. The
+      # same server has a second consumer of SS13 Framework, which nests a
+      # newer framework than the release jar does: one copy of the framework
+      # must load, the newest.
+      - name: API-007 one copy of the API and of SS13 Framework (built jars)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 5
         shell: bash
