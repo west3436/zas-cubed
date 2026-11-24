@@ -3,7 +3,7 @@ package io.github.west3436.zas.atmos.airlock;
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.ss13.device.WallPanelBlock;
 import io.github.west3436.zas.api.relocation.Relocations;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -55,7 +55,7 @@ public class AirlockControllerBlock extends WallPanelBlock implements EntityBloc
 
     /**
      * Opens its window. The multitool selects or links it before this is asked (CONT-138, CONT-141,
-     * {@link MultitoolItem#onItemUseFirst}).
+     * {@link Multitool}).
      */
     @Override
     protected InteractionResult useWithoutItem(

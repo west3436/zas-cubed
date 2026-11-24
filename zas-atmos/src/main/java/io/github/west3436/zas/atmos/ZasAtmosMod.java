@@ -21,6 +21,7 @@ import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.registry.MovedItems;
+import io.github.west3436.zas.atmos.tool.ToolProviders;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
@@ -69,6 +70,7 @@ public final class ZasAtmosMod {
         AtmosMenus.register(modBus);
         AtmosCreativeTab.register(modBus);
         AtmosCapabilities.register(modBus);
+        ToolProviders.register(modBus);
         AtmosSounds.register(modBus);
         AtmosServerConfig.register(container);
         CentralChunks.register(modBus);

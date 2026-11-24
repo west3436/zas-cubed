@@ -6,6 +6,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import com.mojang.authlib.GameProfile;
 import io.github.west3436.ss13.device.DeviceTicker;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -26,7 +27,7 @@ import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.WrenchItem;
+import io.github.west3436.zas.atmos.tool.Wrench;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
@@ -584,7 +585,7 @@ public final class EncasedPipeTests {
         Room west = Room.of(a, 1);
         Room east = Room.of(a, 7);
         BlockPos pos = a.abs(WALL, 2, 2);
-        Player player = holding(h, GameType.SURVIVAL, new ItemStack(AtmosItems.WRENCH.get()));
+        Player player = holding(h, GameType.SURVIVAL, new ItemStack(FrameworkItems.WRENCH.get()));
 
         a.place(WALL, 2, 2, inWall(PipeColor.GREEN));
         a.<PipeBlockEntity>entity(WALL, 2, 2).network().gas().add(new GasParcel(Map.of(CO2, 2.0), T));
@@ -615,18 +616,18 @@ public final class EncasedPipeTests {
         PipeNetwork net = a.<PipeBlockEntity>entity(WALL, 2, 2).network();
         double thin = a.zone(7, 3, 1).mixture().pressure();
         double dense = a.zone(1, 3, 1).mixture().pressure();
-        double kpa = thin + WrenchItem.LOCK_KPA + 40;
-        h.assertTrue(kpa < dense + WrenchItem.LOCK_KPA - 40, "the rooms are too close: " + thin + " and " + dense);
+        double kpa = thin + Wrench.LOCK_KPA + 40;
+        h.assertTrue(kpa < dense + Wrench.LOCK_KPA - 40, "the rooms are too close: " + thin + " and " + dense);
         PipeBurstTests.fillTo(net, kpa);
         double held = net.gas().moles(CO2);
         a.close(
-                WrenchItem.overAmbient(a.level, pos, Direction.EAST),
-                WrenchItem.LOCK_KPA + 40,
+                Wrench.overAmbient(a.level, pos, Direction.EAST),
+                Wrench.LOCK_KPA + 40,
                 "the pipe's pressure over the east room's");
-        a.close(WrenchItem.overAmbient(a.level, pos, Direction.WEST), kpa - dense, "the pipe's pressure over the west");
+        a.close(Wrench.overAmbient(a.level, pos, Direction.WEST), kpa - dense, "the pipe's pressure over the west");
         wrench(a, player, WALL, 2, 2, Direction.EAST, true);
         h.assertTrue(a.get(WALL, 2, 2).is(AtmosBlocks.STATION_WALL_PIPE.get()), "the pipe came out over the limit");
-        Optional<Component> refusal = WrenchItem.remove(a.level, pos, player, player.getMainHandItem(), Direction.EAST);
+        Optional<Component> refusal = Wrench.remove(a.level, pos, player, player.getMainHandItem(), Direction.EAST);
         h.assertTrue(
                 refusal.isPresent()
                         && refusal.get().getContents() instanceof TranslatableContents t
@@ -646,7 +647,7 @@ public final class EncasedPipeTests {
 
         // In creative, the pipe comes out and nothing drops.
         a.place(WALL, 2, 2, inWall());
-        Player creative = holding(h, GameType.CREATIVE, new ItemStack(AtmosItems.WRENCH.get()));
+        Player creative = holding(h, GameType.CREATIVE, new ItemStack(FrameworkItems.WRENCH.get()));
         WrenchTests.watchDrops();
         wrench(a, creative, WALL, 2, 2, Direction.EAST, true);
         h.assertTrue(a.get(WALL, 2, 2) == wall(), "in creative, the pipe didn't come out");
@@ -1269,7 +1270,7 @@ public final class EncasedPipeTests {
         Room west = Room.of(a, 1);
         Room east = Room.of(a, 7);
         BlockPos pos = a.abs(WALL, 2, 2);
-        Player player = holding(h, GameType.SURVIVAL, new ItemStack(AtmosItems.WRENCH.get()));
+        Player player = holding(h, GameType.SURVIVAL, new ItemStack(FrameworkItems.WRENCH.get()));
 
         h.assertFalse(ChangeTracker.isDirty(a.level, pos), "the grille is still marked from being built");
         h.assertValueEqual(
@@ -1308,17 +1309,17 @@ public final class EncasedPipeTests {
         PipeNetwork net = a.<PipeBlockEntity>entity(WALL, 2, 2).network();
         double thin = a.zone(7, 3, 1).mixture().pressure();
         double dense = a.zone(1, 3, 1).mixture().pressure();
-        double kpa = thin + WrenchItem.LOCK_KPA + 40;
-        h.assertTrue(kpa < dense + WrenchItem.LOCK_KPA - 40, "the rooms are too close: " + thin + " and " + dense);
+        double kpa = thin + Wrench.LOCK_KPA + 40;
+        h.assertTrue(kpa < dense + Wrench.LOCK_KPA - 40, "the rooms are too close: " + thin + " and " + dense);
         PipeBurstTests.fillTo(net, kpa);
         double held = net.gas().moles(CO2);
         a.close(
-                WrenchItem.overAmbient(a.level, pos, Direction.EAST),
-                WrenchItem.LOCK_KPA + 40,
+                Wrench.overAmbient(a.level, pos, Direction.EAST),
+                Wrench.LOCK_KPA + 40,
                 "the pipe's pressure over the east room's");
         wrench(a, player, WALL, 2, 2, Direction.EAST, true);
         h.assertTrue(a.get(WALL, 2, 2).is(AtmosBlocks.FLOOR_GRILLE_PIPE.get()), "the pipe came out over the limit");
-        Optional<Component> refusal = WrenchItem.remove(a.level, pos, player, player.getMainHandItem(), Direction.EAST);
+        Optional<Component> refusal = Wrench.remove(a.level, pos, player, player.getMainHandItem(), Direction.EAST);
         h.assertTrue(
                 refusal.isPresent()
                         && refusal.get().getContents() instanceof TranslatableContents t
@@ -1338,7 +1339,7 @@ public final class EncasedPipeTests {
 
         // In creative, the pipe comes out and nothing drops.
         a.place(WALL, 2, 2, inGrille());
-        Player creative = holding(h, GameType.CREATIVE, new ItemStack(AtmosItems.WRENCH.get()));
+        Player creative = holding(h, GameType.CREATIVE, new ItemStack(FrameworkItems.WRENCH.get()));
         WrenchTests.watchDrops();
         wrench(a, creative, WALL, 2, 2, Direction.EAST, true);
         h.assertTrue(a.get(WALL, 2, 2) == grille(), "in creative, the pipe didn't come out");

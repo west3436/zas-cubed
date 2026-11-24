@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.airlock.AirSensorBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlock;
@@ -125,7 +126,7 @@ public final class AirlockScenes {
         Say.at(scene, front, "airlock.bolted");
         Hand.use(scene, util, upper, Direction.NORTH, ItemStack.EMPTY);
         refused(scene, doors);
-        Hand.use(scene, util, upper, Direction.NORTH, new ItemStack(AtmosItems.CROWBAR.get()));
+        Hand.use(scene, util, upper, Direction.NORTH, new ItemStack(FrameworkItems.CROWBAR.get()));
         refused(scene, doors);
         flick(scene, util, lever, true);
         refused(scene, doors);
@@ -194,7 +195,7 @@ public final class AirlockScenes {
 
         // The multitool links each part, which takes the slot the controller guesses from the zones
         // around it, and then the vent, which takes none.
-        Hand.use(scene, util, controller, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        Hand.use(scene, util, controller, Direction.NORTH, new ItemStack(FrameworkItems.MULTITOOL.get()));
         Say.at(scene, panel, "airlock_controller.links");
         link(
                 scene,
@@ -251,7 +252,7 @@ public final class AirlockScenes {
                 "OuterSensor",
                 outerSensor,
                 3);
-        Hand.use(scene, util, vent, Direction.UP, new ItemStack(AtmosItems.MULTITOOL.get()));
+        Hand.use(scene, util, vent, Direction.UP, new ItemStack(FrameworkItems.MULTITOOL.get()));
         scene.overlay().showOutline(PonderPalette.GREEN, "vent", util.select().position(vent), ROLE);
         prime(scene, util, controller, tag -> tag.putLongArray("Vents", new long[] {vent.asLong()}));
         scene.idle(ROLE);
@@ -480,7 +481,7 @@ public final class AirlockScenes {
             String slot,
             BlockPos saved,
             int place) {
-        Hand.use(scene, util, clicked, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        Hand.use(scene, util, clicked, Direction.NORTH, new ItemStack(FrameworkItems.MULTITOOL.get()));
         scene.overlay().showOutline(PonderPalette.GREEN, new Object(), part, ROLE);
         Say.over(scene, ROLE, at, role);
         prime(scene, util, controller, tag -> {
@@ -611,9 +612,9 @@ public final class AirlockScenes {
                 Gas.pressure(SensorStatus.ALERT_ABOVE_KPA));
 
         // The multitool links it to the controller, as the station side's sensor.
-        Hand.use(scene, util, controller, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        Hand.use(scene, util, controller, Direction.NORTH, new ItemStack(FrameworkItems.MULTITOOL.get()));
         scene.idle(Hand.SHOW - Hand.PAUSE);
-        Hand.use(scene, util, sensor, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        Hand.use(scene, util, sensor, Direction.NORTH, new ItemStack(FrameworkItems.MULTITOOL.get()));
         scene.overlay().showOutline(PonderPalette.GREEN, "sensor", util.select().position(sensor), Say.LINE);
         prime(scene, util, controller, tag -> {
             tag.putLong("InnerSensor", sensor.asLong());

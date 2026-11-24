@@ -2,7 +2,7 @@ package io.github.west3436.zas.atmos.controller;
 
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.api.relocation.Relocations;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -111,7 +111,7 @@ public class AreaAirControllerBlock extends HorizontalDirectionalBlock implement
         return new AreaAirControllerBlockEntity(pos, state);
     }
 
-    /** Opens its window. The multitool selects it before this is asked ({@link MultitoolItem#onItemUseFirst}). */
+    /** Opens its window. The multitool selects it before this is asked ({@link Multitool}). */
     @Override
     protected InteractionResult useWithoutItem(
             BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {

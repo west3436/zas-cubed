@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
 import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Gas;
@@ -64,7 +65,7 @@ public final class ToolScenes {
         Build.sink(
                 scene, util, vent, AtmosBlocks.VENT.get().defaultBlockState().setValue(VentBlock.FACING, Direction.UP));
 
-        ItemStack multitool = new ItemStack(AtmosItems.MULTITOOL.get());
+        ItemStack multitool = new ItemStack(FrameworkItems.MULTITOOL.get());
         Vec3 front = util.vector().blockSurface(controller, Direction.WEST);
         Hand.use(scene, util, controller, Direction.WEST, multitool);
         scene.overlay().showOutline(PonderPalette.GREEN, "picked", util.select().position(controller), 200);
@@ -114,7 +115,7 @@ public final class ToolScenes {
         }
         Build.revealAll(scene, util, blocks, Direction.DOWN);
 
-        ItemStack crowbar = new ItemStack(AtmosItems.CROWBAR.get());
+        ItemStack crowbar = new ItemStack(FrameworkItems.CROWBAR.get());
         Hand.use(scene, util, lower, Direction.WEST, crowbar);
         Build.change(scene, firelock, s -> s.setValue(FirelockBlock.OPEN, true));
         Say.at(scene, util.vector().blockSurface(lower.above(), Direction.WEST), "crowbar.open");
@@ -231,7 +232,7 @@ public final class ToolScenes {
         Build.revealAll(scene, util, run, Direction.DOWN);
 
         // Two uses turn the pump round, while the line is up.
-        ItemStack wrench = new ItemStack(AtmosItems.WRENCH.get());
+        ItemStack wrench = new ItemStack(FrameworkItems.WRENCH.get());
         List<Direction> turns = List.of(Direction.SOUTH, Direction.WEST);
         Say.over(
                 scene,

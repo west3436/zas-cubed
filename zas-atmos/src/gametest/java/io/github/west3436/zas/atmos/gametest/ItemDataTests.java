@@ -3,6 +3,8 @@ package io.github.west3436.zas.atmos.gametest;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.ss13.device.DeviceData;
 import io.github.west3436.ss13.device.ItemData;
+import io.github.west3436.ss13.registry.FrameworkItems;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
@@ -10,7 +12,6 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.Signal;
 import io.netty.buffer.Unpooled;
@@ -256,33 +257,44 @@ public final class ItemDataTests {
     }
 
     /**
-     * A multitool's selection is in vanilla's {@code custom_data}. One saved with no version still
-     * reads, and one made now saves a version and reads back.
+     * The multitool, the wrench and the crowbar are SS13 Framework's now (#540). A stack of each saved
+     * by 1.2.0, under its old {@code zas_atmos:} id, loads as the framework's item, and a multitool's
+     * selection, which 1.2.0 kept in vanilla's {@code custom_data} with or without a version, is still
+     * its selection. Selecting a controller again keeps it in the framework's buffer, which saves and
+     * reads back, and drops the old one.
      */
     @GameTest(template = "empty")
-    public static void data_012_a_multitool_selection_saved_with_no_version_still_reads(GameTestHelper h) {
+    public static void data_012_tools_saved_by_1_2_0_load_as_the_frameworks_with_their_selection(GameTestHelper h) {
         HolderLookup.Provider registries = h.getLevel().registryAccess();
         BlockPos controller = new BlockPos(12, 64, -34);
         Optional<BlockPos> selected = Optional.of(controller);
+        String dimension = h.getLevel().dimension().location().toString();
 
-        ItemStack old = ItemStack.parseOptional(
-                registries,
-                snbt("{id:\"zas_atmos:multitool\",count:1,components:{\"minecraft:custom_data\":{Controller:"
-                        + controller.asLong() + "L,Dimension:\""
-                        + h.getLevel().dimension().location() + "\"}}}"));
-        h.assertValueEqual(MultitoolItem.selected(old, h.getLevel()), selected, "the old selection");
+        for (String tool : List.of("multitool", "wrench", "crowbar")) {
+            ItemStack old = ItemStack.parseOptional(registries, snbt("{id:\"zas_atmos:" + tool + "\",count:1}"));
+            h.assertValueEqual(
+                    BuiltInRegistries.ITEM.getKey(old.getItem()),
+                    ResourceLocation.fromNamespaceAndPath("ss13_framework", tool),
+                    "the " + tool + " saved by 1.2.0");
+        }
+        h.assertTrue(
+                ItemStack.parseOptional(registries, snbt("{id:\"zas_atmos:multitool\",count:1}"))
+                        .is(FrameworkItems.MULTITOOL.get()),
+                "the old multitool isn't the framework's");
 
-        ItemStack made = new ItemStack(AtmosItems.MULTITOOL.get());
-        MultitoolItem.select(made, h.getLevel(), controller);
+        for (String version : List.of("", "," + DeviceData.VERSION_KEY + ":1")) {
+            ItemStack old = ItemStack.parseOptional(
+                    registries,
+                    snbt("{id:\"zas_atmos:multitool\",count:1,components:{\"minecraft:custom_data\":{Controller:"
+                            + controller.asLong() + "L,Dimension:\"" + dimension + "\"" + version + "}}}"));
+            h.assertValueEqual(MultitoolItem.source(old, h.getLevel()), selected, "the old selection" + version);
+        }
+
+        ItemStack made = new ItemStack(FrameworkItems.MULTITOOL.get());
+        MultitoolItem.store(made, h.getLevel(), controller);
         CompoundTag current = (CompoundTag) made.save(registries);
         h.assertValueEqual(
-                current.getCompound("components")
-                        .getCompound("minecraft:custom_data")
-                        .getInt(DeviceData.VERSION_KEY),
-                1,
-                "the version it saves");
-        h.assertValueEqual(
-                MultitoolItem.selected(ItemStack.parseOptional(registries, current), h.getLevel()),
+                MultitoolItem.source(ItemStack.parseOptional(registries, current), h.getLevel()),
                 selected,
                 "the selection saved as current");
         h.succeed();

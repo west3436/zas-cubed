@@ -1,7 +1,9 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.ss13.testkit.SoundLog;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -14,10 +16,9 @@ import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.firelock.Lockdown;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
-import io.github.west3436.zas.atmos.tool.CrowbarItem;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Crowbar;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.config.ZasServerConfig;
@@ -326,9 +327,9 @@ public final class FirelockTests {
             s.cycles(2, a, vent, f);
             h.assertFalse(vent.power().isPowered(), "the unlinked vent in B has power");
 
-            ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-            MultitoolItem.select(tool, s.level, a.getBlockPos());
-            MultitoolItem.link(tool, s.level, vent.getBlockPos());
+            ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+            MultitoolItem.store(tool, s.level, a.getBlockPos());
+            Multitool.link(tool, s.level, vent.getBlockPos());
             s.cycle(a, vent, f);
             h.assertTrue(vent.power().isPowered(), "the vent linked across the firelock has no power");
             h.assertTrue(vent.power().source() == a, "the vent's power isn't the controller's");
@@ -357,9 +358,9 @@ public final class FirelockTests {
             TestParts.Vent vent =
                     s.place(6, 1, 3, TestParts.Kind.VENT.block().defaultBlockState(), TestParts.Vent.class);
             s.cycles(2, c, f);
-            ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-            MultitoolItem.select(tool, s.level, c.getBlockPos());
-            MultitoolItem.link(tool, s.level, vent.getBlockPos());
+            ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+            MultitoolItem.store(tool, s.level, c.getBlockPos());
+            Multitool.link(tool, s.level, vent.getBlockPos());
             s.addKpa(12, 2, 2, CO2, 20);
             s.cycle(c, vent, f);
             h.assertValueEqual(c.danger(), 2, "C's danger");
@@ -506,12 +507,12 @@ public final class FirelockTests {
             use(s, player, 1);
             h.assertFalse(open(s), "opened by hand when cold");
 
-            h.assertTrue(CrowbarItem.force(s.level, s.abs(4, 1, 2), player), "the crowbar didn't open it");
+            h.assertTrue(Crowbar.force(s.level, s.abs(4, 1, 2), player), "the crowbar didn't open it");
             h.assertTrue(open(s), "the crowbar didn't open the locked-down firelock");
             h.assertFalse(lockedState(s), "an open firelock shows the lockdown");
             s.cycle(f);
             h.assertTrue(open(s), "the forced firelock closed with no alarm");
-            h.assertFalse(CrowbarItem.force(s.level, s.abs(4, 1, 2), player), "the crowbar didn't shut it");
+            h.assertFalse(Crowbar.force(s.level, s.abs(4, 1, 2), player), "the crowbar didn't shut it");
             h.assertFalse(open(s), "the crowbar didn't shut it");
             player.discard();
         });
@@ -583,9 +584,9 @@ public final class FirelockTests {
             h.assertFalse(open(s), "a locked-down firelock opened by hand");
             DeviceSoundTests.played(h, lower, "refused", AtmosSounds.FIRELOCK_FORCE);
 
-            CrowbarItem.force(s.level, lower, player);
+            Crowbar.force(s.level, lower, player);
             DeviceSoundTests.played(h, lower, "forced open", AtmosSounds.FIRELOCK_OPEN, AtmosSounds.FIRELOCK_FORCE);
-            CrowbarItem.force(s.level, lower, player);
+            Crowbar.force(s.level, lower, player);
             DeviceSoundTests.played(h, lower, "forced shut", AtmosSounds.FIRELOCK_CLOSE, AtmosSounds.FIRELOCK_FORCE);
             player.discard();
         });

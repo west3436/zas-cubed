@@ -2,8 +2,8 @@ package io.github.west3436.zas.atmos.firelock;
 
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.ss13.api.label.LabelledPart;
+import io.github.west3436.ss13.api.tool.ToolTags;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
-import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -265,9 +265,9 @@ public class FirelockBlock extends HorizontalDirectionalBlock implements EntityB
             Player player,
             InteractionHand hand,
             BlockHitResult hit) {
-        // The crowbar forces it in its own useOn (CONT-094): it doesn't open or close it by hand. The
-        // multitool links it before this is asked (MultitoolItem#onItemUseFirst, CONT-043).
-        if (stack.getItem() instanceof CrowbarItem) {
+        // A crowbar forces it once this has passed (CONT-094, Crowbar): it doesn't open or close it by
+        // hand. The multitool links it before this is asked (Multitool, CONT-043).
+        if (stack.is(ToolTags.CROWBARS)) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

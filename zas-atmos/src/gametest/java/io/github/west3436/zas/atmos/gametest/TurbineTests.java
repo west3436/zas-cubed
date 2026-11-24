@@ -3,13 +3,14 @@ package io.github.west3436.zas.atmos.gametest;
 import static io.github.west3436.zas.atmos.gametest.TurbineRig.H2;
 import static io.github.west3436.zas.atmos.gametest.TurbineRig.O2;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
 import io.github.west3436.zas.atmos.turbine.TurbineBlockEntity;
 import io.github.west3436.zas.atmos.turbine.TurbineControllerBlock;
@@ -492,12 +493,12 @@ public final class TurbineTests {
     public static void cont_190_the_multitool_links_and_unlinks_the_parts(GameTestHelper h) {
         Area a = new Area(h, 5618);
         TurbineRig r = TurbineRig.build(a);
-        ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-        MultitoolItem.select(tool, a.level, r.controller.getBlockPos());
+        ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+        MultitoolItem.store(tool, a.level, r.controller.getBlockPos());
         BlockPos[] parts = {r.turbine.getBlockPos(), r.compressor.getBlockPos(), r.igniter.getBlockPos()};
         for (BlockPos part : parts) {
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, a.level, part)),
+                    key(Multitool.link(tool, a.level, part)),
                     "item.zas_atmos.multitool.linked_turbine",
                     "linking " + part);
         }
@@ -512,12 +513,12 @@ public final class TurbineTests {
                 TurbinePartBlock.controllerOf(a.level, r.compressor.getBlockPos()) == r.controller,
                 "the compressor's link");
         h.assertValueEqual(
-                key(MultitoolItem.link(tool, a.level, a.abs(0, 2, 2))),
+                key(Multitool.link(tool, a.level, a.abs(0, 2, 2))),
                 "item.zas_atmos.multitool.not_linkable_turbine",
                 "linking stone");
 
         h.assertValueEqual(
-                key(MultitoolItem.link(tool, a.level, r.compressor.getBlockPos())),
+                key(Multitool.link(tool, a.level, r.compressor.getBlockPos())),
                 "item.zas_atmos.multitool.unlinked_turbine",
                 "unlinking the compressor");
         h.assertFalse(r.controller.linked(Part.COMPRESSOR), "the compressor is still linked");
@@ -539,8 +540,8 @@ public final class TurbineTests {
                         .defaultBlockState()
                         .setValue(TurbineControllerBlock.FACING, Direction.SOUTH));
         TurbineControllerBlockEntity second = a.entity(5, 5, 2);
-        MultitoolItem.select(tool, a.level, second.getBlockPos());
-        MultitoolItem.link(tool, a.level, r.turbine.getBlockPos());
+        MultitoolItem.store(tool, a.level, second.getBlockPos());
+        Multitool.link(tool, a.level, r.turbine.getBlockPos());
         h.assertTrue(second.linked(Part.TURBINE), "the second controller didn't take the turbine");
         h.assertFalse(r.controller.linked(Part.TURBINE), "the first controller kept the turbine");
         h.assertTrue(TurbinePartBlock.controllerOf(a.level, r.turbine.getBlockPos()) == second, "the turbine's link");

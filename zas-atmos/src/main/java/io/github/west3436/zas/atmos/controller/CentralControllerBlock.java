@@ -3,7 +3,7 @@ package io.github.west3436.zas.atmos.controller;
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.ss13.api.label.LabelledPart;
 import io.github.west3436.zas.api.relocation.Relocations;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -298,7 +298,7 @@ public class CentralControllerBlock extends HorizontalDirectionalBlock implement
 
     /**
      * Opens its window. The multitool moves its selected area air controller here before this is
-     * asked (CONT-118, {@link MultitoolItem#onItemUseFirst}).
+     * asked (CONT-118, {@link Multitool}).
      */
     @Override
     protected InteractionResult useWithoutItem(
