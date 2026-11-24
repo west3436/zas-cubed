@@ -6,7 +6,7 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     },
     {
       "type": "neoforge:item_exists",
@@ -22,7 +22,7 @@
   ],
   "key": {
     "S": {
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     },
     "V": {
       "item": "zas_atmos:softsuit_leggings"

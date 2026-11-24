@@ -3,7 +3,7 @@ package io.github.west3436.zas.life;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.ss13.data.DatapackErrors;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

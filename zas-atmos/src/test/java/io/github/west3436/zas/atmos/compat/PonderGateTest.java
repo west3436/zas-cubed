@@ -2,7 +2,6 @@ package io.github.west3436.zas.atmos.compat;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.atmos.compat.PonderGate.Verdict;
@@ -64,7 +63,7 @@ class PonderGateTest {
     void compat_002_ponder_1_from_creates_copy_up_is_supported() {
         for (String version :
                 new String[] {CREATES, "1.0.83+mc1.21.1", ADDONS, "1.0.100+mc1.21.1", "1.1.0+mc1.21.1", "1.0.82"}) {
-            assertTrue(PonderGate.supports(version, PonderGate.SUPPORTED), version);
+            assertEquals(Verdict.ON, PonderGate.decide(true, version, false), version);
         }
     }
 
@@ -73,15 +72,8 @@ class PonderGateTest {
         for (String version : new String[] {
             "1.0.81+mc1.21.1", "1.0.59+mc1.21.1", "1.0.9+mc1.21.1", "0.9.0", "2.0.0+mc1.21.1", "2.0.0", "3.1.4+mc1.21.1"
         }) {
-            assertFalse(PonderGate.supports(version, PonderGate.SUPPORTED), version);
+            assertEquals(Verdict.UNSUPPORTED, PonderGate.decide(true, version, false), version);
         }
-    }
-
-    /** A bare version would let every version through, so it is refused. */
-    @Test
-    void compat_002_a_range_must_have_bounds() {
-        assertThrows(IllegalArgumentException.class, () -> PonderGate.supports(CREATES, "1.0.82"));
-        assertThrows(IllegalArgumentException.class, () -> PonderGate.supports(CREATES, "[1.0.82"));
     }
 
     /**

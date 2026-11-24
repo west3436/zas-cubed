@@ -4,10 +4,11 @@ import dev.emi.emi.api.EmiEntrypoint;
 import dev.emi.emi.api.EmiInitRegistry;
 import dev.emi.emi.api.EmiPlugin;
 import dev.emi.emi.api.EmiRegistry;
-import io.github.west3436.zas.compat.Adapters;
+import io.github.west3436.ss13.compat.PluginGate;
+import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.viewer.GasEntry;
 import io.github.west3436.zas.compat.viewer.ViewerData;
-import io.github.west3436.zas.compat.viewer.ViewerGate;
 import java.util.List;
 
 /**
@@ -36,9 +37,9 @@ public final class ZasEmiPlugin implements EmiPlugin {
     private static final String AE2 = "ae2";
 
     /** One gate for the whole game, so its warning is logged once however often EMI reloads. */
-    private static final ViewerGate INSTALLED = new ViewerGate(EMI, SUPPORTED);
+    private static final PluginGate INSTALLED = new PluginGate(ZasMod.MOD_ID, EMI, SUPPORTED);
 
-    private final ViewerGate gate;
+    private final PluginGate gate;
 
     /** EMI makes the plugin with this. */
     public ZasEmiPlugin() {
@@ -46,7 +47,7 @@ public final class ZasEmiPlugin implements EmiPlugin {
     }
 
     /** A plugin behind a gate of the caller's, for tests. */
-    public ZasEmiPlugin(ViewerGate gate) {
+    public ZasEmiPlugin(PluginGate gate) {
         this.gate = gate;
     }
 
@@ -65,7 +66,7 @@ public final class ZasEmiPlugin implements EmiPlugin {
             Pages.register(registry, gases, ViewerData.reactions());
         }
         // With AE2 too, gases can be dragged onto its filters (COMPAT-073).
-        if (gate.on() && Adapters.isActive(AE2)) {
+        if (gate.on() && ZasAdapters.ADAPTERS.isActive(AE2)) {
             Ae2GasStacks.register();
         }
     }

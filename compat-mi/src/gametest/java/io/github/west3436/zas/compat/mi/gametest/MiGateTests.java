@@ -1,10 +1,11 @@
 package io.github.west3436.zas.compat.mi.gametest;
 
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.GasTags;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.compat.mi.ModernIndustrializationCompat;
 import java.util.List;
 import java.util.Map;
@@ -56,9 +57,8 @@ public final class MiGateTests {
 
     /** The adapter's row in zas's table, as the loader found it. */
     static Status status(GameTestHelper h) {
-        Status status = Adapters.statuses().stream()
-                .filter(s -> s.row().modId().equals(ModernIndustrializationCompat.MOD_ID))
-                .findFirst()
+        Status status = ZasAdapters.ADAPTERS
+                .status(ModernIndustrializationCompat.MOD_ID)
                 .orElse(null);
         h.assertTrue(status != null, "zas has no adapter row for Modern Industrialization");
         return status;
@@ -92,7 +92,8 @@ public final class MiGateTests {
                 status.row().entryClass(), ModernIndustrializationCompat.class.getName(), "the row's entry class");
         h.assertValueEqual(status.version(), installed, "the version the loader saw");
         h.assertValueEqual(status.state(), State.ACTIVE, "the adapter's state");
-        h.assertTrue(Adapters.isActive(ModernIndustrializationCompat.MOD_ID), "zas says the adapter is off");
+        h.assertTrue(
+                ZasAdapters.ADAPTERS.isActive(ModernIndustrializationCompat.MOD_ID), "zas says the adapter is off");
         h.assertTrue(ModernIndustrializationCompat.isActive(), "the adapter says it never started");
         for (String pack : List.of(
                 ModernIndustrializationCompat.dataPackId("zas"),

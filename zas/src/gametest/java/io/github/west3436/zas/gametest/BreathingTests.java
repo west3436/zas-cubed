@@ -1,6 +1,7 @@
 package io.github.west3436.zas.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
@@ -19,7 +20,6 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.HazardConfig;
-import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.life.BreathState;
 import io.github.west3436.zas.life.BreathSyncPayload;
 import io.github.west3436.zas.life.Breathers;

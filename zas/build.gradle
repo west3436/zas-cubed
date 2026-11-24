@@ -93,7 +93,7 @@ dependencies {
     implementation project(':engine')
     implementation project(':compat-adastra')
     implementation project(':zas-api')
-    // Started by name (Adapters), so zas never compiles against them.
+    // Started by name (ZasAdapters), so zas never compiles against them.
     runtimeOnly project(':compat-mekanism')
     runtimeOnly project(':compat-slots')
     runtimeOnly project(':compat-pneumaticcraft')

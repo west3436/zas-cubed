@@ -1,5 +1,8 @@
 package io.github.west3436.zas.gametest;
 
+import io.github.west3436.ss13.api.area.Area;
+import io.github.west3436.ss13.api.area.AreaStore;
+import io.github.west3436.ss13.api.area.Areas;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
@@ -414,6 +417,45 @@ public final class RelocationTests {
             h.assertFalse(r.zoned(3, 2, 2), "a zone is left where the room was");
         });
         h.succeed();
+    }
+
+    /**
+     * The hand-over carries SS13 Framework's stored areas with the blocks: an area wholly inside the
+     * box arrives where the turn puts its blocks, and an area the box only cuts through, like a hangar
+     * floor under a ship, stays whole where it was.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100, batch = BATCH)
+    public static void stored_area_moves_with_its_blocks(GameTestHelper h) {
+        Rooms r = rooms(h, h.getLevel(), 8, 100);
+        r.clear(0, 0, 50, 8);
+        r.box(0, 0, 6, 4); // interior x 1 to 5, z 1 to 3
+        AreaStore store = Areas.store(r.level);
+        ResourceLocation cabin = ResourceLocation.fromNamespaceAndPath("zas_gametest", "cabin");
+        ResourceLocation hangar = ResourceLocation.fromNamespaceAndPath("zas_gametest", "hangar");
+        store.define(cabin, "Cabin");
+        store.define(hangar, "Hangar");
+        BoundingBox inside = BoundingBox.fromCorners(r.abs(1, 1, 1), r.abs(5, 3, 3));
+        store.assign(cabin, inside);
+        store.assign(hangar, BoundingBox.fromCorners(r.abs(0, 0, 0), r.abs(10, 0, 4)));
+
+        Destination d = new Destination(r.level, r.abs(0, 0, 0), r.abs(40, 0, 0), Rotation.CLOCKWISE_90);
+        RelocationResult moved = r.settle(move(r.level, box(r, 0, 0, 6, 4), d).done());
+        h.assertValueEqual(moved.outcome(), RelocationOutcome.MOVED, "the move");
+
+        h.assertValueEqual(
+                areaAt(r.level, d.map(r.abs(5, 2, 3))), Optional.of(cabin), "the area where the turn put the cabin");
+        h.assertValueEqual(areaAt(r.level, r.abs(5, 2, 3)), Optional.empty(), "the area left where the cabin was");
+        h.assertValueEqual(store.size(cabin), 45, "the cabin's blocks");
+        h.assertValueEqual(store.bounds(cabin), Optional.of(d.map(inside)), "the cabin's bounds");
+        h.assertValueEqual(areaAt(r.level, r.abs(0, 0, 0)), Optional.of(hangar), "the hangar inside the box");
+        h.assertValueEqual(areaAt(r.level, r.abs(10, 0, 4)), Optional.of(hangar), "the hangar outside the box");
+        h.assertValueEqual(areaAt(r.level, d.map(r.abs(0, 0, 0))), Optional.empty(), "the hangar at the destination");
+        h.assertValueEqual(store.size(hangar), 55, "the hangar's blocks");
+        h.succeed();
+    }
+
+    private static Optional<ResourceLocation> areaAt(ServerLevel level, BlockPos pos) {
+        return Areas.at(level, pos).map(Area::id);
     }
 
     /**

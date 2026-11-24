@@ -1,10 +1,11 @@
 package io.github.west3436.zas.gametest;
 
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.Adapters.Row;
+import io.github.west3436.ss13.compat.Adapters.State;
+import io.github.west3436.ss13.compat.Adapters.Status;
 import io.github.west3436.zas.ZasMod;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.Adapters.Row;
-import io.github.west3436.zas.compat.Adapters.State;
-import io.github.west3436.zas.compat.Adapters.Status;
+import io.github.west3436.zas.compat.ZasAdapters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -161,7 +162,7 @@ public final class AdapterTests {
             h.assertValueEqual(log.at(Level.INFO, INSTALLED, real), 1, "lines saying it is on");
             h.assertValueEqual(log.events.size(), 1, "lines logged in all");
         }
-        h.assertFalse(Adapters.isActive(INSTALLED), "a test's row was recorded as a shipped adapter");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive(INSTALLED), "a test's row was recorded as a shipped adapter");
         h.succeed();
     }
 
@@ -172,16 +173,18 @@ public final class AdapterTests {
      */
     @GameTest(template = "empty")
     public static void compat_002_no_shipped_adapter_is_on_without_its_target(GameTestHelper h) {
-        List<Status> statuses = Adapters.statuses();
-        h.assertValueEqual(statuses.stream().map(Status::row).toList(), Adapters.rows(), "the rows gone through");
+        List<Status> statuses = ZasAdapters.ADAPTERS.statuses();
+        h.assertValueEqual(
+                statuses.stream().map(Status::row).toList(), ZasAdapters.ADAPTERS.rows(), "the rows gone through");
         for (Status status : statuses) {
             String mod = status.row().modId();
-            h.assertValueEqual(Adapters.isActive(mod), status.state() == State.ACTIVE, "isActive for " + mod);
+            h.assertValueEqual(
+                    ZasAdapters.ADAPTERS.isActive(mod), status.state() == State.ACTIVE, "isActive for " + mod);
             if (!Boolean.getBoolean("zas.compatMatrix")) {
                 h.assertValueEqual(status.state(), State.ABSENT, "the adapter for " + mod);
             }
         }
-        h.assertFalse(Adapters.isActive("zas_test_absent"), "a mod with no adapter has an active one");
+        h.assertFalse(ZasAdapters.ADAPTERS.isActive("zas_test_absent"), "a mod with no adapter has an active one");
         h.succeed();
     }
 

@@ -5,6 +5,7 @@ import static io.github.west3436.zas.gametest.Rooms.O2;
 import static io.github.west3436.zas.gametest.Rooms.STONE;
 import static io.github.west3436.zas.gametest.Rooms.source;
 
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -16,7 +17,6 @@ import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.config.ZasServerConfig;
-import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;

@@ -2,15 +2,15 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
       "type": "neoforge:item_exists",
@@ -18,11 +18,11 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:micro_laser"
+      "item": "ss13_framework:micro_laser"
     }
   ],
   "type": "minecraft:crafting_shaped",
@@ -34,22 +34,22 @@
   ],
   "key": {
     "F": {
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     "W": {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     "B": {
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     },
     "L": {
-      "item": "zas_atmos:micro_laser"
+      "item": "ss13_framework:micro_laser"
     },
     "C": {
       "item": "minecraft:copper_ingot"
     },
     "T": {
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     }
   },
   "result": {

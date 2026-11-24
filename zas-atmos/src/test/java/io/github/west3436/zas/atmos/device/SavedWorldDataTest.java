@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.device;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -38,10 +39,12 @@ import org.junit.jupiter.api.Test;
  * {@code SavedWorldTests} loads the same world in a running game.
  *
  * <p>0.1.0's world is S-09's station, built by console commands: a block entity of every kind, pipe
- * networks across chunk borders, and a chest of items with every data component.
+ * networks across chunk borders, and a chest of items with every data component. 1.2.0's is a chest
+ * and a player holding the crafting components that SS13 Framework registers since.
  */
 class SavedWorldDataTest {
     private static final SavedWorld RELEASE_0_1_0 = SavedWorld.of("0.1.0");
+    private static final SavedWorld RELEASE_1_2_0 = SavedWorld.of("1.2.0");
     private static final String MOD = "zas_atmos:";
     private static final ResourceLocation CO2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
     private static final ResourceLocation H2 = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
@@ -327,5 +330,48 @@ class SavedWorldDataTest {
         assertEquals(600, saved.getInt("Timer"));
         holds(gas(saved.getCompound("First")), 290, Map.of(StandardAir.OXYGEN, 1.5), "its first tank");
         holds(gas(saved.getCompound("Second")), 293, Map.of(StandardAir.NITROGEN, 1.25), "its second tank");
+    }
+    /**
+     * 1.2.0's chest and player hold the 19 crafting components under their old {@code zas_atmos:} ids,
+     * as {@code expected.json} lists them, so the GameTest that loads them as SS13 Framework's items
+     * reads what 1.2.0 wrote, not ids already moved.
+     */
+    @Test
+    void data_012_crafting_components_saved_by_1_2_0_have_their_old_ids() {
+        JsonObject expected = RELEASE_1_2_0.expected();
+        JsonArray chunk = expected.getAsJsonArray("chunks").get(0).getAsJsonArray();
+        ListTag blockEntities = RELEASE_1_2_0
+                .chunk(chunk.get(0).getAsInt(), chunk.get(1).getAsInt())
+                .getList("block_entities", Tag.TAG_COMPOUND);
+        assertEquals(1, blockEntities.size());
+        CompoundTag chest = blockEntities.getCompound(0);
+        assertEquals("minecraft:chest", chest.getString("id"));
+        JsonArray at = expected.getAsJsonArray("chest_at");
+        assertEquals(
+                List.of(at.get(0).getAsInt(), at.get(1).getAsInt(), at.get(2).getAsInt()),
+                List.of(chest.getInt("x"), chest.getInt("y"), chest.getInt("z")));
+        sameStacks(expected.getAsJsonArray("chest"), chest.getList("Items", Tag.TAG_COMPOUND), "the chest");
+
+        CompoundTag player = RELEASE_1_2_0.player(expected.get("player").getAsString());
+        sameStacks(expected.getAsJsonArray("inventory"), player.getList("Inventory", Tag.TAG_COMPOUND), "the player");
+    }
+
+    /** Saved stacks are the ones listed, each a component under its {@code zas_atmos:} id. */
+    private static void sameStacks(JsonArray told, ListTag saved, String where) {
+        Map<Integer, String> listed = new TreeMap<>();
+        Map<Integer, String> held = new TreeMap<>();
+        for (JsonElement e : told) {
+            JsonObject stack = e.getAsJsonObject();
+            String id = stack.get("id").getAsString();
+            assertTrue(id.startsWith(MOD), where + " lists " + id);
+            listed.put(
+                    stack.get("slot").getAsInt(), id + " x" + stack.get("count").getAsInt());
+        }
+        for (int i = 0; i < saved.size(); i++) {
+            CompoundTag stack = saved.getCompound(i);
+            held.put(stack.getInt("Slot"), stack.getString("id") + " x" + stack.getInt("count"));
+        }
+        assertEquals(19, listed.size(), where);
+        assertEquals(listed, held, where);
     }
 }

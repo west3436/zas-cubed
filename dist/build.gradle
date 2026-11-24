@@ -23,7 +23,7 @@ evaluationDependsOn(':compat-ponder')
 def ponderScenes = project(':compat-ponder').sourceSets.main.output
 
 // CC: Tweaked adapter (COMPAT-001): built the same way, against CC: Tweaked's API, and part of
-// zas_atmos here. zas starts it, by its row in Adapters, and only with CC: Tweaked installed.
+// zas_atmos here. zas starts it, by its row in ZasAdapters, and only with CC: Tweaked installed.
 evaluationDependsOn(':compat-cc')
 def ccAdapter = project(':compat-cc').sourceSets.main.output
 
@@ -85,6 +85,7 @@ dependencies {
     releaseCheckCompileOnly project(':zas-atmos')
     // MEK-001: the checks ask zas which adapters it started, and the API which gases exist.
     releaseCheckCompileOnly project(':zas')
+    releaseCheckCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     releaseCheckCompileOnly project(':zas-api')
 }
 

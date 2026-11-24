@@ -6,28 +6,28 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:ansible_crystal"
+      "item": "ss13_framework:ansible_crystal"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     }
   ],
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
     {
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     },
     {
-      "item": "zas_atmos:ansible_crystal"
+      "item": "ss13_framework:ansible_crystal"
     }
   ],
   "result": {

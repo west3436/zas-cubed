@@ -6,6 +6,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.STONE;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -857,7 +858,7 @@ public final class LargeTankTests {
     @GameTest(template = "empty")
     public static void large_tank_is_crafted_from_plasteel_a_pipe_and_a_machine_frame(GameTestHelper h) {
         ServerLevel level = h.getLevel();
-        ItemStack sheet = new ItemStack(AtmosItems.PLASTEEL_SHEET.get());
+        ItemStack sheet = new ItemStack(FrameworkItems.PLASTEEL_SHEET.get());
         CraftingInput input = CraftingInput.of(
                 3,
                 3,
@@ -869,7 +870,7 @@ public final class LargeTankTests {
                         ItemStack.EMPTY,
                         sheet,
                         sheet,
-                        new ItemStack(AtmosItems.MACHINE_FRAME.get()),
+                        new ItemStack(FrameworkItems.MACHINE_FRAME.get()),
                         sheet));
         RecipeHolder<CraftingRecipe> recipe = level.getRecipeManager()
                 .getRecipeFor(RecipeType.CRAFTING, input, level)

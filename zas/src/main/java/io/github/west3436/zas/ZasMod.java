@@ -5,7 +5,7 @@ import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.change.TriggerStates;
 import io.github.west3436.zas.command.ZasCommands;
-import io.github.west3436.zas.compat.Adapters;
+import io.github.west3436.zas.compat.ZasAdapters;
 import io.github.west3436.zas.config.PresetMigration;
 import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasClientConfig;
@@ -81,6 +81,6 @@ public final class ZasMod {
         BlockIgnitions.register(NeoForge.EVENT_BUS);
         Burners.register(NeoForge.EVENT_BUS);
         // Last, so an adapter's entry class finds everything above in place (COMPAT-002).
-        Adapters.load(modBus, container);
+        ZasAdapters.ADAPTERS.load(modBus, container);
     }
 }

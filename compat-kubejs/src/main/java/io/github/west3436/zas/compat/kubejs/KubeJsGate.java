@@ -1,10 +1,6 @@
 package io.github.west3436.zas.compat.kubejs;
 
-import com.mojang.logging.LogUtils;
-import io.github.west3436.zas.compat.Adapters;
-import io.github.west3436.zas.compat.VersionGate;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
+import io.github.west3436.ss13.compat.PluginGate;
 
 /**
  * Whether the installed KubeJS is one the adapter supports (COMPAT-002). KubeJS finds the plugin
@@ -28,9 +24,11 @@ public final class KubeJsGate {
      */
     public static final String SUPPORTED = "[2101.7.0-build.131,)";
 
-    private static final Logger LOGGER = LogUtils.getLogger();
-
-    private static @Nullable Boolean open;
+    /**
+     * The version gate, from SS13 Framework, since no loader stands in front of the plugin. The
+     * adapter is part of {@code zas}, which its log lines name.
+     */
+    private static final PluginGate GATE = new PluginGate("zas", MOD_ID, SUPPORTED);
 
     private static volatile boolean pluginStarted;
 
@@ -66,20 +64,7 @@ public final class KubeJsGate {
      * Whether the adapter may register with the KubeJS that is installed. Decided at the first
      * call, which logs the one line that says so: a warning if it may not. Any thread.
      */
-    static synchronized boolean open() {
-        if (open == null) {
-            String installed = Adapters.installedVersion(MOD_ID).orElse(null);
-            open = VersionGate.check(installed, SUPPORTED) == VersionGate.Verdict.SUPPORTED;
-            if (open) {
-                LOGGER.info("The adapter for {} {} is on", MOD_ID, installed);
-            } else if (installed != null) {
-                LOGGER.warn(
-                        "The adapter for {} is off: it supports versions {}, and {} is installed",
-                        MOD_ID,
-                        SUPPORTED,
-                        installed);
-            }
-        }
-        return open;
+    static boolean open() {
+        return GATE.on();
     }
 }
