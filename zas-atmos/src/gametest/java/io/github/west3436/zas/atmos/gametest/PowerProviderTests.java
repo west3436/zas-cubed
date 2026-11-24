@@ -37,8 +37,13 @@ public final class PowerProviderTests {
     /** Game ticks: the test waits for nothing but the clock, about twenty atmos ticks. */
     private static final int TIMEOUT = 800;
 
-    /** How long a test waits after it changes who powers what: see {@link ChargeLog}. */
-    private static final int SETTLE = 2 * DeviceTicks.PERIOD;
+    /**
+     * How long a test waits after it changes who powers what. A provider that takes a device over in
+     * a step another has paid for finds it {@link PowerFeed.Outcome#PAID_ALREADY} and pays from its
+     * next step on, so the change shows by its second step: up to three periods after the change,
+     * wherever its steps fall.
+     */
+    private static final int SETTLE = 3 * DeviceTicks.PERIOD;
 
     /** The atmos ticks each phase watches. */
     private static final int WATCH = 3;
@@ -109,7 +114,10 @@ public final class PowerProviderTests {
                 })
                 .thenIdle(SETTLE)
                 .thenExecute(() -> {
-                    h.assertTrue(vent.power().source() == apc[0], "the APC didn't take over the vent");
+                    h.assertTrue(
+                            vent.power().source() == apc[0],
+                            "the APC didn't take over the vent: " + vent.power().source() + ", "
+                                    + apc[0].outcome(vent));
                     h.assertTrue(vent.power().claimant() == apc[0], "the APC doesn't hold the vent");
                     h.assertTrue(
                             AreaPower.provider(s.level, room).orElse(null) == apc[0], "the APC doesn't hold its area");
@@ -132,7 +140,10 @@ public final class PowerProviderTests {
                 })
                 .thenIdle(SETTLE)
                 .thenExecute(() -> {
-                    h.assertTrue(vent.power().source() == c, "the vent didn't fall back to its controller");
+                    h.assertTrue(
+                            vent.power().source() == c,
+                            "the vent didn't fall back to its controller: "
+                                    + vent.power().source());
                     h.assertTrue(vent.power().claimant() == c, "the controller doesn't hold the vent again");
                     AreaAirControllerBlockEntity.Part listed = c.parts().get(0);
                     h.assertTrue(
