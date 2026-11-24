@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.airflow.AirflowImpulsePayload;
 import io.github.west3436.zas.airflow.AirflowReceiver;
@@ -50,7 +51,6 @@ import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.environment.Ambients;
-import io.github.west3436.zas.gametest.TestPlayers;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.EnvironmentHazards;

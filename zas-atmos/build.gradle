@@ -121,8 +121,13 @@ dependencies {
     // overrides and the published zones' pins. main never names zas (CONT-095).
     gametestCompileOnly project(':zas')
     gametestCompileOnly project(':engine')
-    // The GameTest helpers zas shares, such as TestPlayers.
+    // The GameTest helpers zas shares, such as FaultClock.
     gametestCompileOnly project(':zas').sourceSets.gametest.output
+    // SS13 Framework's test kit: TestPlayers, ListeningPlayer, SoundLog and FaultLog for the
+    // GameTests, and PlayerTextScan for CLIENT-007's unit test. Never nested: it loads as a
+    // GAMELIBRARY from the GameTest server's classpath.
+    gametestImplementation "io.github.west3436:ss13-framework-testkit:${framework_version}"
+    testImplementation "io.github.west3436:ss13-framework-testkit:${framework_version}"
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'

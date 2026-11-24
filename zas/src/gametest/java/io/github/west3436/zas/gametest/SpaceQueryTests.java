@@ -7,6 +7,8 @@ import static io.github.west3436.zas.gametest.Rooms.oxygen;
 import static io.github.west3436.zas.gametest.Rooms.source;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.west3436.ss13.testkit.FaultLog;
+import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
@@ -554,7 +556,7 @@ public final class SpaceQueryTests {
             return thin;
         });
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 0; i < 4; i++) {
                 Breathability verdict = Breathing.of(pig);
                 h.assertValueEqual(verdict.breath(), Optional.of(rich), "the breath, with two providers throwing");
@@ -565,7 +567,7 @@ public final class SpaceQueryTests {
             h.assertValueEqual(log.naming("Local atmosphere provider " + FIRST), 1, "errors about the first");
             h.assertValueEqual(log.naming("Local atmosphere provider " + SECOND), 1, "errors about the second");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Breathing.of(pig);
             h.assertValueEqual(log.naming("Local atmosphere provider " + FIRST), 2, "errors a minute later");
 
@@ -846,7 +848,7 @@ public final class SpaceQueryTests {
         Internals.set(p, true);
         String source = "Internal supply of item " + TestLifeSupport.GAS_HOLDER_ID;
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 0; i < 4; i++) {
                 h.assertValueEqual(
                         Internals.find(p).orElseThrow().distributionPressure(), 50.0, "the tank found behind it");
@@ -854,7 +856,7 @@ public final class SpaceQueryTests {
                         BreathingRules.assess(p).verdict().source(), BreathSource.INTERNALS, "what it breathes from");
             }
             h.assertValueEqual(log.naming(source), 1, "errors about the lookup");
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Internals.find(p);
             h.assertValueEqual(log.naming(source), 2, "errors a minute later");
         }

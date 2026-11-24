@@ -1,6 +1,7 @@
 package io.github.west3436.zas.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -108,7 +109,7 @@ public final class LifeSupportFaultTests {
         p.setItemSlot(EquipmentSlot.CHEST, new ItemStack(TestLifeSupport.faultyPiece()));
         p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(StandardAir.OXYGEN, 1.0), 40));
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             long t = r.level.getGameTime();
             for (int i = 0; i < 4; i++) {
                 Breathers.checkAt(bare, t + 40L * i);
@@ -126,7 +127,7 @@ public final class LifeSupportFaultTests {
             close(h, Internals.find(p).orElseThrow().distributionPressure(), 40, 0, "the next tank along");
             h.assertValueEqual(log.naming(PIECE), 1, "errors logged about it");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Breathers.checkAt(faulty, t + 160);
             h.assertValueEqual(log.naming(PIECE), 2, "errors logged about it a minute later");
             close(h, lost(faulty), lost(bare) + 2, 1e-4, "its damage is still dealt");
@@ -148,7 +149,7 @@ public final class LifeSupportFaultTests {
     @GameTest(template = "empty")
     public static void nfr_013_a_life_supports_other_parts_count_when_one_throws(GameTestHelper h) {
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             ILifeSupport part = Protections.of(new ItemStack(TestLifeSupport.faultyPart()));
             h.assertTrue(part != null, "the capability");
             close(h, part.minPressure(), StandardAir.PRESSURE, 0, "the part that throws");
@@ -173,7 +174,7 @@ public final class LifeSupportFaultTests {
         p.setItemSlot(EquipmentSlot.CHEST, lookup.copy());
         p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(StandardAir.OXYGEN, 1.0), 40));
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 0; i < 3; i++) {
                 ILifeSupport data = Protections.of(lookup);
                 h.assertTrue(data != null, "the data naming the item");
@@ -184,7 +185,7 @@ public final class LifeSupportFaultTests {
             h.assertValueEqual(log.naming(LOOKUP), 1, "errors logged about the item");
             h.assertValueEqual(log.naming(ZOMBIE), 1, "errors logged about the entity");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Protections.of(lookup);
             Protections.of(z);
             h.assertValueEqual(log.naming(LOOKUP), 2, "errors logged about the item a minute later");
@@ -210,7 +211,7 @@ public final class LifeSupportFaultTests {
         TestLifeSupport.FaultySupply tank = TestLifeSupport.FAULTY_TANK;
         tank.refill();
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             h.assertTrue(Internals.active(p) != null, "the tank before it throws");
 
             tank.throwing(true, false, false);
@@ -233,7 +234,7 @@ public final class LifeSupportFaultTests {
             close(h, tank.contents().totalMoles(), 1, 0, "the gas in a tank whose draw threw");
             h.assertValueEqual(log.naming(TANK), 1, "errors logged about it");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Internals.breathe(r.level, p, active.supply(), 60);
             h.assertValueEqual(log.naming(TANK), 2, "errors logged about it a minute later");
 
@@ -261,7 +262,7 @@ public final class LifeSupportFaultTests {
         TestLifeSupport.FaultySupply tank = TestLifeSupport.FAULTY_TANK;
         tank.refill();
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             tank.alwaysOn(true, false);
             h.assertTrue(Internals.active(p) != null, "an always-on tank with the switch off");
 

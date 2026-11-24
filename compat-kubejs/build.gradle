@@ -81,6 +81,9 @@ dependencies {
     // GameTests (only) drive the framework's atmos ticks and breath checks.
     gametestCompileOnly project(':zas')
     gametestCompileOnly project(':engine')
+    // SS13 Framework's test kit, for FaultLog. Never in a jar: the run loads it as a GAMELIBRARY from
+    // its classpath, beside the release jar.
+    gametestCompileOnly "io.github.west3436:ss13-framework-testkit:${framework_version}"
 
     releaseJar project(':dist')
 }
@@ -116,6 +119,7 @@ def adapterTestJar = tasks.register('adapterTestJar', Jar) {
 
 dependencies {
     gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly "io.github.west3436:ss13-framework-testkit:${framework_version}"
     gametestRunRuntimeOnly("dev.latvian.mods:kubejs-neoforge:${chosen.kubejs}") { transitive = false }
     gametestRunRuntimeOnly("dev.latvian.mods:rhino:${chosen.rhino}") { transitive = false }
 }

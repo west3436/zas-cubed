@@ -1,6 +1,7 @@
 package io.github.west3436.zas.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -353,13 +354,13 @@ public final class ExtraSlotTests {
 
             faulty.failing = new IllegalStateException("a GameTest's faulty provider");
             linkage.failing = new NoClassDefFoundError("a GameTest's provider built against another version");
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 0; i < 4; i++) {
                 close(h, Internals.find(p).orElseThrow().distributionPressure(), 37, 0, "with two providers throwing");
             }
             h.assertValueEqual(log.naming("Extra slot provider " + faulty.id()), 1, "errors about the first");
             h.assertValueEqual(log.naming("Extra slot provider " + linkage.id()), 1, "errors about the second");
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             h.assertTrue(WornProtection.sealedBreathing(p), "the helmet's seal, with two providers throwing");
             h.assertValueEqual(log.naming("Extra slot provider " + faulty.id()), 1, "errors with no provider asked");
             Internals.find(p);

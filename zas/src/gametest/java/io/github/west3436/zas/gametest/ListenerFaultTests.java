@@ -1,5 +1,6 @@
 package io.github.west3436.zas.gametest;
 
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.event.OpenAirGasEvent;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -62,7 +63,7 @@ public final class ListenerFaultTests {
         NeoForge.EVENT_BUS.addListener(EventPriority.NORMAL, OpenAirGasEvent.class, bad);
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, OpenAirGasEvent.class, last);
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 1; i <= 3; i++) {
                 MutationResult result = r.settle(GasMutations.add(r.level, point, Rooms.oxygen(1), SOURCE));
                 h.assertValueEqual(result.outcome(), MutationOutcome.AMBIENT, "the mutation's outcome");
@@ -73,7 +74,7 @@ public final class ListenerFaultTests {
             h.assertValueEqual(log.naming("OpenAirGasEvent"), 1, "errors logged about it");
             h.assertValueEqual(log.naming(BUS_LOGGER), 0, "errors the bus logged");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             r.settle(GasMutations.add(r.level, point, Rooms.oxygen(1), SOURCE));
             h.assertValueEqual(thrown.get(), 4, "the times it threw");
             h.assertValueEqual(log.naming("OpenAirGasEvent"), 2, "errors logged about it a minute later");

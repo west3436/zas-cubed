@@ -1,9 +1,15 @@
-import com.vanniktech.maven.publish.JavaLibrary
-import com.vanniktech.maven.publish.JavadocJar
-import com.vanniktech.maven.publish.SourcesJar
-
 apply plugin: 'net.neoforged.moddev'
-apply plugin: 'com.vanniktech.maven.publish'
+// SS13 Framework's plugin for an API jar. It makes the jar a GAMELIBRARY whose
+// Automatic-Module-Name is apiPackage, and adds the checks that check runs:
+// checkApiPackages (API-001: nothing outside io.github.west3436.zas.api and its
+// subpackages, plus META-INF), checkApiDependencies (API-003, API-044: no
+// dependency but Minecraft and NeoForge), javadoc that fails on a broken or
+// missing comment (API-004, API-005, API-008), and apiCompat, the
+// binary-compatibility check (API-043, NFR-033). It publishes the jar to Maven
+// Central with its sources and javadoc jars (API-008, D-18).
+apply plugin: 'io.github.west3436.ss13.api'
+
+ss13 { apiPackage = 'io.github.west3436.zas.api' }
 
 // Independent semver (API-002), 1.x from R1 on (API-041). It loads as its own
 // GAMELIBRARY module in dev and production, so no mod lists this project's
@@ -14,16 +20,6 @@ apply plugin: 'com.vanniktech.maven.publish'
 // API keeps its range, from api_version up to the next major, either way.
 def snapshot = providers.gradleProperty('apiSnapshot').getOrElse('false').toBoolean()
 version = snapshot ? "${api_version}-SNAPSHOT" : api_version
-
-jar {
-    manifest {
-        attributes(
-            'Automatic-Module-Name': 'io.github.west3436.zas.api',
-            'FMLModType': 'GAMELIBRARY',
-            'Implementation-Version': project.version,
-        )
-    }
-}
 
 // Unit tests of the API's pure logic. Minecraft's classes are on the test
 // classpath, but the game is never bootstrapped.
@@ -45,269 +41,26 @@ tasks.named('test', Test) {
     systemProperty 'zas.api.classes', classes.files.join(File.pathSeparator)
 }
 
-// API-001: the jar holds nothing but io.github.west3436.zas.api and its
-// subpackages (plus META-INF). Run by check.
-def checkApiPackages = tasks.register('checkApiPackages') {
-    group = 'verification'
-    description = 'Fails if the API jar holds a package outside io.github.west3436.zas.api (API-001).'
-    def jarFile = tasks.named('jar', Jar).flatMap { it.archiveFile }
-    inputs.file(jarFile)
-    doLast {
-        def bad = []
-        zipTree(jarFile.get().asFile).visit { d ->
-            if (d.directory) return
-            def path = d.relativePath.pathString
-            if (!path.startsWith('META-INF/') && !path.startsWith('io/github/west3436/zas/api/')) bad << path
-        }
-        if (bad) {
-            throw new GradleException("API-001: the API jar holds files outside io.github.west3436.zas.api:\n  " +
-                    bad.join('\n  '))
-        }
-    }
-}
-
-// API-003, API-044: the API declares no dependency on another project (zas,
-// the engine) or on any library; Minecraft and NeoForge come from ModDevGradle.
-// ApiReferencesTest checks the compiled classes reference nothing else.
-def checkApiDependencies = tasks.register('checkApiDependencies') {
-    group = 'verification'
-    description = 'Fails if the API declares a dependency other than Minecraft and NeoForge (API-003, API-044).'
-    def declared = ['api', 'implementation', 'compileOnly', 'compileOnlyApi', 'runtimeOnly'].collectMany { name ->
-        def c = configurations.findByName(name)
-        c == null ? [] : c.dependencies.collect { "${name}: ${it.group}:${it.name}" }
-    }
-    inputs.property('declared', declared)
-    doLast {
-        if (declared) {
-            throw new GradleException('API-003/API-044: the API may depend only on Minecraft and NeoForge, ' +
-                    "but declares:\n  " + declared.join('\n  '))
-        }
-    }
-}
-
-// javadoc runs with check so a broken comment fails the build, not the
-// publish (API-004, API-008). So does a missing one (API-005): javadoc leaves
-// doclint's "missing" group out by default and only warns about it, so ask for
-// every group and make a warning an error.
-tasks.named('javadoc', Javadoc) {
-    options.addBooleanOption('Xdoclint:all', true)
-    options.addBooleanOption('Werror', true)
-}
-tasks.named('check') { dependsOn checkApiPackages, checkApiDependencies, tasks.named('javadoc') }
-
-// Maven Central through the Sonatype Central Portal (API-008, D-18). A
-// -SNAPSHOT version goes to https://central.sonatype.com/repository/maven-snapshots/;
-// a release becomes a Portal deployment that is published by hand. Credentials
-// come from the mavenCentralUsername and mavenCentralPassword Gradle
-// properties (a Portal user token). The archived API guide has the details:
+// Maven Central through the Sonatype Central Portal (API-008, D-18), as
+// io.github.west3436:zas-api. A -SNAPSHOT version goes to
+// https://central.sonatype.com/repository/maven-snapshots/; a release becomes a
+// Portal deployment. Credentials come from the mavenCentralUsername and
+// mavenCentralPassword Gradle properties (a Portal user token), and the build
+// signs whenever signingInMemoryKey is set. The archived API guide has the details:
 // https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#publishing-maintainers
+//
+// apiCompat compares this jar with the released API that api_baseline_version,
+// api_baseline_tag and api_baseline_sha256 in gradle.properties name: the jar on
+// that GitHub release, refused unless its SHA-256 matches. A binary-incompatible
+// change needs a new major version, and from 1.0 even a new major can't remove
+// what the baseline didn't mark @Deprecated (API-042). -Papi_baseline_repo=<url
+// or path> takes the baseline from a Maven repository instead. The version
+// policy is in the archived API guide:
+// https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#versioning-and-the-compatibility-check
 mavenPublishing {
-    configure(new JavaLibrary(new JavadocJar.Javadoc(), new SourcesJar.Sources()))
-    coordinates('io.github.west3436', 'zas-api', project.version.toString())
-    publishToMavenCentral()
-
-    // Central requires signatures on releases, not on snapshots. Sign whenever
-    // an in-memory key is given (signingInMemoryKey, and
-    // signingInMemoryKeyPassword if it has one), so publishToMavenLocal works
-    // without a key.
-    if (!providers.gradleProperty('signingInMemoryKey').getOrElse('').isBlank()) {
-        signAllPublications()
-    }
-
     pom {
         name = 'ZAS³ API'
         description = 'The public API of ZAS³, zone-based atmospherics for NeoForge. ' +
                 'Mods may bundle it (jar-in-jar) and call it whether or not ZAS³ is installed.'
-        url = 'https://github.com/west3436/zas-cubed'
-        inceptionYear = '2026'
-        licenses {
-            license {
-                name = 'MIT License'
-                url = 'https://opensource.org/licenses/MIT'
-                distribution = 'repo'
-            }
-        }
-        developers {
-            developer {
-                id = 'west3436'
-                name = 'west3436'
-                url = 'https://github.com/west3436'
-            }
-        }
-        scm {
-            url = 'https://github.com/west3436/zas-cubed'
-            connection = 'scm:git:https://github.com/west3436/zas-cubed.git'
-            developerConnection = 'scm:git:ssh://git@github.com/west3436/zas-cubed.git'
-        }
-        issueManagement {
-            system = 'GitHub'
-            url = 'https://github.com/west3436/zas-cubed/issues'
-        }
     }
-}
-
-// API binary-compatibility check (API-043, NFR-033), run by `check`. It
-// compares this jar with the released API named by api_baseline_version, using
-// japicmp. The version policy is in the archived API guide
-// (https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#versioning-and-the-compatibility-check): a binary-
-// incompatible change needs a new major version, or, while the API is 0.x
-// (API-041), a new minor version.
-def baselineVersion = providers.gradleProperty('api_baseline_version').getOrElse('').trim()
-
-if (baselineVersion.isEmpty()) {
-    def apiCompat = tasks.register('apiCompat') {
-        group = 'verification'
-        description = 'Checks binary compatibility with the last released API (no baseline set).'
-        doLast {
-            // On GitHub Actions the ::notice:: prefix turns this into an annotation.
-            def prefix = System.getenv('GITHUB_ACTIONS') ? '::notice::' : ''
-            logger.lifecycle(prefix + 'apiCompat: skipped, no baseline. Set api_baseline_version in ' +
-                    'gradle.properties to the last released API version to enable the check.')
-        }
-    }
-    tasks.named('check') { dependsOn apiCompat }
-} else {
-    // Where the baseline comes from. The API isn't on Maven Central yet
-    // (API-008), so it is the jar attached to the GitHub release named by
-    // api_baseline_tag (v<baseline> if that is empty): an Ivy repository of
-    // bare jars, which answers for these coordinates and nothing else, and
-    // which alone may answer for them. The task then refuses a jar whose
-    // SHA-256 isn't api_baseline_sha256, since a release's files can be replaced.
-    //
-    // -Papi_baseline_repo=<url or path> names a Maven repository to find the
-    // baseline in instead, for testing the check against a local repository.
-    // Its jar is whatever was published there, so it has no hash to match.
-    def baselineRepo = providers.gradleProperty('api_baseline_repo').getOrNull()
-    def baselineTag = providers.gradleProperty('api_baseline_tag').getOrElse('').trim() ?: "v${baselineVersion}"
-    def baselineSha256 = providers.gradleProperty('api_baseline_sha256').getOrElse('').trim().toLowerCase()
-    repositories {
-        exclusiveContent {
-            forRepository {
-                baselineRepo
-                        ? maven {
-                            name = 'apiBaseline'
-                            url = baselineRepo.contains('://') ? baselineRepo : file(baselineRepo).toURI()
-                        }
-                        : ivy {
-                            name = 'apiBaselineRelease'
-                            url = 'https://github.com/west3436/zas-cubed/releases/download'
-                            patternLayout { artifact "${baselineTag}/[artifact]-[revision].[ext]" }
-                            metadataSources { artifact() }
-                        }
-            }
-            filter { includeModule('io.github.west3436', 'zas-api') }
-        }
-    }
-
-    configurations { japicmp }
-    dependencies {
-        japicmp 'com.github.siom79.japicmp:japicmp:0.26.5:jar-with-dependencies'
-    }
-    // Detached, because a normal configuration of this project resolves its
-    // own coordinates to the project itself rather than to the release.
-    def apiBaseline = configurations.detachedConfiguration(
-            dependencies.create("io.github.west3436:zas-api:${baselineVersion}"))
-    apiBaseline.transitive = false
-
-    // Breaking changes are allowed only when the version says so: a major
-    // bump, or a minor bump while both versions are 0.x.
-    def parse = { String v ->
-        def m = v =~ /^(\d+)\.(\d+)/
-        if (!m.find()) throw new GradleException("apiCompat: not a semver version: ${v}")
-        [m.group(1) as int, m.group(2) as int]
-    }
-    def (oldMajor, oldMinor) = parse(baselineVersion)
-    def (newMajor, newMinor) = parse(api_version.toString())
-    def breakingAllowed = newMajor > oldMajor || (newMajor == 0 && oldMajor == 0 && newMinor > oldMinor)
-
-    // API-042: from 1.0, even a version that may break can't remove what the
-    // baseline didn't mark @Deprecated. 0.x promises nothing (API-041).
-    def deprecationRequired = oldMajor >= 1
-    def undeprecatedRemovals = { File xml ->
-        // A mark this version adds is no warning to anyone who used the baseline.
-        def marked = { node ->
-            node.annotations.annotation.any {
-                it.@fullyQualifiedName.text() == 'java.lang.Deprecated' && it.@changeStatus.text() != 'NEW'
-            }
-        }
-        def removed = { node -> node.@changeStatus.text() == 'REMOVED' && !marked(node) }
-        def found = []
-        new groovy.xml.XmlSlurper().parse(xml).classes.'class'.each { c ->
-            def name = c.@fullyQualifiedName.text()
-            if (removed(c)) {
-                found << name
-            } else if (!marked(c)) {
-                c.fields.field.findAll(removed).each { found << "${name}.${it.@name.text()}" }
-                c.methods.method.findAll(removed).each { found << "${name}.${it.@name.text()}()" }
-                c.constructors.constructor.findAll(removed).each { found << "${name}, a constructor" }
-            }
-        }
-        found
-    }
-
-    def report = layout.buildDirectory.file('reports/apiCompat/apiCompat.html')
-    def xmlReport = layout.buildDirectory.file('reports/apiCompat/apiCompat.xml')
-    def apiCompat = tasks.register('apiCompat', JavaExec) {
-        group = 'verification'
-        description = "Checks binary compatibility with the released API ${baselineVersion}."
-        classpath = configurations.japicmp
-        mainClass = 'japicmp.JApiCmp'
-
-        def oldJar = apiBaseline
-        def newJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
-        def libs = configurations.compileClasspath
-        inputs.files(oldJar).withPropertyName('baseline')
-        inputs.file(newJar).withPropertyName('current')
-        inputs.property('baselineSha256', baselineRepo ? '' : baselineSha256)
-        outputs.file(report)
-        outputs.file(xmlReport)
-
-        doFirst {
-            if (!baselineRepo) {
-                def jar = oldJar.singleFile
-                def sha256 = java.security.MessageDigest.getInstance('SHA-256').digest(jar.bytes).encodeHex().toString()
-                if (sha256 != baselineSha256) {
-                    throw new GradleException("apiCompat: ${jar.name} from the GitHub release ${baselineTag} has " +
-                            "SHA-256 ${sha256}, but api_baseline_sha256 in gradle.properties is " +
-                            "${baselineSha256 ?: 'empty'}. It must be that jar's line in the release's SHA256SUMS.txt.")
-                }
-            }
-            report.get().asFile.parentFile.mkdirs()
-            def cp = libs.files.join(File.pathSeparator)
-            def a = [
-                '--old', oldJar.singleFile.absolutePath,
-                '--new', newJar.get().asFile.absolutePath,
-                '--old-classpath', cp,
-                '--new-classpath', cp,
-                '--only-modified',
-                '--html-file', report.get().asFile.absolutePath,
-                '--xml-file', xmlReport.get().asFile.absolutePath,
-            ]
-            if (breakingAllowed) {
-                logger.lifecycle("apiCompat: ${api_version} may break ${baselineVersion} " +
-                        '(new major, or new minor under 0.x); reporting only.')
-            } else {
-                a << '--error-on-binary-incompatibility'
-            }
-            args(a)
-        }
-        ignoreExitValue = true
-        doLast {
-            def file = report.get().asFile
-            if (executionResult.get().exitValue != 0) {
-                throw new GradleException("apiCompat: ${api_version} has binary-incompatible changes " +
-                        "against ${baselineVersion}. Revert them, or bump the minor version under 0.x " +
-                        "(the major from 1.0) in api_version. Report: ${file}")
-            }
-            def undeprecated = deprecationRequired ? undeprecatedRemovals(xmlReport.get().asFile) : []
-            if (undeprecated) {
-                throw new GradleException("apiCompat: ${api_version} removes what ${baselineVersion} didn't " +
-                        "mark @Deprecated (API-042):\n  " + undeprecated.join('\n  ') +
-                        "\nDeprecate it in a minor version first, then remove it in a later major. Report: ${file}")
-            }
-            def how = breakingAllowed ? 'breaking changes allowed by the version bump' : 'binary compatible'
-            logger.lifecycle("apiCompat: passed against ${baselineVersion} (${how}). Report: ${file}")
-        }
-    }
-    tasks.named('check') { dependsOn apiCompat }
 }
