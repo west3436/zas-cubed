@@ -5,6 +5,7 @@ import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.ss13.api.label.LabelledMenu;
 import io.github.west3436.ss13.api.label.Labels;
 import io.github.west3436.ss13.label.LabelPayload;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
@@ -923,7 +924,7 @@ public final class LabelTests {
             String ventAt = xyz(vent.getBlockPos());
 
             Who who = Who.at(s, 7, 1, 4);
-            who.hold(new ItemStack(AtmosItems.MULTITOOL.get()));
+            who.hold(new ItemStack(FrameworkItems.MULTITOOL.get()));
 
             // With no label anywhere, each names a position, as it always did.
             who.click(c.getBlockPos(), Direction.SOUTH);
@@ -1050,7 +1051,7 @@ public final class LabelTests {
 
             // A turn of the wrench keeps the block entity, and so its label.
             Who who = Who.at(s, 3, 1, 5);
-            who.hold(new ItemStack(AtmosItems.WRENCH.get()));
+            who.hold(new ItemStack(FrameworkItems.WRENCH.get()));
             Direction before = vent.getBlockState().getValue(VentBlock.FACING);
             h.assertTrue(who.click(at, Direction.NORTH).consumesAction(), "the wrench didn't turn the vent");
             h.assertTrue(s.level.getBlockState(at).getValue(VentBlock.FACING) != before, "the vent faces as it did");

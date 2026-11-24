@@ -2,12 +2,13 @@ package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.power.PoweredPart;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestSequence;
@@ -128,10 +129,10 @@ public final class PowerChargeTests {
         TestParts.Part pump = s.place(8, 1, 2, TestParts.Kind.PUMP.block().defaultBlockState(), TestParts.Part.class);
         c.buffer().set(10_000);
         formZone(h, s, c, vent);
-        ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-        MultitoolItem.select(tool, s.level, c.getBlockPos());
-        MultitoolItem.link(tool, s.level, vent.getBlockPos());
-        MultitoolItem.link(tool, s.level, pump.getBlockPos());
+        ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+        MultitoolItem.store(tool, s.level, c.getBlockPos());
+        Multitool.link(tool, s.level, vent.getBlockPos());
+        Multitool.link(tool, s.level, pump.getBlockPos());
         h.assertValueEqual(c.links().size(), 2, "the controller's links");
 
         ChargeLog log = new ChargeLog(h, "the buffer", () -> c.buffer().getEnergyStored());
@@ -176,9 +177,9 @@ public final class PowerChargeTests {
         zone.buffer().set(10_000);
         linked.buffer().set(10_000);
         formZone(h, s, zone, vent);
-        ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-        MultitoolItem.select(tool, s.level, linked.getBlockPos());
-        MultitoolItem.link(tool, s.level, vent.getBlockPos());
+        ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+        MultitoolItem.store(tool, s.level, linked.getBlockPos());
+        Multitool.link(tool, s.level, vent.getBlockPos());
         s.cycle(linked);
         h.assertValueEqual(linked.parts().size(), 1, "the parts the linked controller covers");
 

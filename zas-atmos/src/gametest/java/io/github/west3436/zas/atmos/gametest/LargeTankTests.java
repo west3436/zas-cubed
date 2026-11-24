@@ -29,7 +29,7 @@ import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tank.GasVessels;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
-import io.github.west3436.zas.atmos.tool.WrenchItem;
+import io.github.west3436.zas.atmos.tool.Wrench;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -169,7 +169,7 @@ public final class LargeTankTests {
     /** A survival player holding a wrench. */
     private static Player wrenching(GameTestHelper h) {
         Player player = h.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AtmosItems.WRENCH.get()));
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(FrameworkItems.WRENCH.get()));
         return player;
     }
 
@@ -796,7 +796,7 @@ public final class LargeTankTests {
         double ambient = a.zone(1, 1, 1).mixture().pressure();
         GasStore gas = tank.network().gas();
         gas.add(new GasParcel(Map.of(CO2, molesFor(ambient + 3 * ATM, PipeVolumes.LARGE_TANK, T)), T));
-        a.close(WrenchItem.overAmbient(a.level, at), 3 * ATM, "the tank's pressure over the room's");
+        a.close(Wrench.overAmbient(a.level, at), 3 * ATM, "the tank's pressure over the room's");
         double held = gas.totalMoles();
         Player player = wrenching(h);
 
@@ -804,7 +804,7 @@ public final class LargeTankTests {
             wrench(a, player, 2, y, 2, Direction.EAST, true);
             h.assertTrue(whole(a, 2, 1, 2), "the tank came off at 3 atm over, clicked at y = " + y);
         }
-        Optional<Component> refusal = WrenchItem.remove(a.level, at, player, player.getMainHandItem());
+        Optional<Component> refusal = Wrench.remove(a.level, at, player, player.getMainHandItem());
         h.assertTrue(whole(a, 2, 1, 2), "the call removed the tank at 3 atm over");
         h.assertTrue(
                 refusal.isPresent()

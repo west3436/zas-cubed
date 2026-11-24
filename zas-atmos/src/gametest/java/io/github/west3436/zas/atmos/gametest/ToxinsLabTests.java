@@ -6,6 +6,8 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import com.mojang.authlib.GameProfile;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -31,7 +33,7 @@ import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMath;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.scrubber.ScrubberStatus;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
@@ -137,11 +139,11 @@ public final class ToxinsLabTests {
             GeneratorBlockEntity generator = a.entity(x, 2, 5);
             generator.fuel().insertItem(0, new ItemStack(Items.COAL, 8), false);
         }
-        ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-        MultitoolItem.select(tool, a.level, controller.getBlockPos());
-        MultitoolItem.link(tool, a.level, a.abs(1, 1, 2));
-        MultitoolItem.link(tool, a.level, a.abs(4, 2, 2));
-        MultitoolItem.link(tool, a.level, a.abs(6, 2, 2));
+        ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+        MultitoolItem.store(tool, a.level, controller.getBlockPos());
+        Multitool.link(tool, a.level, a.abs(1, 1, 2));
+        Multitool.link(tool, a.level, a.abs(4, 2, 2));
+        Multitool.link(tool, a.level, a.abs(6, 2, 2));
         return new Station(controller, a.entity(1, 1, 2), a.entity(4, 2, 2), a.entity(6, 2, 2), a.entity(7, 4, 2));
     }
 

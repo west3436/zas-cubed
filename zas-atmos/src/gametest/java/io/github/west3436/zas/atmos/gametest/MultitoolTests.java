@@ -1,8 +1,10 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.api.tool.Linkable;
 import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.airlock.AirlockBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
@@ -16,8 +18,6 @@ import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.ArrayList;
@@ -80,7 +80,7 @@ public final class MultitoolTests {
             List<Packet<?>> sent = new ArrayList<>();
             new ListeningPlayer.Recording(s.level, p, sent);
             p.moveTo(Vec3.atBottomCenterOf(s.abs(x, y, z)));
-            p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AtmosItems.MULTITOOL.get()));
+            p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(FrameworkItems.MULTITOOL.get()));
             return new Hand(p, sent);
         }
 
@@ -110,7 +110,7 @@ public final class MultitoolTests {
 
         /** The controller its multitool has selected, or null. */
         BlockPos selected() {
-            return MultitoolItem.selected(player.getMainHandItem(), player.serverLevel())
+            return MultitoolItem.source(player.getMainHandItem(), player.serverLevel())
                     .orElse(null);
         }
 
@@ -206,6 +206,13 @@ public final class MultitoolTests {
             h.assertTrue(
                     s.level.getBlockState(recharger.getBlockPos()).getValue(RechargerBlock.BATTERY),
                     "the recharger doesn't show its battery");
+
+            // The framework's multitool knows the controller and the parts only by their Linkable.
+            h.assertTrue(
+                    s.level.getCapability(Linkable.BLOCK, c.getBlockPos()) != null, "the controller isn't Linkable");
+            for (BlockPos part : placed) {
+                h.assertTrue(s.level.getCapability(Linkable.BLOCK, part) != null, part + " isn't Linkable");
+            }
 
             Hand hand = Hand.at(s, 7, 1, 4);
             h.assertTrue(hand.click(s, 1, 2, 1).consumesAction(), "the click on the controller passed");
@@ -394,7 +401,7 @@ public final class MultitoolTests {
             hand.player().closeContainer();
             hand.sneakClick(s, 5, 0, 2);
             h.assertFalse(hand.windowOpen(), "a sneak-click opened the vent's window");
-            h.assertValueEqual(hand.told(), "item.zas_atmos.multitool.no_controller", "what a sneak-click says");
+            h.assertValueEqual(hand.told(), "item.ss13_framework.multitool.no_source", "what a sneak-click says");
             h.assertTrue(ac.linkedVents().contains(vent), "a click with nothing selected unlinked the vent");
 
             hand.click(s, 1, 2, 1);

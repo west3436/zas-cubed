@@ -15,10 +15,7 @@ import io.github.west3436.zas.atmos.inline.MirroredDeviceItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.portable.PortableGasItem;
 import io.github.west3436.zas.atmos.tool.BikeHornItem;
-import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
-import io.github.west3436.zas.atmos.tool.WrenchItem;
 import io.github.west3436.zas.atmos.ttv.ProximitySensorItem;
 import io.github.west3436.zas.atmos.ttv.RemoteSignalerItem;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
@@ -80,9 +77,6 @@ public final class AtmosItems {
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AIRLOCK_CONTROLLER);
     public static final DeferredItem<BlockItem> AIR_SENSOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.AIR_SENSOR);
 
-    /** Forces firelocks open or shut (CONT-094). */
-    public static final DeferredItem<CrowbarItem> CROWBAR = ITEMS.registerItem("crowbar", CrowbarItem::new);
-
     public static final DeferredItem<BlockItem> RECHARGER = ITEMS.registerSimpleBlockItem(AtmosBlocks.RECHARGER);
     public static final DeferredItem<BlockItem> IGNITER = ITEMS.registerSimpleBlockItem(AtmosBlocks.IGNITER);
 
@@ -137,12 +131,6 @@ public final class AtmosItems {
     public static List<DeferredItem<BlockItem>> stationBlocks() {
         return List.of(STATION_WALL, REINFORCED_STATION_WALL, REINFORCED_GLASS_BLOCK);
     }
-
-    /** Links parts to an area air controller (CONT-042). */
-    public static final DeferredItem<MultitoolItem> MULTITOOL = ITEMS.registerItem("multitool", MultitoolItem::new);
-
-    /** Turns and removes atmos parts (CONT-035, CONT-091). */
-    public static final DeferredItem<WrenchItem> WRENCH = ITEMS.registerItem("wrench", WrenchItem::new);
 
     /** Puts out the fires it is aimed at (CONT-037). */
     public static final DeferredItem<FireExtinguisherItem> FIRE_EXTINGUISHER =

@@ -268,17 +268,6 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/canister.json
 origin: original
 notes: The canister item: the canister model, scaled down in the inventory.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/wrench.png
-origin: vgstation13
-source: icons/obj/items.dmi
-state: wrench
-commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
-notes: vg's sprite as it is, at 32x32 (D-70).
-
-path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/wrench.json
-origin: original
-notes: A handheld item model for the wrench sprite. Its hand poses are item/handheld's turned a quarter clockwise, because the sprite's handle is at the bottom right, not the bottom left.
-
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/fire_extinguisher.png
 origin: vgstation13
 source: icons/obj/items.dmi
@@ -1064,17 +1053,6 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/emergency_oxygen
 origin: original
 notes: A flat item model for the tank's sprite.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/crowbar.png
-origin: vgstation13
-source: icons/obj/items.dmi
-state: crowbar
-commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
-notes: Redrawn to fill the slot's width at 45 degrees, with vg's outline, faces, hook and chisel end.
-
-path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/crowbar.json
-origin: original
-notes: A handheld item model, held like a vanilla tool.
-
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/breath_mask.png
 origin: vgstation13
 source: icons/obj/clothing/masks.dmi
@@ -1705,16 +1683,6 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/tank_transfer_va
 origin: original
 notes: The valve with two tanks: the body, the right tank and the left tank (layers 1 and 2, tinted).
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/multitool.png
-origin: vgstation13
-source: icons/obj/device.dmi
-state: multitool
-commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
-notes: vg's sprite as it is, 9 x 17, with one of its two matching rows dropped so it's 16 tall.
-
-path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/multitool.json
-origin: original
-notes: A flat item model for the multitool sprite.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/fire_alarm.png
 origin: vgstation13

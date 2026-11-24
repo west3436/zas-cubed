@@ -149,7 +149,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
      * Its links after a mover moved it (CONT-156): each goes where {@code rebase} says, or is dropped
      * for null. It pins its zone again, under the owner of its new position.
      */
-    void rebase(java.util.function.UnaryOperator<BlockPos> rebase) {
+    public void rebase(java.util.function.UnaryOperator<BlockPos> rebase) {
         List<BlockPos> was = new ArrayList<>(links);
         links.clear();
         for (BlockPos l : was) {

@@ -13,6 +13,7 @@ import io.github.west3436.ss13.api.FrameworkApi;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.registry.FrameworkComponents;
 import io.github.west3436.ss13.registry.FrameworkItems;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -23,7 +24,6 @@ import io.github.west3436.zas.atmos.controller.CentralClaims;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.MovedItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import io.github.west3436.zas.config.ZasServerConfig;
@@ -68,6 +68,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -564,6 +565,7 @@ public final class SavedWorldTests {
                 continue;
             }
             CompoundTag then = (CompoundTag) moved(tag(e.getValue().getAsString()));
+            resolveItemIds(then);
             if (ORDERED.contains(then.getString("id")) && then.contains(ORDERS.get(0))) {
                 ORDERS.forEach(then::remove);
                 underOrders++;
@@ -611,6 +613,21 @@ public final class SavedWorldTests {
         return moved ? MovedItems.framework(old.getPath()).toString() : id;
     }
 
+    /**
+     * Gives each stack a container saved under an id that is now an alias, such as a tool that moved to
+     * SS13 Framework, the id the game reads it as, which is the id it saves it under now.
+     */
+    private static void resolveItemIds(CompoundTag container) {
+        for (Tag t : container.getList("Items", Tag.TAG_COMPOUND)) {
+            CompoundTag stack = (CompoundTag) t;
+            ResourceLocation id = ResourceLocation.tryParse(stack.getString("id"));
+            Item item = id == null ? Items.AIR : BuiltInRegistries.ITEM.get(id);
+            if (item != Items.AIR) {
+                stack.putString("id", BuiltInRegistries.ITEM.getKey(item).toString());
+            }
+        }
+    }
+
     /** The chest's stacks hold what they were given on 0.1.0, read as the game reads them. */
     private static void items(GameTestHelper h, ServerLevel level) {
         if (!(level.getBlockEntity(CHEST) instanceof ChestBlockEntity chest)) {
@@ -629,7 +646,10 @@ public final class SavedWorldTests {
                 "the TTV's second tank");
         h.assertTrue(chest.getItem(4).is(FrameworkItems.BATTERY.get()), "the battery isn't the framework's");
         h.assertValueEqual(chest.getItem(4).get(FrameworkComponents.ENERGY.get()), 2468, "the battery's charge");
+        h.assertTrue(
+                chest.getItem(7).is(FrameworkItems.MULTITOOL.get()),
+                "the multitool isn't SS13 Framework's: " + chest.getItem(7));
         h.assertValueEqual(
-                MultitoolItem.selected(chest.getItem(7), level), Optional.of(CONTROLLER), "the multitool's selection");
+                MultitoolItem.source(chest.getItem(7), level), Optional.of(CONTROLLER), "the multitool's selection");
     }
 }

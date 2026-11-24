@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Gas;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;
@@ -13,7 +14,6 @@ import io.github.west3436.zas.atmos.firealarm.FireAlarmStatus;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -154,12 +154,12 @@ public final class FireScenes {
         Hand.use(scene, util, lower.above(), Direction.NORTH, ItemStack.EMPTY);
         Say.at(scene, util.vector().blockSurface(lower.above(), Direction.NORTH), "firelock.locked");
 
-        Hand.use(scene, util, lower.above(), Direction.NORTH, new ItemStack(AtmosItems.CROWBAR.get()));
+        Hand.use(scene, util, lower.above(), Direction.NORTH, new ItemStack(FrameworkItems.CROWBAR.get()));
         Build.change(
                 scene, firelock, s -> s.setValue(FirelockBlock.LOCKED, false).setValue(FirelockBlock.OPEN, true));
         Say.at(scene, util.vector().blockSurface(lower.above(), Direction.NORTH), "firelock.crowbar");
 
-        Hand.use(scene, util, lower.above(), Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        Hand.use(scene, util, lower.above(), Direction.NORTH, new ItemStack(FrameworkItems.MULTITOOL.get()));
         Say.at(scene, util.vector().blockSurface(lower.above(), Direction.NORTH), "firelock.multitool");
         scene.markAsFinished();
     }

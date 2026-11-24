@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.ss13.testkit.SoundLog;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -351,9 +352,9 @@ public final class TransferValveMenuTests {
         TransferValveMenu menu = open(p);
 
         // Not a tank: carried, shift-clicked, by number key, dragged.
-        menu.setCarried(new ItemStack(AtmosItems.MULTITOOL.get()));
+        menu.setCarried(new ItemStack(FrameworkItems.MULTITOOL.get()));
         menu.clicked(FIRST, 0, ClickType.PICKUP, p);
-        h.assertTrue(menu.getCarried().is(AtmosItems.MULTITOOL.get()), "the cursor lost its multitool");
+        h.assertTrue(menu.getCarried().is(FrameworkItems.MULTITOOL.get()), "the cursor lost its multitool");
         h.assertValueEqual(TransferValveItem.tankCount(stack), 0, "tanks after a multitool");
         menu.setCarried(ItemStack.EMPTY);
         p.getInventory().setItem(1, new ItemStack(Items.DIRT));

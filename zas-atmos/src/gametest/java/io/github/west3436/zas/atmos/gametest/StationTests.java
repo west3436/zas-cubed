@@ -4,7 +4,9 @@ import com.mojang.authlib.GameProfile;
 import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.TestPlayers;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.airflow.AirflowImpulsePayload;
 import io.github.west3436.zas.airflow.AirflowReceiver;
@@ -42,7 +44,7 @@ import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
@@ -241,10 +243,10 @@ public final class StationTests {
             h.assertValueEqual(vent.power().drawPerStep(), (long) ventDraw, "the blowing vent's draw");
             h.assertTrue(fe >= own + ventDraw && fe < own + ventDraw + 400, "the generator's FE: " + fe);
 
-            ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-            MultitoolItem.select(tool, s.level, c.getBlockPos());
-            MultitoolItem.link(tool, s.level, vent.getBlockPos());
-            MultitoolItem.link(tool, s.level, pump.getBlockPos());
+            ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+            MultitoolItem.store(tool, s.level, c.getBlockPos());
+            Multitool.link(tool, s.level, vent.getBlockPos());
+            Multitool.link(tool, s.level, pump.getBlockPos());
             h.assertValueEqual(
                     c.links(), java.util.Set.of(vent.getBlockPos(), pump.getBlockPos()), "the controller's links");
 

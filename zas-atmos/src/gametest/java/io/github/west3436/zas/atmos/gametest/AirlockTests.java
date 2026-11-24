@@ -2,6 +2,8 @@ package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -29,7 +31,7 @@ import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMode;
@@ -763,7 +765,7 @@ public final class AirlockTests {
                 h.assertTrue(at(s, 4, 2, 2).getValue(AirlockBlock.BOLTED), what + "'s upper block isn't bolted");
                 use(s, player, 4, 2, 2);
                 h.assertFalse(open(s, 4, 2), what + " opened by hand");
-                useItem(s, player, new ItemStack(AtmosItems.CROWBAR.get()), 4, 1, 2);
+                useItem(s, player, new ItemStack(FrameworkItems.CROWBAR.get()), 4, 1, 2);
                 h.assertFalse(open(s, 4, 2), what + " opened with the crowbar");
                 s.set(4, 1, 1, Blocks.REDSTONE_BLOCK.defaultBlockState());
                 h.assertTrue(at(s, 4, 1, 2).getValue(AirlockBlock.POWERED), what + " didn't see the signal");
@@ -837,7 +839,7 @@ public final class AirlockTests {
             use(s, player, 4, 1, 2);
             h.assertValueEqual(
                     at(s, 4, 1, 2).getValue(AirlockBlock.FIRELOCK), AirlockFirelock.LOCKED, "the hand opened it");
-            useItem(s, player, new ItemStack(AtmosItems.CROWBAR.get()), 4, 2, 2);
+            useItem(s, player, new ItemStack(FrameworkItems.CROWBAR.get()), 4, 2, 2);
             h.assertValueEqual(
                     at(s, 4, 1, 2).getValue(AirlockBlock.FIRELOCK),
                     AirlockFirelock.OPEN,
@@ -1023,12 +1025,12 @@ public final class AirlockTests {
             h.assertTrue(ac.linkedVents().isEmpty(), "a vent is still linked");
 
             Player player = h.makeMockPlayer(GameType.SURVIVAL);
-            ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
+            ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
             useItem(s, player, tool, 3, 2, 1);
-            h.assertValueEqual(MultitoolItem.selected(tool, s.level).orElse(null), ac.getBlockPos(), "the selection");
+            h.assertValueEqual(MultitoolItem.source(tool, s.level).orElse(null), ac.getBlockPos(), "the selection");
             useItem(s, player, tool, 4, 2, 2); // the inner airlock's upper block
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, lock.outer().getBlockPos())),
+                    key(Multitool.link(tool, s.level, lock.outer().getBlockPos())),
                     "item.zas_atmos.multitool.linked_slot",
                     "linking the outer airlock");
             useItem(s, player, tool, 8, 2, 1);
@@ -1041,25 +1043,25 @@ public final class AirlockTests {
 
             AirlockBlockEntity third = airlock(s, 10, 2, Direction.EAST, false);
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, third.getBlockPos())),
+                    key(Multitool.link(tool, s.level, third.getBlockPos())),
                     "item.zas_atmos.multitool.airlocks_full",
                     "a third airlock");
             AirSensorBlockEntity fourth = sensor(s, 1, 3, 1);
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, fourth.getBlockPos())),
+                    key(Multitool.link(tool, s.level, fourth.getBlockPos())),
                     "item.zas_atmos.multitool.sensor_full",
                     "a fourth sensor");
             h.assertValueEqual(ac.toggleLink(s.level, s.abs(8, 0, 2)), LinkResult.NOT_LINKABLE, "linking stone");
 
             AirlockBlock.setBolted(s.level, lock.inner().getBlockPos(), true);
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, lock.inner().getBlockPos())),
+                    key(Multitool.link(tool, s.level, lock.inner().getBlockPos())),
                     "item.zas_atmos.multitool.unlinked_airlock",
                     "using it on a linked airlock");
             h.assertTrue(ac.slotOf(lock.inner().getBlockPos()) == null, "the inner airlock is still linked");
             h.assertFalse(bolted(s, 4, 2), "unlinking didn't unbolt the airlock");
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, third.getBlockPos())),
+                    key(Multitool.link(tool, s.level, third.getBlockPos())),
                     "item.zas_atmos.multitool.linked_slot",
                     "a second airlock once one was unlinked");
             h.assertTrue(
@@ -1068,8 +1070,8 @@ public final class AirlockTests {
                     "both doors aren't filled");
 
             // Sneaking, with an area air controller selected: the airlock controller is its part.
-            ItemStack areaTool = new ItemStack(AtmosItems.MULTITOOL.get());
-            MultitoolItem.select(areaTool, s.level, lock.area().getBlockPos());
+            ItemStack areaTool = new ItemStack(FrameworkItems.MULTITOOL.get());
+            MultitoolItem.store(areaTool, s.level, lock.area().getBlockPos());
             player.setShiftKeyDown(true);
             useItem(s, player, areaTool, 3, 2, 1);
             player.setShiftKeyDown(false);
@@ -1606,17 +1608,17 @@ public final class AirlockTests {
             h.assertValueEqual(menu.value(AirlockControllerMenu.DATA_LINKS), 0b11111, "the slots shown");
 
             // The wrong kind is refused, and the slot stays armed.
-            ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-            MultitoolItem.select(tool, s.level, ac.getBlockPos());
+            ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+            MultitoolItem.store(tool, s.level, ac.getBlockPos());
             menu.clickMenuButton(player, AirlockControllerMenu.ARM + Slot.INNER_SENSOR.ordinal());
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, parts[0])),
+                    key(Multitool.link(tool, s.level, parts[0])),
                     "item.zas_atmos.multitool.wants_sensor",
                     "an airlock for a sensor's slot");
             h.assertValueEqual(ac.armed(), Slot.INNER_SENSOR, "a refusal disarmed the slot");
             menu.clickMenuButton(player, AirlockControllerMenu.ARM + Slot.INNER_DOOR.ordinal());
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, parts[2])),
+                    key(Multitool.link(tool, s.level, parts[2])),
                     "item.zas_atmos.multitool.wants_airlock",
                     "a sensor for a door's slot");
             h.assertValueEqual(ac.armed(), Slot.INNER_DOOR, "a refusal disarmed the slot");

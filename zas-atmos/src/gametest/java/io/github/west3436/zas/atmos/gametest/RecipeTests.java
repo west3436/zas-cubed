@@ -299,7 +299,8 @@ public final class RecipeTests {
 
     /**
      * Every recipe of the mod that takes a crafting component still crafts (#534): laid out in a
-     * grid, the first item of each of its ingredients makes what it made before. There are 41, now the batteries are SS13 Framework's (#539).
+     * grid, the first item of each of its ingredients makes what it made before. There are 40: the 44
+     * of #534 but the multitool's (#540) and the batteries' (#539), which are SS13 Framework's now.
      */
     @GameTest(template = "empty")
     public static void recipes_that_take_a_component_still_craft(GameTestHelper h) {
@@ -331,7 +332,7 @@ public final class RecipeTests {
             }
         }
         h.assertTrue(failed.isEmpty(), failed.size() + " recipes don't craft: " + failed);
-        h.assertValueEqual(taking, 41, "the mod's recipes that take a crafting component");
+        h.assertValueEqual(taking, 40, "the mod's recipes that take a crafting component");
         h.succeed();
     }
 
