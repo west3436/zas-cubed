@@ -28,6 +28,26 @@ subprojects {
     // to the next version that may break it, the next minor while it is 0.x and the next major from 1.0.
     ext.framework_range = ss13.versionRange(framework_version)
 
+    // Gives a dev run of the main source set SS13 Framework's test kit, never in a jar. In a dev
+    // environment NeoForge registers GameTests on any server, a dev client's included, so a dev run
+    // whose mods have a gametest source set loads those tests' classes as its world starts, and they
+    // use the kit: without it, the run crashes with a ClassNotFoundException. The run takes the
+    // devRun source set, which has no code: its classpath is main's and the kit. A GameTest server
+    // has the kit from its own source set. Not ModDevGradle's additionalRuntimeClasspath, which
+    // loads a jar in the boot layer, where the kit can't see NeoForge: like the GameTest servers,
+    // the run has to find it on its classpath to load it as the GAMELIBRARY it is.
+    def subproject = it
+    ext.addTestKitTo = { run ->
+        def sourceSets = subproject.sourceSets
+        if (sourceSets.findByName('devRun') == null) {
+            def devRun = sourceSets.create('devRun')
+            devRun.runtimeClasspath += sourceSets.main.runtimeClasspath
+            subproject.dependencies.add(devRun.runtimeOnlyConfigurationName,
+                    "io.github.west3436:ss13-framework-testkit:${framework_version}")
+        }
+        run.sourceSet = sourceSets.devRun
+    }
+
     // Expanded into each mod's neoforge.mods.toml.
     tasks.named('processResources', ProcessResources) {
         def props = [
