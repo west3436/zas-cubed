@@ -106,6 +106,8 @@ neoForge {
         }
     }
 }
+// The dev client loads zas's GameTests, which use SS13 Framework's test kit.
+addTestKitTo(neoForge.runs.client)
 
 dependencies {
     // As zas_atmos itself: the public API to compile against (CONT-095), zas at run time.

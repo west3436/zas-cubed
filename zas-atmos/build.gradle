@@ -54,6 +54,9 @@ neoForge {
         }
     }
 }
+// The dev client and server load zas's and zas_atmos's GameTests, which use SS13 Framework's test kit.
+addTestKitTo(neoForge.runs.client)
+addTestKitTo(neoForge.runs.server)
 
 // GameTests start from a fresh world, as in :zas: saved zones would otherwise come back. The only
 // things in it are what earlier releases saved, far from every test's place, which SavedWorldTests
