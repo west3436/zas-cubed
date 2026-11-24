@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.failure.BlastSound;
 import io.github.west3436.zas.atmos.failure.ContainerBlast;

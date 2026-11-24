@@ -3,7 +3,7 @@
 # Every file under a project's src/<set>/resources/assets/ directory, or under
 # the assets/ of a built-in resource pack in src/<set>/resources/resourcepacks/,
 # has one entry here (NFR-045). All assets are licensed CC BY-SA 4.0 International;
-# see LICENSE-ASSETS. scripts/check_credits.py checks this file in CI.
+# see LICENSE-ASSETS. ./gradlew checkCredits checks this file, in build and in CI.
 #
 # Format
 #
@@ -62,7 +62,7 @@
 # and "notes: <text>". If an asset's origin or license is unclear, leave it
 # out.
 #
-# Run the check locally with: python scripts/check_credits.py
+# Run the check locally with: ./gradlew checkCredits (it needs Python 3)
 
 path: zas/src/main/resources/assets/zas/lang/en_us.json
 origin: original

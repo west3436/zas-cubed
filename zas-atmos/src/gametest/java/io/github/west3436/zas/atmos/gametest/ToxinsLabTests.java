@@ -36,7 +36,6 @@ import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.ZasServerConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -148,7 +147,7 @@ public final class ToxinsLabTests {
 
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void s_13_toxins_lab(GameTestHelper h) {
-        h.assertValueEqual(ZasServerConfig.preset(), AtmospherePreset.NORMAL, "the preset");
+        h.assertValueEqual(AtmospherePreset.active(), AtmospherePreset.NORMAL, "the preset");
         Blasts.listen();
         Area a = new Area(h, 109);
         a.forceLoad(true);

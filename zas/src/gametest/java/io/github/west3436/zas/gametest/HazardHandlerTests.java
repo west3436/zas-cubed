@@ -1,6 +1,7 @@
 package io.github.west3436.zas.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -362,7 +363,7 @@ public final class HazardHandlerTests {
         HazardHandlers.register(OTHER, GasTags.TOXIC, e -> good[0]++);
         long t = r.level.getGameTime();
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Breathers.checkAt(pig, t);
             for (int i = 1; i <= 3; i++) {
                 Breathers.checkAt(pig, t + 40L * i);
@@ -371,7 +372,7 @@ public final class HazardHandlerTests {
             }
             h.assertValueEqual(log.naming(source), 1, "errors logged about it");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Breathers.checkAt(pig, t + 160);
             h.assertValueEqual(log.naming(source), 2, "errors logged about it a minute later");
 

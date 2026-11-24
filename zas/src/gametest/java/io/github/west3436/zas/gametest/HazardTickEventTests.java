@@ -1,5 +1,6 @@
 package io.github.west3436.zas.gametest;
 
+import io.github.west3436.ss13.testkit.FaultLog;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.event.HazardTickEvent;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -388,7 +389,7 @@ public final class HazardTickEventTests {
         NeoForge.EVENT_BUS.addListener(EventPriority.HIGH, HazardTickEvent.class, bad);
         NeoForge.EVENT_BUS.addListener(EventPriority.LOW, HazardTickEvent.class, last);
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 1; i <= 3; i++) {
                 Breathers.exposeForTest(z, at(15, StandardAir.TEMPERATURE), 2);
                 h.assertValueEqual(after[0], i, "what the listener after it heard");
@@ -396,7 +397,7 @@ public final class HazardTickEventTests {
             }
             h.assertValueEqual(log.naming("HazardTickEvent"), 1, "errors logged about it");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Breathers.exposeForTest(z, at(15, StandardAir.TEMPERATURE), 2);
             h.assertValueEqual(log.naming("HazardTickEvent"), 2, "errors logged about it a minute later");
         } finally {

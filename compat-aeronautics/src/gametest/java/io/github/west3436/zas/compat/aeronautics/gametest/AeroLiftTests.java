@@ -12,7 +12,6 @@ import io.github.west3436.zas.compat.aeronautics.LiftFactors;
 import io.github.west3436.zas.compat.aeronautics.LiftFactorsPayload;
 import io.github.west3436.zas.compat.aeronautics.SableSeed;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.environment.DimensionAmbient;
@@ -144,7 +143,7 @@ public final class AeroLiftTests {
                     scaled(h, Level.OVERWORLD, own.get(Level.OVERWORLD), 1.0, "the Overworld under Normal");
                     scaled(h, Level.END, own.get(Level.END), 1.0, "the End under Normal");
                     scaled(h, Level.NETHER, own.get(Level.NETHER), 293.15 / 313.15, "the Nether under Normal");
-                    ZasServerConfig.PRESET.set(AtmospherePreset.HARDCORE);
+                    AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
                 })
                 .thenExecuteAfter(2, () -> {
                     scaled(h, Level.OVERWORLD, own.get(Level.OVERWORLD), 1.0, "the Overworld under Hardcore");

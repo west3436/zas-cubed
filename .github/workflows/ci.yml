@@ -1,5 +1,8 @@
 name: CI
 
+# ZAS³'s CI, on SS13 Framework's shared workflow at the framework's tag
+# (v<framework_version> in gradle.properties: raise them together). Its header
+# says what each input does.
 on:
   push:
     branches: [main]
@@ -13,170 +16,62 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Asset provenance (CREDITS)
-        run: python3 scripts/check_credits.py
-      - name: Check for Gradle build
-        id: gradle
-        run: |
-          if [ -f gradlew ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::No Gradle build yet (Phase C); skipping."
-          fi
-      - uses: actions/setup-java@v6
-        if: steps.gradle.outputs.present == 'true'
-        with:
-          distribution: temurin
-          java-version: "21"
-      - uses: gradle/actions/setup-gradle@v6
-        if: steps.gradle.outputs.present == 'true'
-      # check, inside build, runs the API compatibility check (API-043,
-      # NFR-033): :zas-api:apiCompat.
-      - name: Build
-        if: steps.gradle.outputs.present == 'true'
-        run: ./gradlew build --stacktrace
+  ci:
+    uses: west3436/ss13-framework/.github/workflows/shared-build.yml@v0.3.0
+    with:
+      # check, inside build, runs checkCredits (asset provenance, NFR-045),
+      # Spotless and the API's checks: packages, dependencies, javadoc and the
+      # compatibility check (API-043, NFR-033), :zas-api:apiCompat.
+      #
+      # Then, in the same job:
+      #
       # NFR-030: the engine's line coverage, on this run's summary page, with
       # the full report as an artifact. The tests have already run in build.
-      - name: Engine coverage
-        if: steps.gradle.outputs.present == 'true'
-        run: |
-          ./gradlew :engine:jacocoTestReport --stacktrace
-          python3 scripts/coverage_summary.py engine/build/reports/jacoco/test/jacocoTestReport.xml >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v7
-        if: steps.gradle.outputs.present == 'true'
-        with:
-          name: engine-coverage
-          path: engine/build/reports/jacoco/test/html
+      #
       # NFR-034: the S-10 script on the engine at the commit in
       # engine/s10-baseline.properties and on this code, side by side on this
-      # machine, because CI's machines differ too much to compare times between them.
-      - name: S-10 regression check
-        if: steps.gradle.outputs.present == 'true'
-        timeout-minutes: 5
-        run: ./gradlew :engine:benchCheck --stacktrace
-      # Each mod's own GameTests on its own server. zas's tests with zas_atmos
-      # loaded as well run nightly: full-gametests.yml.
-      # The task can succeed without a server ever starting, so the log must also
-      # say that the tests passed, once for each of the two servers.
-      # The two take 5 to 7 minutes between them, and over 10 on a slow machine.
-      - name: GameTests (dedicated server)
-        if: steps.gradle.outputs.present == 'true'
-        timeout-minutes: 20
-        shell: bash
-        run: |
-          ./gradlew runGameTestServer -x :example-addon:runGameTestServer -Pgametests.ownOnly=true --stacktrace | tee gametests.log
-          passed=$(grep -cE "All [0-9]+ required tests passed" gametests.log || true)
-          if [ "$passed" -ne 2 ]; then
-            echo "::error::Expected 2 GameTest servers to report that their tests passed, but $passed did."
-            exit 1
-          fi
-      # S-12 (API-048): the example addon, which nests the API, on a GameTest
-      # server without zas. The fallback must answer with standard air.
-      - name: S-12 API without ZAS³ (example addon alone)
-        if: steps.gradle.outputs.present == 'true'
-        timeout-minutes: 5
-        shell: bash
-        run: |
-          ./gradlew :example-addon:runGameTestServer --stacktrace | tee addon-gametests.log
-          passed=$(grep -cE "All [0-9]+ required tests passed" addon-gametests.log || true)
-          if [ "$passed" -ne 1 ]; then
-            echo "::error::Expected the example addon's GameTest server to report that its tests passed, but $passed did."
-            exit 1
-          fi
-      # API-007: the built release jar and a built copy of the example addon,
-      # each nesting the API, on one server. They must share one copy. The
-      # same server has a second consumer of SS13 Framework, which nests a
-      # newer framework than the release jar does: one copy of the framework
-      # must load, the newest.
-      - name: API-007 one copy of the API and of SS13 Framework (built jars)
-        if: steps.gradle.outputs.present == 'true'
-        timeout-minutes: 5
-        shell: bash
-        run: |
-          ./gradlew :example-addon:runOneCopyGameTestServer --stacktrace | tee one-copy-gametests.log
-          passed=$(grep -cE "All [0-9]+ required tests passed" one-copy-gametests.log || true)
-          if [ "$passed" -ne 1 ]; then
-            echo "::error::Expected the built jars' GameTest server to report that its tests passed, but $passed did."
-            exit 1
-          fi
-      # CLIENT-025 (NFR-022): the built Ponder addon, which nests Ponder and
-      # Flywheel, on a dedicated server with the release jar, which holds the
-      # Ponder scenes.
-      - name: CLIENT-025 dedicated server with the Ponder addon (built jars)
-        if: steps.gradle.outputs.present == 'true'
-        timeout-minutes: 5
-        shell: bash
-        run: |
-          ./gradlew :zas-ponder:runServerCheckGameTestServer --stacktrace | tee ponder-gametests.log
-          passed=$(grep -cE "All [0-9]+ required tests passed" ponder-gametests.log || true)
-          if [ "$passed" -ne 1 ]; then
-            echo "::error::Expected the Ponder addon's GameTest server to report that its tests passed, but $passed did."
-            exit 1
-          fi
-      # CONT-052 and CONT-155: the release jar, which holds zas and zas_atmos,
-      # on a dedicated server with the content on, then on another with it off.
-      # Neither has Ponder, so neither may load any of the Ponder scenes
-      # (CLIENT-023, NFR-022).
-      - name: CONT-155 release jar with the content on and off (built jar)
-        if: steps.gradle.outputs.present == 'true'
-        timeout-minutes: 5
-        shell: bash
-        run: |
-          ./gradlew :dist:runReleaseCheckGameTestServer :dist:runContentOffGameTestServer --stacktrace | tee release-gametests.log
-          passed=$(grep -cE "All [0-9]+ required tests passed" release-gametests.log || true)
-          if [ "$passed" -ne 2 ]; then
-            echo "::error::Expected the release jar's 2 GameTest servers to report that their tests passed, but $passed did."
-            exit 1
-          fi
-
-  # Snapshot of the API on the Central Portal (API-008, D-18), after a green
-  # build on main. Never on PRs: they don't get the secrets.
-  publish-api-snapshot:
-    name: Publish API snapshot
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    env:
-      ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_USERNAME }}
-      ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PASSWORD }}
-      # Optional: Central doesn't require signed snapshots. The build signs
-      # when a key is set.
-      ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-      ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-    steps:
-      - name: Check for Central credentials
-        id: creds
-        run: |
-          if [ -n "$ORG_GRADLE_PROJECT_mavenCentralUsername" ] && [ -n "$ORG_GRADLE_PROJECT_mavenCentralPassword" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::CENTRAL_USERNAME or CENTRAL_PASSWORD is not set; skipping the API snapshot."
-          fi
-      - uses: actions/checkout@v7
-        if: steps.creds.outputs.present == 'true'
-      - uses: actions/setup-java@v6
-        if: steps.creds.outputs.present == 'true'
-        with:
-          distribution: temurin
-          java-version: "21"
-      - uses: gradle/actions/setup-gradle@v6
-        if: steps.creds.outputs.present == 'true'
-      - name: Publish the snapshot
-        if: steps.creds.outputs.present == 'true'
-        run: ./gradlew :zas-api:publishToMavenCentral -PapiSnapshot=true --stacktrace
-
-  docs:
-    name: Docs links
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Check relative links and anchors
-        uses: lycheeverse/lychee-action@v2
-        with:
-          args: --offline --include-fragments --no-progress './**/*.md'
-          fail: true
+      # machine, because CI's machines differ too much to compare times
+      # between them. Five minutes at most.
+      after-build: |
+        ./gradlew :engine:jacocoTestReport --stacktrace
+        python3 scripts/coverage_summary.py engine/build/reports/jacoco/test/jacocoTestReport.xml >> "$GITHUB_STEP_SUMMARY"
+        timeout 5m ./gradlew :engine:benchCheck --stacktrace
+      artifact-name: engine-coverage
+      artifact-path: engine/build/reports/jacoco/test/html
+      # Each line: the number of GameTest servers that must report that their
+      # tests passed, then the Gradle arguments.
+      #
+      # 1. Each mod's own GameTests on its own server. zas's tests with
+      #    zas_atmos loaded as well run nightly: full-gametests.yml.
+      # 2. S-12 (API-048): the example addon, which nests the API, on a
+      #    GameTest server without zas. The fallback must answer with standard
+      #    air.
+      # 3. API-007: the built release jar and a built copy of the example
+      #    addon, each nesting the API, on one server. They must share one
+      #    copy. The same server has a second consumer of SS13 Framework,
+      #    which nests a newer framework than the release jar does: one copy of
+      #    the framework must load, the newest.
+      # 4. CLIENT-025 (NFR-022): the built Ponder addon, which nests Ponder and
+      #    Flywheel, on a dedicated server with the release jar, which holds
+      #    the Ponder scenes.
+      # 5. CONT-052 and CONT-155: the release jar, which holds zas and
+      #    zas_atmos, on a dedicated server with the content on, then on
+      #    another with it off. Neither has Ponder, so neither may load any of
+      #    the Ponder scenes (CLIENT-023, NFR-022).
+      gametests: |
+        2 runGameTestServer -x :example-addon:runGameTestServer -Pgametests.ownOnly=true
+        1 :example-addon:runGameTestServer
+        1 :example-addon:runOneCopyGameTestServer
+        1 :zas-ponder:runServerCheckGameTestServer
+        2 :dist:runReleaseCheckGameTestServer :dist:runContentOffGameTestServer
+      # The first run takes 5 to 7 minutes, and over 10 on a slow machine; the
+      # four others up to 5 each.
+      gametest-timeout-minutes: 40
+      # A snapshot of the API on the Central Portal (API-008, D-18), after a
+      # green build on main.
+      snapshot: ":zas-api:publishToMavenCentral -PapiSnapshot=true"
+    secrets:
+      CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+      CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+      SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}

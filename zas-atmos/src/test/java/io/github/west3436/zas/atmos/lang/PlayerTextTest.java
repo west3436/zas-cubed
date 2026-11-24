@@ -1,11 +1,11 @@
 package io.github.west3436.zas.atmos.lang;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
-import io.github.west3436.zas.atmos.lang.PlayerTextScan.Found;
+import io.github.west3436.ss13.testkit.PlayerTextScan;
+import io.github.west3436.ss13.testkit.PlayerTextScan.Found;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -21,7 +21,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +47,12 @@ class PlayerTextTest {
             Set.of("zas:engine", "no reason given", "the engine failed:", "the engine couldn't be rebuilt:");
 
     /**
+     * The mod id Ponder puts first in the scenes' keys: the plugin's, which is {@code zas_atmos} for
+     * the scenes in the release jar. The scan reads Ponder's key calls with it (CLIENT-023).
+     */
+    private static final String PONDER_NAMESPACE = "zas_atmos";
+
+    /**
      * Methods whose text stays in English for operators, which the scan doesn't follow. None now: the
      * one there was, a datapack problem's line, which {@code /zas datapacks} repeats from the log, is
      * SS13 Framework's ({@code DatapackErrors.Problem}), outside the classes scanned.
@@ -63,7 +68,8 @@ class PlayerTextTest {
                 classes("zas_atmos.jadeClasses"),
                 classes("zas_atmos.ccClasses"),
                 classes("zas_atmos.ponderClasses"))) {
-            hardCoded(PlayerTextScan.of(classes, OPERATOR_LINES)).forEach(found -> problems.add(found.toString()));
+            hardCoded(PlayerTextScan.of(classes, OPERATOR_LINES, PONDER_NAMESPACE))
+                    .forEach(found -> problems.add(found.toString()));
         }
         assertTrue(
                 problems.isEmpty(),
@@ -136,57 +142,6 @@ class PlayerTextTest {
         assertTrue(problems.isEmpty(), "Tags with no name in en_us.json:\n  " + String.join("\n  ", problems));
     }
 
-    @Test
-    void client_007_the_scan_finds_text_however_it_gets_there() throws IOException {
-        Set<String> expected = Set.of(
-                "Direct",
-                "Concatenated ",
-                "Local",
-                "Either",
-                "Or",
-                "Constant",
-                "Array",
-                "Passed",
-                "Returned",
-                "Enum field",
-                "Record field",
-                "Appended",
-                "Drawn",
-                "Floating",
-                "Argument",
-                "Client argument",
-                "Fallback",
-                "Format ",
-                "Argument of a format",
-                "Captured",
-                "Command error",
-                "Substring");
-        Set<String> found = hardCoded(scan(PlayerTextSamples.FLAGGED)).stream()
-                .map(Found::text)
-                .collect(Collectors.toSet());
-        assertEquals(new TreeSet<>(expected), new TreeSet<>(found));
-    }
-
-    @Test
-    void client_007_the_scan_allows_symbols_numbers_units_and_composed_values() throws IOException {
-        assertEquals(Set.of(), hardCoded(scan(PlayerTextSamples.ALLOWED)));
-    }
-
-    @Test
-    void client_007_the_scan_finds_keys_through_helpers() throws IOException {
-        Set<String> keys =
-                scan(PlayerTextSamples.KEYS).keys().stream().map(Found::text).collect(Collectors.toSet());
-        assertEquals(
-                new TreeSet<>(Set.of(
-                        "sample.plain",
-                        "sample.client",
-                        "sample.either",
-                        "sample.or",
-                        "sample.prefix.helper",
-                        "sample.prefix.enum")),
-                new TreeSet<>(keys));
-    }
-
     private static Set<Found> hardCoded(PlayerTextScan scan) {
         Set<Found> out = new TreeSet<>();
         for (Found found : scan.withLetters()) {
@@ -199,7 +154,8 @@ class PlayerTextTest {
     }
 
     private static List<String> missing(Path classes, Set<String> lang) {
-        Set<Found> keys = PlayerTextScan.of(classes, OPERATOR_LINES).keys();
+        Set<Found> keys =
+                PlayerTextScan.of(classes, OPERATOR_LINES, PONDER_NAMESPACE).keys();
         assertFalse(keys.isEmpty(), "no translation keys found in " + classes);
         List<String> out = new ArrayList<>();
         for (Found key : keys) {
@@ -208,18 +164,6 @@ class PlayerTextTest {
             }
         }
         return out;
-    }
-
-    private static PlayerTextScan scan(List<Class<?>> samples) throws IOException {
-        List<byte[]> files = new ArrayList<>();
-        for (Class<?> sample : samples) {
-            String file = sample.getName().substring(sample.getPackageName().length() + 1) + ".class";
-            try (InputStream in = sample.getResourceAsStream(file)) {
-                files.add(in.readAllBytes());
-            }
-        }
-        return new PlayerTextScan(
-                files, Set.of(PlayerTextSamples.Diagnostic.class.getName().replace('.', '/') + ".toString"));
     }
 
     private static Path classes(String property) {

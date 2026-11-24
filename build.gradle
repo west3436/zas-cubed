@@ -1,12 +1,22 @@
 plugins {
     id 'net.neoforged.moddev' version '2.0.148' apply false
-    id 'com.diffplug.spotless' version '8.10.4' apply false
-    id 'com.vanniktech.maven.publish' version '0.37.0' apply false
+    // SS13 Framework's Gradle plugins, at framework_version (settings.gradle). They bring Spotless and
+    // the Maven publish plugin with them.
+    id 'io.github.west3436.ss13.conventions' apply false
+    id 'io.github.west3436.ss13.api' apply false
+    // checkCredits, which check runs: every asset needs a valid entry in CREDITS. It needs Python 3
+    // (python3 or python on the PATH, or -Pss13.python=<path>).
+    id 'io.github.west3436.ss13.credits'
 }
 
 subprojects {
-    apply plugin: 'java-library'
-    apply plugin: 'com.diffplug.spotless'
+    // Java 21, UTF-8, Maven Central, Spotless (spotlessCheck runs as part of check, so build fails on
+    // unformatted code: run ./gradlew spotlessApply to fix it), and, with ModDevGradle, NeoForge from
+    // neo_version and Parchment from gradle.properties. A project whose target mod needs a newer
+    // NeoForge for a run of its own names it as ext.runNeoVersion before it applies ModDevGradle, as
+    // compat-cc does; nothing that ships is built that way.
+    apply plugin: 'io.github.west3436.ss13.conventions'
+    ss13 { githubRepo = 'west3436/zas-cubed' }
 
     group = 'io.github.west3436'
     version = mod_version
@@ -16,45 +26,7 @@ subprojects {
     ext.api_range = "[${api_version},${(api_version.tokenize('.')[0] as int) + 1}.0)"
     // The SS13 Framework versions the release jar's nested copies accept: from framework_version up
     // to the next version that may break it, the next minor while it is 0.x and the next major from 1.0.
-    ext.framework_range = { ->
-        def (major, minor) = framework_version.tokenize('.').take(2).collect { it as int }
-        major == 0 ? "[${framework_version},0.${minor + 1}.0)" : "[${framework_version},${major + 1}.0)"
-    }()
-
-    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
-
-    repositories {
-        mavenCentral()
-    }
-
-    // spotlessCheck runs as part of check, so build fails on unformatted code.
-    // Run ./gradlew spotlessApply to fix it.
-    spotless {
-        java {
-            target 'src/*/java/**/*.java'
-            palantirJavaFormat('2.103.0')
-            removeUnusedImports()
-            trimTrailingWhitespace()
-            endWithNewline()
-        }
-    }
-
-    tasks.withType(JavaCompile).configureEach {
-        options.encoding = 'UTF-8'
-    }
-
-    // Every ModDevGradle project uses the same NeoForge and Parchment. One whose target mod needs a
-    // newer NeoForge for a run of its own names it as ext.runNeoVersion before it applies the plugin,
-    // as compat-cc does; nothing that ships is built that way.
-    plugins.withId('net.neoforged.moddev') {
-        neoForge {
-            version = project.findProperty('runNeoVersion') ?: neo_version
-            parchment {
-                mappingsVersion = parchment_mappings_version
-                minecraftVersion = parchment_minecraft_version
-            }
-        }
-    }
+    ext.framework_range = ss13.versionRange(framework_version)
 
     // Expanded into each mod's neoforge.mods.toml.
     tasks.named('processResources', ProcessResources) {

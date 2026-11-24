@@ -1,8 +1,15 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        // com.vanniktech.maven.publish is published to Maven Central only.
+        // SS13 Framework's Gradle plugins are published to Maven Central only.
         mavenCentral()
+    }
+    // SS13 Framework's Gradle plugins, released with the framework: the version zas nests is the
+    // version it builds with, so the two can't drift apart.
+    plugins {
+        id 'io.github.west3436.ss13.conventions' version "${framework_version}"
+        id 'io.github.west3436.ss13.api' version "${framework_version}"
+        id 'io.github.west3436.ss13.credits' version "${framework_version}"
     }
 }
 

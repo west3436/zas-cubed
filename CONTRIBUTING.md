@@ -78,10 +78,12 @@ commit: 0123456789ab
 ```
 
 Leave out any asset whose origin or license is unclear. The full format is
-at the top of `CREDITS`. Check it with `python scripts/check_credits.py`
-(Python 3, no dependencies). It lists asset files with no entry, entries for
-files that don't exist, malformed entries, `goon/` sources and licenses that
-aren't allowed. CI runs it in "Build and test".
+at the top of `CREDITS`. Check it with `./gradlew checkCredits`, which
+`build` runs too. It runs SS13 Framework's `check_credits.py`, which comes with
+the framework's Gradle plugin, so it needs Python 3 (`python3` or `python`, or
+`-Pss13.python=<path>`), with no dependencies. It lists asset files with no
+entry, entries for files that don't exist, malformed entries, `goon/` sources
+and licenses that aren't allowed. CI runs it in "Build and test".
 
 No NonCommercial or NoDerivatives asset ships in any jar (NFR-046). RE:SS3D and Stationeers are
 reference and inspiration only.
@@ -104,7 +106,8 @@ mods itself.
 
 | Command | What it does |
 |---|---|
-| `./gradlew build` | Compiles, runs the engine's and the API's unit tests, and checks formatting, the API's packages and dependencies, its javadoc and its compatibility |
+| `./gradlew build` | Compiles, runs the engine's and the API's unit tests, and checks the asset credits, formatting, the API's packages and dependencies, its javadoc and its compatibility |
+| `./gradlew checkCredits` | Checks that every asset has a valid `CREDITS` entry |
 | `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests, including S-12 (the example addon without `zas`). `zas-atmos`'s server also repeats `zas`'s tests with the content mod loaded; add `-Pgametests.ownOnly=true` to leave those out, as CI does on a PR. The [Full GameTests](https://github.com/west3436/zas-cubed/actions/workflows/full-gametests.yml) workflow runs them nightly |
 | `./gradlew :dist:jar` | Builds the release jar, `dist/build/libs/zas-<ver>.jar`: `zas` and `zas_atmos` as two mods in one file (D-88). It also holds the Ponder scenes, which load only with Ponder installed. The Ponder addon's jar, which only nests Ponder and Flywheel, is `zas-ponder/build/libs/zas_ponder-<ver>.jar` |
 | `./gradlew :dist:runReleaseCheckGameTestServer :dist:runContentOffGameTestServer` | Loads the built release jar on a GameTest server, once with the content on and once with `zas_atmos-startup.toml` turning it off, and checks what loads (CONT-052, CONT-155); not part of `build` or `runGameTestServer` |
@@ -146,6 +149,14 @@ compiles against `zas-api` and [SS13 Framework](https://github.com/west3436/ss13
 never `zas` internals (CONT-095). The release jar nests SS13 Framework, mod and API, the
 way it nests `zas-api`.
 
+The build's common setup comes from SS13 Framework's Gradle plugins, at `framework_version`
+(see the framework's README): `io.github.west3436.ss13.conventions` on every project (Java 21,
+Spotless, NeoForge and Parchment, Central publishing), `.api` on `zas-api` (its jar's checks and
+`apiCompat`) and `.credits` on the root (`checkCredits`). What is ZAS³'s own stays in the root
+`build.gradle`: `api_range`, `processResources` and `-Pcontent`. The CI workflows call the
+framework's shared ones (`shared-build.yml`, `shared-gametests.yml`, `shared-release.yml`,
+`shared-publish.yml`) at the tag `v<framework_version>`, so raise that tag with the version.
+
 How mods depend on the API is in the wiki's [API guide](https://github.com/west3436/zas-cubed/wiki/API-Guide).
 The version policy and the compatibility check are in the
 [archived one](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#versioning-and-the-compatibility-check),
@@ -166,7 +177,10 @@ audit zones against the blocks and profile each phase. The config files are in
 - **API value types and checks** get JUnit 5 tests in `zas-api`. Minecraft's
   classes are on that classpath, but the game is never bootstrapped.
 - **Anything in the world** gets a GameTest in the mod's `src/gametest`
-  source set, which stays out of the mod jar.
+  source set, which stays out of the mod jar. The helpers the mods' tests
+  share (`TestPlayers`, `ListeningPlayer`, `SoundLog`, `FaultLog`, and
+  `PlayerTextScan` for unit tests) come from SS13 Framework's test kit,
+  `io.github.west3436:ss13-framework-testkit`, which is never nested.
 - **Names trace back** to the requirement they verify, where there is one:
   `core_012_zone_merge`. The same goes for GameTest structure names.
 
@@ -185,9 +199,11 @@ the code, such as unit symbols, are listed at the top of `PlayerTextTest`.
 2. Fill in the PR template: link the issue (`Closes #nn`) and tick the
    checklist. For a player-facing change made with AI, include the human
    testing evidence described in [Using AI](#using-ai).
-3. CI must pass: "Build and test" (asset credits, build, unit tests,
+3. CI must pass: "ci / Build and test" (asset credits, build, unit tests,
    formatting, the API's javadoc with no comment missing, the S-10 regression
-   check, GameTests, and one copy of the API from built jars) and "Docs links".
+   check, GameTests, and one copy of the API from built jars) and "ci / Docs
+   links". The jobs run in SS13 Framework's shared workflows, which ZAS³'s
+   workflows call at the framework's tag.
 4. PRs are squash-merged, so the PR title becomes the commit subject. Write it
    in the imperative: "Add Spotless formatting".
 

@@ -15,7 +15,6 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.compat.adastra.AdAstraConfig;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.simulation.AtmosService;
@@ -238,9 +237,9 @@ final class Lab implements AutoCloseable {
 
     /** Switches the server's preset until the test ends. */
     void preset(AtmospherePreset preset) {
-        AtmospherePreset before = ZasServerConfig.preset();
-        restore.add(() -> ZasServerConfig.setPreset(before));
-        ZasServerConfig.setPreset(preset);
+        AtmospherePreset before = AtmospherePreset.active();
+        restore.add(() -> AtmospherePreset.switchTo(before));
+        AtmospherePreset.switchTo(preset);
     }
 
     /**

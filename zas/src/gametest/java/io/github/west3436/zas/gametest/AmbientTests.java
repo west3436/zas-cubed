@@ -270,13 +270,13 @@ public final class AmbientTests {
     /** Runs checks under a preset, then restores the configured one. */
     private static void withPreset(GameTestHelper h, AtmospherePreset preset, Runnable checks) {
         h.assertTrue(ZasServerConfig.SPEC.isLoaded(), "the server config isn't loaded");
-        AtmospherePreset before = ZasServerConfig.PRESET.get();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.PRESET.set(preset);
-            h.assertValueEqual(ZasServerConfig.preset(), preset, "active preset");
+            AtmospherePreset.switchTo(preset);
+            h.assertValueEqual(AtmospherePreset.active(), preset, "active preset");
             checks.run();
         } finally {
-            ZasServerConfig.PRESET.set(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 

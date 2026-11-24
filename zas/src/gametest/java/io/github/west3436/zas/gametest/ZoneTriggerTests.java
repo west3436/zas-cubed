@@ -1,12 +1,12 @@
 package io.github.west3436.zas.gametest;
 
+import io.github.west3436.ss13.api.preset.PresetOption;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.change.TriggerStates;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.PresetOption;
 import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.config.ZoneTrigger;
@@ -428,13 +428,13 @@ public final class ZoneTriggerTests {
 
     /** Runs checks under a preset, then restores the configured one. */
     private static void withPreset(GameTestHelper h, AtmospherePreset preset, Runnable checks) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(preset);
-            h.assertValueEqual(ZasServerConfig.preset(), preset, "active preset");
+            AtmospherePreset.switchTo(preset);
+            h.assertValueEqual(AtmospherePreset.active(), preset, "active preset");
             checks.run();
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
     }
 }

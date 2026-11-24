@@ -7,6 +7,8 @@ import static io.github.west3436.zas.gametest.Rooms.oxygen;
 import static io.github.west3436.zas.gametest.Rooms.source;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.west3436.ss13.testkit.FaultLog;
+import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
@@ -27,7 +29,6 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.FireConfig;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
@@ -132,20 +133,20 @@ public final class SpaceQueryTests {
     /** The API's preset is the server's, from the next read after it changes (SPACE-004, OPS-007). */
     @GameTest(template = "empty")
     public static void space_004_the_api_reports_the_servers_preset(GameTestHelper h) {
-        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset before = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
             h.assertValueEqual(
                     Atmospheres.preset(),
                     io.github.west3436.zas.api.atmosphere.AtmospherePreset.NORMAL,
                     "under Normal");
-            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             h.assertValueEqual(
                     Atmospheres.preset(),
                     io.github.west3436.zas.api.atmosphere.AtmospherePreset.HARDCORE,
                     "under Hardcore");
         } finally {
-            ZasServerConfig.setPreset(before);
+            AtmospherePreset.switchTo(before);
         }
         h.succeed();
     }
@@ -555,7 +556,7 @@ public final class SpaceQueryTests {
             return thin;
         });
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 0; i < 4; i++) {
                 Breathability verdict = Breathing.of(pig);
                 h.assertValueEqual(verdict.breath(), Optional.of(rich), "the breath, with two providers throwing");
@@ -566,7 +567,7 @@ public final class SpaceQueryTests {
             h.assertValueEqual(log.naming("Local atmosphere provider " + FIRST), 1, "errors about the first");
             h.assertValueEqual(log.naming("Local atmosphere provider " + SECOND), 1, "errors about the second");
 
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Breathing.of(pig);
             h.assertValueEqual(log.naming("Local atmosphere provider " + FIRST), 2, "errors a minute later");
 
@@ -847,7 +848,7 @@ public final class SpaceQueryTests {
         Internals.set(p, true);
         String source = "Internal supply of item " + TestLifeSupport.GAS_HOLDER_ID;
         try (FaultLog log = new FaultLog()) {
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             for (int i = 0; i < 4; i++) {
                 h.assertValueEqual(
                         Internals.find(p).orElseThrow().distributionPressure(), 50.0, "the tank found behind it");
@@ -855,7 +856,7 @@ public final class SpaceQueryTests {
                         BreathingRules.assess(p).verdict().source(), BreathSource.INTERNALS, "what it breathes from");
             }
             h.assertValueEqual(log.naming(source), 1, "errors about the lookup");
-            FaultLog.aMinutePasses();
+            FaultClock.aMinutePasses();
             Internals.find(p);
             h.assertValueEqual(log.naming(source), 2, "errors a minute later");
         }
