@@ -2,15 +2,15 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
       "type": "neoforge:item_exists",
@@ -21,13 +21,13 @@
   "category": "misc",
   "ingredients": [
     {
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "item": "minecraft:iron_ingot"

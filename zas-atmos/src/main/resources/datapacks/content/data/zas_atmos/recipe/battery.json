@@ -6,14 +6,14 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     }
   ],
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
     {
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
       "item": "minecraft:copper_ingot"

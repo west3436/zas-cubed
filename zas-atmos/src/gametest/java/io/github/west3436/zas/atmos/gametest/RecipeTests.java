@@ -1,12 +1,16 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.FrameworkApi;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosCreativeTab;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.MovedItems;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -24,6 +28,7 @@ import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -70,16 +75,19 @@ public final class RecipeTests {
 
     /**
      * The content is craftable from vanilla materials (CONT-051): each recipe's ingredients are
-     * vanilla items or the mod's own, and each of the mod's own has a recipe too, so every chain
-     * ends in vanilla materials. Every item of the mod has a recipe that loads, but the O2 and air
-     * tanks and the bike horn, which have none.
+     * vanilla items, the mod's own or SS13 Framework's crafting components, and each of the mod's
+     * own and the framework's has a recipe too, so every chain ends in vanilla materials. Every item
+     * of the mod has a recipe that loads, but the O2 and air tanks and the bike horn, which have none.
      */
     @GameTest(template = "empty")
     public static void cont_051_recipes_use_vanilla_materials(GameTestHelper h) {
         List<RecipeHolder<?>> recipes = modRecipes(h);
         Set<Item> made = new HashSet<>();
-        for (RecipeHolder<?> r : recipes) {
-            made.add(r.value().getResultItem(h.getLevel().registryAccess()).getItem());
+        for (RecipeHolder<?> r : h.getLevel().getRecipeManager().getRecipes()) {
+            String ns = r.id().getNamespace();
+            if (ns.equals(ZasAtmosMod.MOD_ID) || ns.equals(FrameworkApi.MOD_ID)) {
+                made.add(r.value().getResultItem(h.getLevel().registryAccess()).getItem());
+            }
         }
         for (RecipeHolder<?> r : recipes) {
             for (Ingredient ingredient : r.value().getIngredients()) {
@@ -87,10 +95,10 @@ public final class RecipeTests {
                     ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
                     String ns = id.getNamespace();
                     h.assertTrue(
-                            ns.equals("minecraft") || ns.equals(ZasAtmosMod.MOD_ID),
-                            r.id() + " uses " + id + ", which is neither vanilla nor the mod's own");
+                            ns.equals("minecraft") || ns.equals(ZasAtmosMod.MOD_ID) || ns.equals(FrameworkApi.MOD_ID),
+                            r.id() + " uses " + id + ", which is neither vanilla, the mod's own nor the framework's");
                     h.assertTrue(
-                            !ns.equals(ZasAtmosMod.MOD_ID) || made.contains(stack.getItem()),
+                            ns.equals("minecraft") || made.contains(stack.getItem()),
                             r.id() + " uses " + id + ", which has no recipe");
                 }
             }
@@ -208,5 +216,100 @@ public final class RecipeTests {
                 "the pipe cap recipe makes " + out.getCount() + ", not the test pack's "
                         + RecipeTestPack.PIPE_CAP_COUNT);
         h.succeed();
+    }
+
+    /**
+     * The crafting components are SS13 Framework's (#534): this mod registers none of them, each old
+     * {@code zas_atmos:} id names the framework's item, and neither this mod's recipes nor its
+     * creative tab make or list one, so recipe viewers and the creative inventory show each once.
+     */
+    @GameTest(template = "empty")
+    public static void crafting_components_are_the_frameworks(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        Set<Item> components = components();
+        h.assertValueEqual(components.size(), MovedItems.TO_FRAMEWORK.size(), "the framework's components");
+        for (String path : MovedItems.TO_FRAMEWORK) {
+            Item item = BuiltInRegistries.ITEM.get(MovedItems.framework(path));
+            h.assertTrue(components.contains(item), MovedItems.framework(path) + " isn't a framework component");
+            h.assertTrue(
+                    BuiltInRegistries.ITEM.get(ZasAtmosMod.id(path)) == item,
+                    ZasAtmosMod.id(path) + " doesn't name " + MovedItems.framework(path));
+        }
+        for (DeferredHolder<Item, ? extends Item> entry : AtmosItems.ITEMS.getEntries()) {
+            h.assertFalse(
+                    MovedItems.TO_FRAMEWORK.contains(entry.getId().getPath()), "the mod registers " + entry.getId());
+        }
+        for (RecipeHolder<?> r : modRecipes(h)) {
+            ItemStack out = r.value().getResultItem(level.registryAccess());
+            h.assertFalse(components.contains(out.getItem()), r.id() + " makes " + out);
+        }
+        CreativeModeTab tab = AtmosCreativeTab.TAB.get();
+        tab.buildContents(
+                new CreativeModeTab.ItemDisplayParameters(level.enabledFeatures(), false, level.registryAccess()));
+        for (ItemStack stack : tab.getDisplayItems()) {
+            h.assertFalse(components.contains(stack.getItem()), "the mod's creative tab lists " + stack);
+        }
+        h.succeed();
+    }
+
+    /**
+     * Every recipe of the mod that takes a crafting component still crafts (#534): laid out in a
+     * grid, the first item of each of its ingredients makes what it made before. There are 44.
+     */
+    @GameTest(template = "empty")
+    public static void recipes_that_take_a_component_still_craft(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        Set<Item> components = components();
+        List<String> failed = new ArrayList<>();
+        int taking = 0;
+        for (RecipeHolder<?> r : modRecipes(h)) {
+            boolean takes = r.value().getIngredients().stream()
+                    .flatMap(i -> Arrays.stream(i.getItems()))
+                    .anyMatch(s -> components.contains(s.getItem()));
+            if (!takes) {
+                continue;
+            }
+            taking++;
+            if (!(r.value() instanceof CraftingRecipe recipe)) {
+                failed.add(r.id() + " isn't a crafting recipe");
+                continue;
+            }
+            CraftingInput input = grid(recipe);
+            ItemStack expected = recipe.getResultItem(level.registryAccess());
+            if (!recipe.matches(input, level)) {
+                failed.add(r.id() + " doesn't match its own ingredients");
+                continue;
+            }
+            ItemStack out = recipe.assemble(input, level.registryAccess());
+            if (!out.is(expected.getItem()) || out.getCount() != expected.getCount()) {
+                failed.add(r.id() + " makes " + out + ", not " + expected);
+            }
+        }
+        h.assertTrue(failed.isEmpty(), failed.size() + " recipes don't craft: " + failed);
+        h.assertValueEqual(taking, 44, "the mod's recipes that take a crafting component");
+        h.succeed();
+    }
+
+    /** SS13 Framework's crafting components. */
+    private static Set<Item> components() {
+        Set<Item> components = new HashSet<>();
+        FrameworkItems.components().forEach(c -> components.add(c.get()));
+        return components;
+    }
+
+    /** A crafting grid holding the first item of each of a recipe's ingredients, where they go. */
+    private static CraftingInput grid(CraftingRecipe recipe) {
+        List<ItemStack> items = new ArrayList<>();
+        for (Ingredient ingredient : recipe.getIngredients()) {
+            ItemStack[] options = ingredient.getItems();
+            items.add(options.length == 0 ? ItemStack.EMPTY : options[0].copy());
+        }
+        if (recipe instanceof ShapedRecipe shaped) {
+            return CraftingInput.of(shaped.getWidth(), shaped.getHeight(), items);
+        }
+        while (items.size() < 9) {
+            items.add(ItemStack.EMPTY);
+        }
+        return CraftingInput.of(3, 3, items);
     }
 }

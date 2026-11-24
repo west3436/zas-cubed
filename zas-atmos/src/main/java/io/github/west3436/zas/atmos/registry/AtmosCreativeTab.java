@@ -121,7 +121,6 @@ public final class AtmosCreativeTab {
         out.accept(emergency);
         out.accept(AtmosItems.EMERGENCY_OXYGEN_TANK.get());
         AtmosItems.gear().forEach(g -> out.accept(g.get()));
-        AtmosItems.components().forEach(c -> out.accept(c.get()));
         // The bike horn (CONT-154): only chests have it in survival.
         out.accept(AtmosItems.BIKE_HORN.get());
         // The gas miner (CONT-182): only here, as it has no recipe.

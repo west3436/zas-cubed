@@ -2,7 +2,7 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     },
     {
       "type": "neoforge:item_exists",
@@ -20,7 +20,7 @@
       "item": "zas_atmos:station_wall"
     },
     {
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     }
   ],
   "result": {

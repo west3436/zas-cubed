@@ -17,8 +17,8 @@ import net.minecraft.nbt.NbtIo;
 /**
  * A world saved by a release of the mods, kept under {@code fixtures/saves/<release>} in these test
  * resources for the tests of forward migration (DATA-012): the station's chunks in {@code region}
- * and {@code entities}, the mods' own files in {@code data}, and {@code expected.json}, what the
- * release's console said the station held just before it stopped.
+ * and {@code entities}, the mods' own files in {@code data}, players in {@code playerdata}, and
+ * {@code expected.json}, what the release's console said the station held just before it stopped.
  *
  * <p><b>Making one for the next release.</b> Check out the release's tag and start its dedicated
  * server on a new flat world: {@code ./gradlew :zas-atmos:createServerLaunchScript} writes a java
@@ -27,6 +27,12 @@ import net.minecraft.nbt.NbtIo;
  * tick freeze}, read each block with {@code data get block} and each zone with {@code zas zone at}
  * into {@code expected.json}, and {@code stop}. Keep only the station's chunks of the region files,
  * their stored bytes unchanged, and add the release to the tests that read this one.
+ *
+ * <p>1.2.0's world holds what moved out of the content mod after it: a chest of the 19 crafting
+ * components, which SS13 Framework now registers, in one chunk of its own region file, and a player
+ * whose inventory holds them, in {@code playerdata}. A console can't make a player, so a GameTest
+ * added to a checkout of the release's tag wrote both, saved the world and listed them in {@code
+ * expected.json}.
  *
  * <p>Nothing here needs the game to be running, so the content mod's unit tests read it too.
  */
@@ -61,6 +67,16 @@ public final class SavedWorld {
             return NbtIo.readCompressed(
                             new ByteArrayInputStream(bytes("data/" + name + ".dat")), NbtAccounter.unlimitedHeap())
                     .getCompound("data");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** A player's file in the level's {@code playerdata} folder, by the player's UUID. */
+    public CompoundTag player(String uuid) {
+        try {
+            return NbtIo.readCompressed(
+                    new ByteArrayInputStream(bytes("playerdata/" + uuid + ".dat")), NbtAccounter.unlimitedHeap());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

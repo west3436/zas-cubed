@@ -6,28 +6,28 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     }
   ],
   "type": "minecraft:crafting_shapeless",
   "category": "equipment",
   "ingredients": [
     {
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     },
     {
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
       "item": "minecraft:iron_ingot"
