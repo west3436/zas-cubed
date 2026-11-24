@@ -24,6 +24,8 @@ This mod contains two modules; **ZAS³** (`zas`) is the air itself and the publi
  - **Building:** station walls, reinforced station walls, reinforced glass and floor grilles. A pipe can run through a station wall or under a floor grille and the room stays airtight.
  - **Labels:** name a device with a name tag, an anvil or its window's title bar, and controllers list it by that name.
 
+ZAS³ also includes [SS13 Framework](https://github.com/west3436/ss13-framework), the shared base of SS13-style mods, so there is nothing more to install. The crafting components, the multitool, wrench and crowbar, and the batteries are the framework's, shared with every mod built on it; the framework adds a welder, a screwdriver and wirecutters. Its Normal/Hardcore switch sets ZAS³'s preset along with every other such mod's.
+
 Animated guides to every device are built in as Ponder scenes. They show when Create is installed. Without Create, the separate [ZAS³ Ponder](https://modrinth.com/mod/zas-ponders) addon brings Ponder.
 
 ## Mod Support
@@ -69,6 +71,10 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
 
 **Sable** (2.0.0+): rooms on ships and other moving structures keep their air when they are built, taken apart, unloaded and reloaded. You breathe the cabin you stand in, and a hole in the hull lets in the air of the dimension outside.
 
+**Create Cosmonautics** (26.08.291+): a sealed, pressurised room is breathable in deep space and on its Moon, and so are internals.
+
+**Create: Northstar – Redux** (0.6.6+): planets have vacuum or air from Northstar's data, and a pressurised room is breathable without an oxygen sealer. Its torches, furnaces, engines and oxygen detector see the room's oxygen and burn it, and its suits protect and supply breath.
+
 ## For mod developers
 
 The public API (`zas-api`) is what space, tech and survival mods can build on: read and change a zone's gas and heat, give a dimension its open air, offer a block's gas store to pipes, make items that protect or supply breath, and carry a room's air along when a mod moves its blocks. A mod can bundle it and still run when ZAS³ isn't installed. The Mekanism and Ad Astra adapters use the public API alone, so they double as worked examples. The guide and Javadoc are on the [wiki](https://github.com/west3436/zas-cubed/wiki).
@@ -92,3 +98,7 @@ The public API (`zas-api`) is what space, tech and survival mods can build on: r
   [Flywheel](https://github.com/Engine-Room/Flywheel), both under the MIT
   License, and holds nothing else. Their licences ship in its jar. The ZAS³
   jar, which holds `zas`, `zas_atmos` and the Ponder scenes, bundles neither.
+  It nests [SS13 Framework](https://github.com/west3436/ss13-framework), the
+  mod and its API, whose code is under the MIT License and whose art is under
+  CC BY-SA 4.0, as ZAS³'s is. Its fonts keep their own license, which ships
+  in its jar.
