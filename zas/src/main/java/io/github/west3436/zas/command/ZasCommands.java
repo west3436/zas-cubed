@@ -69,8 +69,9 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
  * The {@code /zas} operator commands (OPS-003, OPS-004, OPS-005, OPS-009, OPS-010, OPS-011, OPS-017,
- * GEO-032, and with {@link PresetCommand} OPS-007, OPS-014 and OPS-015), documented on the wiki's
- * Commands page.
+ * GEO-032), documented on the wiki's Commands page. {@code /zas preset} (OPS-007, OPS-014,
+ * OPS-015) is SS13 Framework's preset command, which it adds under this root ({@code
+ * Presets.addCommandAlias}) behind the same permission check.
  *
  * <p>Every command needs the permission level in {@code [commands] permission_level} of the server
  * config, 2 by default (OPS-011). Other {@code /zas} subcommands registered elsewhere, such as the
@@ -243,8 +244,7 @@ public final class ZasCommands {
         // OPS-008: datapack problems.
         root.then(Commands.literal("datapacks").executes(ctx -> datapacks(ctx.getSource())));
 
-        // OPS-007, OPS-014, OPS-015: the preset and the options it sets.
-        root.then(PresetCommand.node());
+        // OPS-007, OPS-014, OPS-015: /zas preset is SS13 Framework's, added under this root later.
 
         // LIFE-010 to LIFE-036: an entity's breathing and hazards, and the hazard settings.
         root.then(LifeCommand.lifeNode());

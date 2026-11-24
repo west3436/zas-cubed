@@ -425,10 +425,10 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.get();
     }
 
-    /** The server's preset (OPS-007), Normal before the config loads. */
+    /** The server's preset (OPS-007): SS13 Framework's switch, Normal before a world loads. */
     @Override
     public io.github.west3436.zas.api.atmosphere.AtmospherePreset preset() {
-        return ZasServerConfig.preset() == AtmospherePreset.HARDCORE
+        return AtmospherePreset.active() == AtmospherePreset.HARDCORE
                 ? io.github.west3436.zas.api.atmosphere.AtmospherePreset.HARDCORE
                 : io.github.west3436.zas.api.atmosphere.AtmospherePreset.NORMAL;
     }

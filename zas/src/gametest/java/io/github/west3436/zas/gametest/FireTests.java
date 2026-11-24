@@ -12,7 +12,6 @@ import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.fire.CarbonCombustion;
 import io.github.west3436.zas.engine.scheduler.FireIntent;
@@ -424,15 +423,15 @@ public final class FireTests {
         r.set(1, 1, 1, Rooms.AIR);
         r.ticks(2);
         h.assertFalse(r.zoned(1, 2, 1), "the room is zoned before the fire");
-        AtmospherePreset preset = ZasServerConfig.preset();
+        AtmospherePreset preset = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             r.set(1, 1, 1, FIRE);
             for (int i = 0; i < 4 && !r.zoned(1, 2, 1); i++) {
                 r.tick();
             }
         } finally {
-            ZasServerConfig.setPreset(preset);
+            AtmospherePreset.switchTo(preset);
         }
         h.assertTrue(r.zoned(1, 2, 1), "the fire formed no zone under Hardcore");
         ZoneInfo formed = r.zone(1, 2, 1);

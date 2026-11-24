@@ -1,5 +1,6 @@
 package io.github.west3436.zas.config;
 
+import io.github.west3436.ss13.api.preset.PresetOption;
 import java.util.Optional;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,7 +48,7 @@ public enum ZoneTrigger {
 
     /** Whether the trigger forms zones under a preset and the override, if any. */
     public boolean active(AtmospherePreset preset) {
-        return option == null || option.get(preset);
+        return option == null || option.get(preset.preset());
     }
 
     /** The preset option that switches it, or empty for a trigger that is on under both presets. */

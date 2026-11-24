@@ -6,7 +6,6 @@ import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
-import io.github.west3436.zas.config.WorldConfigCopy;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
@@ -252,10 +251,6 @@ public final class AtmosService {
     private void tick() {
         long gameTick = server.getTickCount();
         SchedulerSettings timing = ZasServerConfig.scheduler();
-        if (timing.closesAt(gameTick)) {
-            WorldConfigCopy.pickUpEdits();
-            timing = ZasServerConfig.scheduler();
-        }
         long start = System.nanoTime();
         long budget = ZasServerConfig.budgetNanos();
         relocator.tick(gameTick);

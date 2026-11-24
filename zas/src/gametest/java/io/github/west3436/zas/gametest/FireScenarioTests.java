@@ -7,7 +7,6 @@ import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.config.AtmospherePreset;
-import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.fire.CarbonCombustion;
 import io.github.west3436.zas.fire.Burners;
 import java.util.Map;
@@ -109,9 +108,9 @@ public final class FireScenarioTests {
         build(r);
         h.assertFalse(r.zoned(2, 3, 2), "the room is zoned before the fire");
         BlockPos fire = r.abs(2, 1, 2);
-        AtmospherePreset preset = ZasServerConfig.preset();
+        AtmospherePreset preset = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            AtmospherePreset.switchTo(AtmospherePreset.HARDCORE);
             r.set(2, 1, 2, FIRE);
             for (int i = 0; i < 4 && !r.zoned(2, 3, 2); i++) {
                 r.tick();
@@ -162,7 +161,7 @@ public final class FireScenarioTests {
             }
             h.assertTrue(r.level.getBlockState(fire).is(Blocks.FIRE), "the relit fire went out in fresh air");
         } finally {
-            ZasServerConfig.setPreset(preset);
+            AtmospherePreset.switchTo(preset);
         }
         h.succeed();
     }
@@ -176,9 +175,9 @@ public final class FireScenarioTests {
         Rooms r = rooms(h, 1);
         build(r);
         BlockPos fire = r.abs(2, 1, 2);
-        AtmospherePreset preset = ZasServerConfig.preset();
+        AtmospherePreset preset = AtmospherePreset.active();
         try {
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            AtmospherePreset.switchTo(AtmospherePreset.NORMAL);
             r.set(2, 1, 2, FIRE);
             r.ticks(4);
             h.assertFalse(r.zoned(2, 3, 2), "the fire formed a zone under Normal");
@@ -193,7 +192,7 @@ public final class FireScenarioTests {
             h.assertTrue(
                     Math.abs(o2Fraction(a.mixture()) - 0.21) < 1e-6, "the ambient's O₂: " + o2Fraction(a.mixture()));
         } finally {
-            ZasServerConfig.setPreset(preset);
+            AtmospherePreset.switchTo(preset);
         }
         h.succeed();
     }
