@@ -65,7 +65,7 @@ public final class FrameworkHooks {
         return new PlayerUnits();
     }
 
-    /** Installs both, on either side. Called once, from the mod constructor. */
+    /** Installs both, on either side, whether the content is on or not. Called once, from the mod constructor. */
     public static void register() {
         BlockMovers.register(ZasAtmosMod.id("relocations"), new RelocationMover());
         Readout.useUnits(playerUnits());

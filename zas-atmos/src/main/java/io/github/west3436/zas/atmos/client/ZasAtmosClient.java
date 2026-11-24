@@ -72,6 +72,10 @@ public final class ZasAtmosClient {
             "key.categories.zas");
 
     public ZasAtmosClient(IEventBus modBus) {
+        // SS13 Framework's device loops play through ZAS³'s sound manager, so they fade in thin air:
+        // any mod's, content or not.
+        DeviceLoops.playWith((source, sound, at, volume, range) -> ClientSounds.loop(
+                new LoopRequest(source, sound, SoundSource.BLOCKS, at.x, at.y, at.z, volume, 1f, range)));
         // FML builds the common entry point first, so the startup config is read (CONT-155).
         if (!ZasAtmosMod.contentEnabled()) {
             return;
@@ -100,9 +104,6 @@ public final class ZasAtmosClient {
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
-        // SS13 Framework's device loops play through ZAS³'s sound manager, so they fade in thin air.
-        DeviceLoops.playWith((source, sound, at, volume, range) -> ClientSounds.loop(
-                new LoopRequest(source, sound, SoundSource.BLOCKS, at.x, at.y, at.z, volume, 1f, range)));
         ClientSounds.fadeInThinAir(ZasAtmosMod.MOD_ID);
 
         // Pipe devices' running sounds (CONT-125).

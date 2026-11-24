@@ -50,6 +50,9 @@ public final class ZasAtmosMod {
     private static boolean contentEnabled = true;
 
     public ZasAtmosMod(IEventBus modBus, ModContainer container) {
+        // What SS13 Framework asks ZAS³, content or not: where a moved block is, so any mod's device
+        // on a ZAS³ ship waits while it moves and is heard where the ship is, and the player's units.
+        FrameworkHooks.register();
         contentEnabled = AtmosStartupConfig.register(container);
         if (!contentEnabled) {
             LOGGER.info("ZAS³ Atmospherics' content is off in zas_atmos-startup.toml, so it loads nothing");
@@ -71,7 +74,6 @@ public final class ZasAtmosMod {
         // SS13 Framework's device base schedules the devices, syncs their activity and takes labels;
         // the gas parts on top are ZAS³'s.
         ZoneIndex.register(NeoForge.EVENT_BUS);
-        FrameworkHooks.register();
         CanisterFailure.register(NeoForge.EVENT_BUS);
         Encumbrance.register(NeoForge.EVENT_BUS);
         FluidConnection.init(modBus, NeoForge.EVENT_BUS);
