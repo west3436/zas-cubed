@@ -103,6 +103,14 @@ dependencies {
     runtimeOnly project(':compat-kubejs')
     onZas.each { runtimeOnly it }
 
+    // SS13 Framework, the mod and its API, which zas and zas_atmos compile against (CONT-095). Dev
+    // runs load the mod's jar, which nests the API: the API is never on a run's classpath by itself,
+    // since a second copy would be a second module of the same name. Unit tests aren't a game, so
+    // they take both jars.
+    compileOnly "io.github.west3436:ss13-framework:${framework_version}"
+    runtimeOnly("io.github.west3436:ss13-framework:${framework_version}") { transitive = false }
+    testImplementation "io.github.west3436:ss13-framework:${framework_version}"
+
     // ModDevGradle takes the jar-in-jar range only from a module selector, so
     // the API is requested by coordinates and substituted with the project.
     jarJar('io.github.west3436:zas-api') {
@@ -113,8 +121,8 @@ dependencies {
     }
 
     // SS13 Framework, the mod and its API, nested as the framework's README says, so the release
-    // jar carries them and players never install them. zas_atmos compiles against them (CONT-095);
-    // zas doesn't. The mod nests the API too, but naming the API here makes its range zas's own.
+    // jar carries them and players never install them. The mod nests the API too, but naming the API
+    // here makes its range zas's own.
     jarJar('io.github.west3436:ss13-framework') {
         transitive = false
         version {
