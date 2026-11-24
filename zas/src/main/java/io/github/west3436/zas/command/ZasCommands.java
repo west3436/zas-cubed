@@ -10,6 +10,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
@@ -23,7 +24,6 @@ import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.config.ZasServerConfig;
-import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -993,6 +993,10 @@ public final class ZasCommands {
 
     // ---- Datapacks (OPS-008) ------------------------------------------------------------
 
+    /**
+     * The last load's datapack problems, every mod's: the record is SS13 Framework's, shared by each
+     * mod that nests it, and a problem names its file in the pack, not the mod that read it.
+     */
     private static int datapacks(CommandSourceStack source) {
         List<DatapackErrors.Problem> problems = DatapackErrors.recent();
         reply(source, Component.translatable("commands.zas.datapacks.header", problems.size()));

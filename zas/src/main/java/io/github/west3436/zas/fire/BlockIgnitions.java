@@ -5,7 +5,7 @@ import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
-import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.ss13.data.DatapackErrors;
 import io.github.west3436.zas.geometry.GeometryOverride;
 import java.util.ArrayList;
 import java.util.HashMap;
