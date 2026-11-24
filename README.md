@@ -24,6 +24,8 @@ This mod contains two modules; **ZAS³** (`zas`) is the air itself and the publi
  - **Building:** station walls, reinforced station walls, reinforced glass and floor grilles. A pipe can run through a station wall or under a floor grille and the room stays airtight.
  - **Labels:** name a device with a name tag, an anvil or its window's title bar, and controllers list it by that name.
 
+ZAS³ also includes [SS13 Framework](https://github.com/west3436/ss13-framework), the shared base of SS13-style mods, so there is nothing more to install. The crafting components, the multitool, wrench and crowbar, and the batteries are the framework's, shared with every mod built on it; the framework adds a welder, a screwdriver and wirecutters. Its Normal/Hardcore switch sets ZAS³'s preset along with every other such mod's.
+
 Animated guides to every device are built in as Ponder scenes. They show when Create is installed. Without Create, the separate [ZAS³ Ponder](https://modrinth.com/mod/zas-ponders) addon brings Ponder.
 
 ## Mod Support
@@ -92,3 +94,7 @@ The public API (`zas-api`) is what space, tech and survival mods can build on: r
   [Flywheel](https://github.com/Engine-Room/Flywheel), both under the MIT
   License, and holds nothing else. Their licences ship in its jar. The ZAS³
   jar, which holds `zas`, `zas_atmos` and the Ponder scenes, bundles neither.
+  It nests [SS13 Framework](https://github.com/west3436/ss13-framework), the
+  mod and its API, whose code is under the MIT License and whose art is under
+  CC BY-SA 4.0, as ZAS³'s is. Its fonts keep their own license, which ships
+  in its jar.
