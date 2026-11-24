@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.radiator;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -10,7 +11,6 @@ import io.github.west3436.zas.api.mutation.HeatMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
@@ -73,7 +73,7 @@ public final class RadiatorExchange {
             return;
         }
         double t = gas.temperature();
-        double seconds = AtmosTicks.SECONDS;
+        double seconds = DeviceTicks.SECONDS;
         double conductance = AtmosServerConfig.get(AtmosServerConfig.RADIATOR_CONDUCTANCE);
         double emissivity = AtmosServerConfig.get(AtmosServerConfig.RADIATOR_EMISSIVITY);
         double nearVacuum = Atmospheres.nearVacuumDensity();

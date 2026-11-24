@@ -4,6 +4,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -11,7 +12,6 @@ import io.github.west3436.zas.api.reaction.Reactions;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Kind;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Verdict;
@@ -665,7 +665,7 @@ public final class ContainerFailureTests {
         GasTankItem.setGas(t, new GasParcel(Map.of(hydrogen, 5.0, O2, 10.0, N2, 13.0), 900));
 
         GasMixture before = GasTankItem.contents(t);
-        GasMixture burned = Reactions.applyStandalone(before, AtmosTicks.SECONDS, false);
+        GasMixture burned = Reactions.applyStandalone(before, DeviceTicks.SECONDS, false);
         h.assertTrue(before.pressure() < 30 * ATM, "it starts at " + before.pressure() + " kPa, not below 30 atm");
         h.assertTrue(burned.pressure() > 50 * ATM, "the burn reaches " + burned.pressure() + " kPa, not above 50 atm");
 
@@ -763,7 +763,7 @@ public final class ContainerFailureTests {
         can.network().gas().add(new GasParcel(Map.of(hydrogen, 400.0, O2, 400.0, N2, 400.0), 900));
 
         GasMixture before = can.network().gas().mixture();
-        GasMixture burned = Reactions.applyStandalone(before, AtmosTicks.SECONDS, false);
+        GasMixture burned = Reactions.applyStandalone(before, DeviceTicks.SECONDS, false);
         h.assertTrue(
                 before.pressure() < ContainerFailure.CANISTER_RATED_KPA,
                 "it starts at " + before.pressure() + " kPa, not below 90 atm");

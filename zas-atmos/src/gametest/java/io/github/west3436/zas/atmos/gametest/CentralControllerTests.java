@@ -1,6 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
@@ -17,8 +19,6 @@ import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.controller.ZonePriority;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -79,7 +79,7 @@ public final class CentralControllerTests {
     private static final int TIMEOUT = 600;
 
     /** How long a live test waits after its last driven step, as {@link PowerChargeTests} does. */
-    private static final int SETTLE = 2 * AtmosTicks.PERIOD;
+    private static final int SETTLE = 2 * DeviceTicks.PERIOD;
 
     /** What the end of a live batch undoes for a test that failed before it could. */
     private static final List<Runnable> CLEANUP = new ArrayList<>();
@@ -106,17 +106,17 @@ public final class CentralControllerTests {
 
     /** The central controller's own bill for one atmos tick. */
     private static int own() {
-        return AtmosServerConfig.get(AtmosServerConfig.CENTRAL_DRAW) * AtmosTicks.PERIOD;
+        return AtmosServerConfig.get(AtmosServerConfig.CENTRAL_DRAW) * DeviceTicks.PERIOD;
     }
 
     /** An area air controller's own bill for one atmos tick. */
     private static int controllerOwn() {
-        return AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+        return AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
     }
 
     /** What an area air controller and one stand-in vent cost an atmos tick. */
     private static int ventBill() {
-        return controllerOwn() + TestParts.Kind.VENT.draw * AtmosTicks.PERIOD;
+        return controllerOwn() + TestParts.Kind.VENT.draw * DeviceTicks.PERIOD;
     }
 
     /** A whole console facing north, its lower left block at a point of a site and the rest west of it and above. */
@@ -880,7 +880,7 @@ public final class CentralControllerTests {
                     // Start again on whole bills, so the Low zone's buffer runs out exactly.
                     low.buffer().set(4 * bill);
                 })
-                .thenExecuteFor(8 * AtmosTicks.PERIOD, () -> {
+                .thenExecuteFor(8 * DeviceTicks.PERIOD, () -> {
                     starve.run();
                     if (!criticalVent.power().isPowered()) {
                         criticalOff[0]++;
@@ -920,7 +920,7 @@ public final class CentralControllerTests {
         Runnable restore = () -> AtmosServerConfig.CENTRAL_FORCE_LOAD.set(before);
         GameTestSequence seq = h.startSequence()
                 .thenWaitUntil(() -> loaded(h, s, mid, true))
-                .thenIdle(3 * AtmosTicks.PERIOD)
+                .thenIdle(3 * DeviceTicks.PERIOD)
                 .thenExecute(() -> loaded(h, s, mid, true))
                 .thenExecute(() -> s.set(2, 1, 2, Site.AIR))
                 .thenWaitUntil(() -> loaded(h, s, mid, false))

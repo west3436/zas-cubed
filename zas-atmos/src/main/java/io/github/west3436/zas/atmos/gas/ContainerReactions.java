@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.gas;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.reaction.Reactions;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.TreeMap;
 import net.minecraft.resources.ResourceLocation;
@@ -33,7 +33,7 @@ public final class ContainerReactions {
             return false;
         }
         GasMixture before = gas.mixture();
-        GasMixture after = Reactions.applyStandalone(before, AtmosTicks.SECONDS, false);
+        GasMixture after = Reactions.applyStandalone(before, DeviceTicks.SECONDS, false);
         if (after == before) {
             return false;
         }

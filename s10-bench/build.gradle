@@ -69,6 +69,9 @@ dependencies {
     compileOnly project(':zas')
     compileOnly project(':engine')
     compileOnly project(':zas-atmos')
+    // SS13 Framework, which zas_atmos's devices and windows are built on, for the compiler only:
+    // zas_atmos brings it to the runs.
+    compileOnly "io.github.west3436:ss13-framework:${framework_version}"
     runtimeOnly project(':zas')
     runtimeOnly project(':zas-atmos')
 

@@ -1,15 +1,15 @@
 package io.github.west3436.zas.atmos.tool;
 
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.device.DeviceData;
 import io.github.west3436.zas.atmos.airlock.AirSensorBlockEntity;
 import io.github.west3436.zas.atmos.airlock.AirlockBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
-import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.turbine.TurbineControllerBlockEntity;

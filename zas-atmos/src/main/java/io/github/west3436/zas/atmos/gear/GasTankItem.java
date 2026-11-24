@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.gear;
 
+import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.failure.TankFailure;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
@@ -304,7 +304,7 @@ public class GasTankItem extends Item {
      * pressure says so (CONT-038), at the middle of its holder's body, and a breath that took it to
      * its last minute is heard (CONT-127). The reaction goes first, so that the check sees the
      * pressure it raised in the same tick. Whatever carries a tank calls
-     * this once per atmos tick ({@link AtmosTicks#due}): the tank itself while it is in a player's
+     * this once per atmos tick ({@link DeviceTicks#due}): the tank itself while it is in a player's
      * inventory or dropped, and a suit for the tank inside it. A tank transfer valve makes the same
      * two calls itself, as how a tank fails decides what becomes of it. A tank anywhere else, such
      * as a chest, waits until it is carried again (architecture §11.9).
@@ -335,7 +335,7 @@ public class GasTankItem extends Item {
 
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
-        if (level instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+        if (level instanceof ServerLevel server && DeviceTicks.due(server, entity)) {
             atmosTick(stack, server, entity);
         }
     }
@@ -343,7 +343,7 @@ public class GasTankItem extends Item {
     /** A tank that is destroyed on the ground takes its item entity with it. */
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-        if (entity.level() instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+        if (entity.level() instanceof ServerLevel server && DeviceTicks.due(server, entity)) {
             atmosTick(stack, server, entity);
             if (stack.isEmpty()) {
                 entity.discard();

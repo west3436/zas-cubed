@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.gauge;
 
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerTarget;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import net.minecraft.core.BlockPos;

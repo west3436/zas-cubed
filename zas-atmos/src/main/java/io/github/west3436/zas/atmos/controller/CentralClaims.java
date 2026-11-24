@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.controller;
 
-import io.github.west3436.zas.atmos.device.DeviceData;
-import io.github.west3436.zas.atmos.label.Labels;
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.device.DeviceData;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;

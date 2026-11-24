@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.client.tgui.Readout;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Gas;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;

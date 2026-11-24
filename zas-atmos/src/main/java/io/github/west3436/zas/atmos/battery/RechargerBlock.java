@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.battery;
 
 import com.mojang.serialization.MapCodec;
-import io.github.west3436.zas.atmos.device.BlockTurns;
+import io.github.west3436.ss13.device.BlockTurns;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;

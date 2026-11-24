@@ -1,10 +1,10 @@
 package io.github.west3436.zas.atmos.heater;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.mutation.HeatMutations;
 import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -56,7 +56,7 @@ public final class ThermoCoil {
      * @param source who moves it, in the conservation ledger
      * @param maxWatts the most it moves, W
      * @param fullDraw what it draws at full power, FE/t
-     * @param clock the current game tick, as {@link AtmosTicks#now}
+     * @param clock the current game tick, as {@link DeviceTicks#now}
      */
     public ThermoCoil(Kind kind, SourceId source, DoubleSupplier maxWatts, IntSupplier fullDraw, LongSupplier clock) {
         this.kind = Objects.requireNonNull(kind, "kind");
@@ -93,7 +93,7 @@ public final class ThermoCoil {
 
     /** The most heat it moves in one atmos tick, J. */
     public double mostPerStep() {
-        return Math.max(0, maxWatts.getAsDouble()) * AtmosTicks.SECONDS;
+        return Math.max(0, maxWatts.getAsDouble()) * DeviceTicks.SECONDS;
     }
 
     /**
@@ -114,8 +114,8 @@ public final class ThermoCoil {
     /** What the order costs, FE/t: the standalone machine's cost of that heat, spread over the atmos tick. */
     public int draw() {
         int fe = HeaterMath.energy(
-                ordered(), AtmosTicks.SECONDS, maxWatts.getAsDouble(), fullDraw.getAsInt(), AtmosTicks.PERIOD);
-        return (fe + AtmosTicks.PERIOD - 1) / AtmosTicks.PERIOD;
+                ordered(), DeviceTicks.SECONDS, maxWatts.getAsDouble(), fullDraw.getAsInt(), DeviceTicks.PERIOD);
+        return (fe + DeviceTicks.PERIOD - 1) / DeviceTicks.PERIOD;
     }
 
     /**
@@ -130,7 +130,7 @@ public final class ThermoCoil {
         if (full <= 0) {
             return mostPerStep(); // free heat at a draw of 0, as the heater's
         }
-        long perTick = Math.max(0, fe) / AtmosTicks.PERIOD;
+        long perTick = Math.max(0, fe) / DeviceTicks.PERIOD;
         if (perTick >= full) {
             return mostPerStep();
         }
@@ -167,7 +167,7 @@ public final class ThermoCoil {
                     ? HeatMutations.add(level, point, joules, source)
                     : HeatMutations.remove(level, point, joules, source);
             sent = joules;
-            watts = joules / AtmosTicks.SECONDS;
+            watts = joules / DeviceTicks.SECONDS;
         }
         return watts;
     }

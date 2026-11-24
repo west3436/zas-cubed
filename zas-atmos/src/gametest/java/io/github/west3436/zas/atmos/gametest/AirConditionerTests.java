@@ -1,11 +1,11 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
 import io.github.west3436.zas.atmos.heater.AirConditionerMath;
@@ -59,11 +59,11 @@ public final class AirConditionerTests {
     /** The FE a step of cooling at this power costs the battery (CONT-087). */
     private static int cost(double watts) {
         return HeaterMath.energy(
-                watts * AtmosTicks.SECONDS,
-                AtmosTicks.SECONDS,
+                watts * DeviceTicks.SECONDS,
+                DeviceTicks.SECONDS,
                 AtmosServerConfig.get(AtmosServerConfig.AIR_CONDITIONER_WATTS),
                 AtmosServerConfig.get(AtmosServerConfig.AIR_CONDITIONER_DRAW),
-                AtmosTicks.PERIOD);
+                DeviceTicks.PERIOD);
     }
 
     /**
@@ -91,7 +91,7 @@ public final class AirConditionerTests {
             h.assertValueEqual(
                     AtmosServerConfig.get(AtmosServerConfig.AIR_CONDITIONER_DRAW), 60, "the configured draw");
             h.assertValueEqual(
-                    cost(AirConditionerMath.DEFAULT_MAX_WATTS), 60 * AtmosTicks.PERIOD, "a step at full power");
+                    cost(AirConditionerMath.DEFAULT_MAX_WATTS), 60 * DeviceTicks.PERIOD, "a step at full power");
             h.assertTrue(
                     Atmospheres.at(s.level, ac.point())
                             .zone()
@@ -125,11 +125,11 @@ public final class AirConditionerTests {
             s.cycle(ac);
             h.assertValueEqual(ac.status(), ThermoStatus.COOLING, "the cooling air conditioner's status");
             s.close(ac.watts(), AirConditionerMath.DEFAULT_MAX_WATTS, 1e-9, "the air conditioner's power");
-            h.assertValueEqual(ac.energy(), 100_000 - 60 * AtmosTicks.PERIOD, "the battery after a step");
+            h.assertValueEqual(ac.energy(), 100_000 - 60 * DeviceTicks.PERIOD, "the battery after a step");
             h.assertTrue(lit(s, ac), "not lit while cooling");
             s.close(
                     before - temperature(s, 2, 2, 2),
-                    AirConditionerMath.DEFAULT_MAX_WATTS * AtmosTicks.SECONDS / c,
+                    AirConditionerMath.DEFAULT_MAX_WATTS * DeviceTicks.SECONDS / c,
                     0.02,
                     "the room's fall over a step of 5 kJ");
             h.assertValueEqual(menu.energy(), ac.energy(), "the GUI's charge");
@@ -168,7 +168,7 @@ public final class AirConditionerTests {
             h.assertValueEqual(ac.status(), ThermoStatus.COOLING, "the air conditioner on its last 300 FE");
             s.close(
                     ac.watts(),
-                    AirConditionerMath.DEFAULT_MAX_WATTS * 300 / (60.0 * AtmosTicks.PERIOD),
+                    AirConditionerMath.DEFAULT_MAX_WATTS * 300 / (60.0 * DeviceTicks.PERIOD),
                     1e-6,
                     "the power 300 FE pays for");
             h.assertValueEqual(ac.energy(), 0, "the battery after its last step");
@@ -302,7 +302,7 @@ public final class AirConditionerTests {
             ac.setOn(true);
             Object part = ac;
             h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "it is a part");
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             for (int i = 0; i < 4 && ac.status() != ThermoStatus.COOLING; i++) {
                 s.cycle(c, ac);
             }
@@ -311,7 +311,7 @@ public final class AirConditionerTests {
             int before = ac.energy();
             s.cycle(c, ac);
             h.assertTrue(c.powered(), "the controller is unpowered");
-            h.assertValueEqual(ac.energy(), before - 60 * AtmosTicks.PERIOD, "the battery after a step");
+            h.assertValueEqual(ac.energy(), before - 60 * DeviceTicks.PERIOD, "the battery after a step");
             h.assertValueEqual(c.buffer().getEnergyStored(), 10_000 - own, "the buffer paid for the air conditioner");
             h.assertTrue(
                     c.parts().stream().noneMatch(p -> p.pos().equals(ac.getBlockPos())),

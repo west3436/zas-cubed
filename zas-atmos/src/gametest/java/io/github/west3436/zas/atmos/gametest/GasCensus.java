@@ -2,7 +2,6 @@ package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
@@ -83,7 +82,7 @@ final class GasCensus {
     private static double inDevices(Area a, ResourceLocation gas, Set<Long> named) {
         Set<Object> counted = Collections.newSetFromMap(new IdentityHashMap<>());
         double total = 0;
-        for (AtmosDevice device : DeviceTicker.loaded(a.level)) {
+        for (AtmosDevice device : AtmosDevice.loaded(a.level)) {
             BlockPos pos = device.getBlockPos();
             if (!named.contains(SectionKeys.chunk(pos.getX() >> 4, pos.getZ() >> 4))) {
                 continue;

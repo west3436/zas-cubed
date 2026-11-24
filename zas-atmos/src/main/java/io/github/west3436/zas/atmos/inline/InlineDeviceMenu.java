@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.inline;
 
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.LabelledMenu;
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.LabelledMenu;
+import io.github.west3436.ss13.device.RedstoneControl;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;

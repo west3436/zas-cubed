@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.client;
 
-import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
+import io.github.west3436.ss13.client.tgui.TguiScreen;
+import io.github.west3436.ss13.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Ui.Tone;
 import io.github.west3436.zas.atmos.ttv.RemoteSignalerMenu;
 import io.github.west3436.zas.atmos.ttv.Signal;
 import net.minecraft.network.chat.Component;

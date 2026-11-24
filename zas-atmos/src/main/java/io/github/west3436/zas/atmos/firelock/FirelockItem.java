@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.firelock;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.Labels;
 import io.github.west3436.zas.atmos.airlock.AirlockBlock;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.Labels;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;

@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.particle;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.ss13.device.DeviceTicks;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,7 +40,7 @@ public final class GasJets {
 
     private static final Vec3 UP = new Vec3(0, 1, 0);
 
-    private static final SendLimiter FLOWING = new SendLimiter(FLOWING_PER_SECOND, AtmosTicks.PERIOD);
+    private static final SendLimiter FLOWING = new SendLimiter(FLOWING_PER_SECOND, DeviceTicks.PERIOD);
 
     /** For GameTests: sees every jet the server sends, whoever is near; null sees none. */
     private static volatile Consumer<GasJet> hook;

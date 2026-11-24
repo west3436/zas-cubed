@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.controller;
 
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.LabelledMenu;
-import io.github.west3436.zas.atmos.label.Labels;
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.LabelledMenu;
+import io.github.west3436.ss13.api.label.Labels;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import java.util.ArrayList;

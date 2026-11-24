@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.inline;
 
-import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
@@ -78,7 +78,7 @@ public abstract class SidePortEntity extends InlineDeviceEntity {
 
     /** Whether an input holds too little for even a step's rate to reach the least flow, which counts as none. */
     protected static boolean runsDry(GasStore in) {
-        return PumpFlow.molesInVolume(PumpFlow.MAX_RATE * AtmosTicks.SECONDS, PumpFlow.Side.of(in))
+        return PumpFlow.molesInVolume(PumpFlow.MAX_RATE * DeviceTicks.SECONDS, PumpFlow.Side.of(in))
                 < PipeBlockEntity.MIN_FLOW;
     }
 

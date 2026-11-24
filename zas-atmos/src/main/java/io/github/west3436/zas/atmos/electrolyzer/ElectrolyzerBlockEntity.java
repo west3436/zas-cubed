@@ -1,10 +1,10 @@
 package io.github.west3436.zas.atmos.electrolyzer;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
@@ -70,7 +70,7 @@ public class ElectrolyzerBlockEntity extends InlineDeviceEntity {
 
     @Override
     protected InlineStatus work(ServerLevel level) {
-        double share = ElectrolyzerMath.fraction(tank.water(), AtmosTicks.SECONDS);
+        double share = ElectrolyzerMath.fraction(tank.water(), DeviceTicks.SECONDS);
         if (share <= 0) {
             return InlineStatus.NO_WATER;
         }
@@ -80,7 +80,7 @@ public class ElectrolyzerBlockEntity extends InlineDeviceEntity {
                 || h2.gas().pressure() >= ElectrolyzerMath.MAX_OUTPUT_KPA) {
             return InlineStatus.OUTPUT_FULL;
         }
-        double seconds = AtmosTicks.SECONDS * share;
+        double seconds = DeviceTicks.SECONDS * share;
         double oxygen = ElectrolyzerMath.O2_PER_SECOND * seconds;
         double hydrogen = ElectrolyzerMath.H2_PER_SECOND * seconds;
         o2.gas().add(new GasParcel(Map.of(StandardAir.OXYGEN, oxygen), StandardAir.TEMPERATURE));

@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.airlock;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.ss13.device.WallPanelBlock;
 import io.github.west3436.zas.atmos.gauge.GaugeReading;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Optional;

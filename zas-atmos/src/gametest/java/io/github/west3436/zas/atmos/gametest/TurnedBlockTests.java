@@ -1,5 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.relocation.Destination;
 import io.github.west3436.zas.api.relocation.RelocationOutcome;
@@ -8,14 +10,12 @@ import io.github.west3436.zas.api.relocation.RelocationTicket;
 import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.PortedBlock;
 import io.github.west3436.zas.atmos.inline.SidePortBlock;
 import io.github.west3436.zas.atmos.inline.SidePortEntity;
-import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;

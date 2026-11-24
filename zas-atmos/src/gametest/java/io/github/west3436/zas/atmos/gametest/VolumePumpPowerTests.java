@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
@@ -133,7 +133,7 @@ public final class VolumePumpPowerTests {
             s.close(pump.setting(), PumpFlow.MAX_RATE, 1e-9, "a new pump's rate");
             h.assertValueEqual(pump.power().draw(), 20, "the draw of a pump that's on");
             h.assertValueEqual(
-                    pump.power().drawPerAtmosTick(), 20L * AtmosTicks.PERIOD, "the bill of a pump that's on");
+                    pump.power().drawPerAtmosTick(), 20L * DeviceTicks.PERIOD, "the bill of a pump that's on");
 
             // No controller: no power, on and beside a burning generator.
             s.cycles(3, pump);
@@ -154,7 +154,7 @@ public final class VolumePumpPowerTests {
             h.assertTrue(pump.power().isPowered(), "the controller didn't power its pump");
             h.assertTrue(pump.power().source() == c, "the pump's power isn't the controller's");
             int left = g.energy().getEnergyStored() + c.buffer().getEnergyStored();
-            h.assertValueEqual(fe - left, 25 * AtmosTicks.PERIOD, "the FE for the controller and the pump");
+            h.assertValueEqual(fe - left, 25 * DeviceTicks.PERIOD, "the FE for the controller and the pump");
 
             // It pumps.
             h.assertTrue(pump.running(), "the powered pump isn't running");
@@ -175,7 +175,7 @@ public final class VolumePumpPowerTests {
         }
         VolumePumpBlockEntity p = pump;
         AreaAirControllerBlockEntity controller = c;
-        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * AtmosTicks.PERIOD, () -> {
+        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * DeviceTicks.PERIOD, () -> {
             try {
                 h.assertFalse(controller.powered(), "the controller has power with no generator");
                 h.assertFalse(p.power().isPowered(), "the pump's lease outlived its controller's power");

@@ -1,13 +1,14 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.client.tgui.TguiScreen;
+import io.github.west3436.ss13.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Ui.Face;
+import io.github.west3436.ss13.client.tgui.WalkingInput;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerMenu;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
-import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.pipe.PipeBurst;
 import java.util.List;
 import net.minecraft.client.Minecraft;

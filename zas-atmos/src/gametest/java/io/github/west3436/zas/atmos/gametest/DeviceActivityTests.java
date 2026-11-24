@@ -4,16 +4,16 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivityPayload;
+import io.github.west3436.ss13.device.DeviceActivityPayload.Change;
+import io.github.west3436.ss13.device.DeviceActivitySync;
+import io.github.west3436.ss13.device.DeviceTicker;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
-import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
-import io.github.west3436.zas.atmos.device.DeviceActivityPayload.Change;
-import io.github.west3436.zas.atmos.device.DeviceActivitySync;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.particle.JetPlan;
@@ -103,7 +103,7 @@ public final class DeviceActivityTests {
         Area a = new Area(h, 760);
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, player(a, 8, 0), t), one(d, DeviceActivity.HARD), "8 blocks away");
         h.assertValueEqual(told(h, player(a, 32, 0), t), one(d, DeviceActivity.HARD), "32 blocks away");
         h.assertValueEqual(told(h, player(a, 33, 0), t), List.of(), "33 blocks away");
@@ -119,7 +119,7 @@ public final class DeviceActivityTests {
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
         FakePlayer p = player(a, 4, 0);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, p, t), one(d, DeviceActivity.HARD), "the first");
         d.moves = 1.5;
         step(a);
@@ -137,12 +137,12 @@ public final class DeviceActivityTests {
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
         FakePlayer p = player(a, 4, 0);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, p, t), one(d, DeviceActivity.HARD), "the first");
         for (int k = 1; k <= 3; k++) {
             d.moves = 3 + k; // moving, but within the level
             step(a);
-            h.assertValueEqual(told(h, p, t + k * AtmosTicks.PERIOD), List.of(), "unchanged, " + k);
+            h.assertValueEqual(told(h, p, t + k * DeviceTicks.PERIOD), List.of(), "unchanged, " + k);
         }
         h.succeed();
     }
@@ -156,7 +156,7 @@ public final class DeviceActivityTests {
         TestDevice.Entity d = device(a, 4, 0, 0.06);
         step(a);
         h.assertValueEqual(
-                told(h, player(a, 2, 2), AtmosTicks.now(a.level)),
+                told(h, player(a, 2, 2), DeviceTicks.now(a.level)),
                 one(d, DeviceActivity.TRICKLE),
                 "only the one that moved 0.06 mol");
         h.succeed();
@@ -169,14 +169,14 @@ public final class DeviceActivityTests {
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
         FakePlayer p = player(a, 4, 0);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         told(h, p, t);
         d.moves = 0;
         step(a);
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD), List.of(), "after one step with nothing");
+        h.assertValueEqual(told(h, p, t + DeviceTicks.PERIOD), List.of(), "after one step with nothing");
         step(a);
-        h.assertValueEqual(told(h, p, t + 2 * AtmosTicks.PERIOD), one(d, DeviceActivity.IDLE), "after two");
-        h.assertValueEqual(told(h, p, t + 3 * AtmosTicks.PERIOD), List.of(), "told once");
+        h.assertValueEqual(told(h, p, t + 2 * DeviceTicks.PERIOD), one(d, DeviceActivity.IDLE), "after two");
+        h.assertValueEqual(told(h, p, t + 3 * DeviceTicks.PERIOD), List.of(), "told once");
         h.succeed();
     }
 
@@ -187,7 +187,7 @@ public final class DeviceActivityTests {
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
         FakePlayer p = player(a, 4, 0);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         told(h, p, t);
         d.moves = 0;
         d.stopping = true;
@@ -204,11 +204,11 @@ public final class DeviceActivityTests {
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
         FakePlayer p = player(a, 4, 0);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         told(h, p, t);
         BlockPos pos = d.getBlockPos();
         a.set(0, 1, 0, Area.AIR);
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD), one(pos, DeviceActivity.IDLE), "after removal");
+        h.assertValueEqual(told(h, p, t + DeviceTicks.PERIOD), one(pos, DeviceActivity.IDLE), "after removal");
         h.succeed();
     }
 
@@ -224,7 +224,7 @@ public final class DeviceActivityTests {
         step(a);
         d.ready = false;
         FakePlayer p = player(a, 4, 0);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         told(h, p, t);
         h.assertValueEqual(told(h, p, t + DeviceActivitySync.STALE_TICKS), List.of(), "on the lease's last tick");
         h.assertValueEqual(
@@ -249,14 +249,14 @@ public final class DeviceActivityTests {
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
         FakePlayer p = player(a, 30, 0);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, p, t), one(d, DeviceActivity.HARD), "at 30 blocks");
         p.moveTo(a.point(38, 1, 0));
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD), List.of(), "at 38 blocks");
+        h.assertValueEqual(told(h, p, t + DeviceTicks.PERIOD), List.of(), "at 38 blocks");
         p.moveTo(a.point(41, 1, 0));
-        h.assertValueEqual(told(h, p, t + 2 * AtmosTicks.PERIOD), one(d, DeviceActivity.IDLE), "at 41 blocks");
+        h.assertValueEqual(told(h, p, t + 2 * DeviceTicks.PERIOD), one(d, DeviceActivity.IDLE), "at 41 blocks");
         p.moveTo(a.point(31, 1, 0));
-        h.assertValueEqual(told(h, p, t + 3 * AtmosTicks.PERIOD), one(d, DeviceActivity.HARD), "back at 31 blocks");
+        h.assertValueEqual(told(h, p, t + 3 * DeviceTicks.PERIOD), one(d, DeviceActivity.HARD), "back at 31 blocks");
         h.succeed();
     }
 
@@ -276,10 +276,10 @@ public final class DeviceActivityTests {
         FakePlayer there = new FakePlayer(nether, new GameProfile(id, "zas_activity"));
         here.moveTo(a.point(4, 1, 0));
         there.moveTo(a.point(4, 1, 0));
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, here, t), one(d, DeviceActivity.HARD), "at home");
-        h.assertValueEqual(told(h, there, t + AtmosTicks.PERIOD), List.of(), "in the Nether");
-        h.assertValueEqual(told(h, here, t + 2 * AtmosTicks.PERIOD), one(d, DeviceActivity.HARD), "back again");
+        h.assertValueEqual(told(h, there, t + DeviceTicks.PERIOD), List.of(), "in the Nether");
+        h.assertValueEqual(told(h, here, t + 2 * DeviceTicks.PERIOD), one(d, DeviceActivity.HARD), "back again");
         h.succeed();
     }
 
@@ -293,7 +293,7 @@ public final class DeviceActivityTests {
         }
         step(a);
         FakePlayer p = player(a, 6, 6);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, p, t).size(), DeviceActivityPayload.MAX_CHANGES, "the first message");
         h.assertValueEqual(told(h, p, t + DeviceActivitySync.SEND_TICKS).size(), 17, "the second message");
         h.assertValueEqual(told(h, p, t + 2 * DeviceActivitySync.SEND_TICKS), List.of(), "then nothing");
@@ -350,13 +350,13 @@ public final class DeviceActivityTests {
         settle(a, vent);
         h.assertTrue(vent.status() == VentStatus.MOVING, "the vent isn't moving gas: " + vent.status());
         FakePlayer p = player(a, 2, 2);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, p, t), one(vent.getBlockPos(), DeviceActivity.HARD), "filling");
         for (int i = 0; i < 60; i++) {
             a.step();
         }
         h.assertValueEqual(
-                told(h, p, t + AtmosTicks.PERIOD), one(vent.getBlockPos(), DeviceActivity.IDLE), "the room is full");
+                told(h, p, t + DeviceTicks.PERIOD), one(vent.getBlockPos(), DeviceActivity.IDLE), "the room is full");
         h.succeed();
     }
 
@@ -371,13 +371,13 @@ public final class DeviceActivityTests {
         settle(a, vent);
         h.assertTrue(vent.status() == VentStatus.MOVING, "the vent isn't moving gas");
         FakePlayer p = player(a, 2, 2);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, p, t), one(vent.getBlockPos(), DeviceActivity.HARD), "siphoning");
         vent.power().setTestPowered(false);
         a.step();
         h.assertTrue(vent.status() == VentStatus.OFF, "the vent still runs: " + vent.status());
         h.assertValueEqual(
-                told(h, p, t + AtmosTicks.PERIOD), one(vent.getBlockPos(), DeviceActivity.IDLE), "without power");
+                told(h, p, t + DeviceTicks.PERIOD), one(vent.getBlockPos(), DeviceActivity.IDLE), "without power");
         h.succeed();
     }
 
@@ -406,11 +406,11 @@ public final class DeviceActivityTests {
         settle(a, s);
         h.assertTrue(s.status() == ScrubberStatus.MOVING, "the scrubber isn't moving gas");
         FakePlayer p = player(a, 2, 2);
-        long t = AtmosTicks.now(a.level);
+        long t = DeviceTicks.now(a.level);
         h.assertValueEqual(told(h, p, t), one(s.getBlockPos(), DeviceActivity.HARD), "siphoning");
         s.command(ScrubberMode.OFF, GasSelection.DEFAULT);
         a.step();
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD), one(s.getBlockPos(), DeviceActivity.IDLE), "off");
+        h.assertValueEqual(told(h, p, t + DeviceTicks.PERIOD), one(s.getBlockPos(), DeviceActivity.IDLE), "off");
         h.succeed();
     }
 
@@ -424,7 +424,7 @@ public final class DeviceActivityTests {
             a.step();
         }
         h.assertTrue(s.status() == ScrubberStatus.NOTHING, "its status: " + s.status());
-        h.assertValueEqual(told(h, player(a, 2, 2), AtmosTicks.now(a.level)), List.of(), "nothing to take");
+        h.assertValueEqual(told(h, player(a, 2, 2), DeviceTicks.now(a.level)), List.of(), "nothing to take");
         h.succeed();
     }
 
@@ -432,7 +432,7 @@ public final class DeviceActivityTests {
 
     /** The level a player is told of the one device working near it, or idle if it is told of none. */
     private static int toldLevel(Area a) {
-        List<Change> changes = told(a.h, player(a, 2, 2), AtmosTicks.now(a.level));
+        List<Change> changes = told(a.h, player(a, 2, 2), DeviceTicks.now(a.level));
         a.h.assertTrue(changes.size() <= 1, "told of more than one device: " + changes);
         return changes.isEmpty() ? DeviceActivity.IDLE : changes.get(0).level();
     }

@@ -5,7 +5,6 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -109,7 +108,7 @@ public final class FirelockLogic {
 
     /** Whether any loaded controller at danger 2 covers the firelock linked at {@code at}. */
     private static boolean alarmed(ServerLevel level, BlockPos at, AtmosphereSample front, AtmosphereSample back) {
-        for (AtmosDevice d : DeviceTicker.loaded(level)) {
+        for (AtmosDevice d : AtmosDevice.loaded(level)) {
             if (d instanceof AreaAirControllerBlockEntity c && c.alarming() && c.covers(at, front, back)) {
                 return true;
             }
@@ -126,7 +125,7 @@ public final class FirelockLogic {
      * @param controller the controller now at danger 2
      */
     public static void alarmRaised(ServerLevel level, AreaAirControllerBlockEntity controller) {
-        for (AtmosDevice d : DeviceTicker.loaded(level)) {
+        for (AtmosDevice d : AtmosDevice.loaded(level)) {
             if (d instanceof Holder h
                     && h.hasFirelock()
                     && !h.firelock().alarm

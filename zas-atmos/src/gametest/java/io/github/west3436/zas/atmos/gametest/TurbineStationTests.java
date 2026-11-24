@@ -3,12 +3,12 @@ package io.github.west3436.zas.atmos.gametest;
 import static io.github.west3436.zas.atmos.gametest.TurbineRig.H2;
 import static io.github.west3436.zas.atmos.gametest.TurbineRig.O2;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
@@ -298,7 +298,7 @@ public final class TurbineStationTests {
 
         /** What the generator makes in a round at its top output, FE. */
         double topFePerRound() {
-            return AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_OUTPUT) * AtmosTicks.PERIOD;
+            return AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_OUTPUT) * DeviceTicks.PERIOD;
         }
 
         boolean burning() {

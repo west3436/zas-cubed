@@ -100,6 +100,8 @@ dependencies {
     gametestCompileOnly project(':engine')
     // The content's device table, for the device sounds on board. The adapter itself never names it.
     gametestCompileOnly project(':zas-atmos')
+    // SS13 Framework, which the device table and its sounds are part of.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
 
     releaseJar project(':dist')
 

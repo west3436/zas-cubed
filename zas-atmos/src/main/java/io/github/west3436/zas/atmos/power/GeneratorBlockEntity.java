@@ -1,13 +1,13 @@
 package io.github.west3436.zas.atmos.power;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceData;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.api.client.LoopRequest;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.Comparators;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
-import io.github.west3436.zas.atmos.device.DeviceData;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;

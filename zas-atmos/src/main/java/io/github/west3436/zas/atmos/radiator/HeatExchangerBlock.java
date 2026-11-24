@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.radiator;
 
 import com.mojang.serialization.MapCodec;
-import io.github.west3436.zas.atmos.device.BlockTurns;
+import io.github.west3436.ss13.device.BlockTurns;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import java.util.EnumMap;
 import java.util.Map;

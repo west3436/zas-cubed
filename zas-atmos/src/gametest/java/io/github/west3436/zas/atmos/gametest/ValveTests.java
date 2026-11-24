@@ -5,12 +5,11 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
@@ -536,7 +535,7 @@ public final class ValveTests {
 
         /** Steps the devices in chunk A once, the valve among them. */
         void stepA() {
-            for (AtmosDevice d : DeviceTicker.loaded(a.level)) {
+            for (AtmosDevice d : AtmosDevice.loaded(a.level)) {
                 if (new ChunkPos(d.getBlockPos()).equals(chunkA)) {
                     d.step();
                 }

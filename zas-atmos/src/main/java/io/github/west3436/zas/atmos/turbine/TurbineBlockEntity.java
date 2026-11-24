@@ -1,5 +1,8 @@
 package io.github.west3436.zas.atmos.turbine;
 
+import io.github.west3436.ss13.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -16,10 +19,7 @@ import io.github.west3436.zas.api.relocation.Relocations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
@@ -230,21 +230,21 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
         double jpf = AtmosServerConfig.get(AtmosServerConfig.JOULES_PER_FE);
         double speed = speed();
         double topJoules =
-                AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_OUTPUT) * 20.0 * AtmosTicks.SECONDS * jpf;
+                AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_OUTPUT) * 20.0 * DeviceTicks.SECONDS * jpf;
         double generated = 0;
         if (c != null) {
             generated = TurbineMath.generatorJoules(shaft, speed, topJoules, work.room(c.energy(), jpf));
             shaft -= generated;
             work.add(generated, c.energy(), jpf);
         }
-        powerPerTick = generated / jpf / (20.0 * AtmosTicks.SECONDS);
+        powerPerTick = generated / jpf / (20.0 * DeviceTicks.SECONDS);
 
         double share = AtmosServerConfig.get(AtmosServerConfig.TURBINE_FRICTION);
         boolean braking = c == null || !c.runs();
         if (braking) {
             share = Math.max(share, AtmosServerConfig.get(AtmosServerConfig.TURBINE_BRAKE));
         }
-        double friction = shaft * Math.min(1, share * AtmosTicks.SECONDS);
+        double friction = shaft * Math.min(1, share * DeviceTicks.SECONDS);
         if (braking) {
             friction = TurbineMath.braked(shaft, friction, topEnergy());
         }
@@ -310,13 +310,13 @@ public class TurbineBlockEntity extends AtmosDevice implements MenuProvider {
                 chamber.pressure(),
                 exhaustV,
                 exhaustP,
-                AtmosServerConfig.get(AtmosServerConfig.TURBINE_NOZZLE) * AtmosTicks.SECONDS,
-                AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_FLOW) * AtmosTicks.SECONDS);
+                AtmosServerConfig.get(AtmosServerConfig.TURBINE_NOZZLE) * DeviceTicks.SECONDS,
+                AtmosServerConfig.get(AtmosServerConfig.TURBINE_MAX_FLOW) * DeviceTicks.SECONDS);
         if (n < PipeBlockEntity.MIN_FLOW) {
             return;
         }
         double from = chamber.pressure();
-        lastFlow = n / AtmosTicks.SECONDS;
+        lastFlow = n / DeviceTicks.SECONDS;
         chamberTakePort.remove(
                 level, chamberPoint(), share(chamber, n), r -> expanded(level, r.moved(), from, exhaustP));
         reportMoved(n);

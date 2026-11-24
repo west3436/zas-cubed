@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.turbine;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -8,7 +9,6 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
@@ -181,7 +181,7 @@ public class CompressorBlockEntity extends PipeNodeEntity implements MenuProvide
         boolean burning = Fires.isBurning(level, chamber.zone().get());
         boolean primed = !burning && TurbineFuels.wouldIgnite(room, fuel);
         double[] want = TurbineMath.release(
-                c.burnRate() * AtmosTicks.SECONDS,
+                c.burnRate() * DeviceTicks.SECONDS,
                 ratio,
                 room.moles(fuel),
                 room.moles(oxidizer),
@@ -279,9 +279,9 @@ public class CompressorBlockEntity extends PipeNodeEntity implements MenuProvide
                 fuel == null ? 0 : TurbineMenu.shortOf(Math.round(buffer().partialPressure(fuel)));
             case CompressorMenu.DATA_BUFFER_OXIDIZER ->
                 oxidizer == null ? 0 : TurbineMenu.shortOf(Math.round(buffer().partialPressure(oxidizer)));
-            case CompressorMenu.DATA_FUEL_RATE -> TurbineMenu.shortOf(Math.round(lastFuel / AtmosTicks.SECONDS * 100));
+            case CompressorMenu.DATA_FUEL_RATE -> TurbineMenu.shortOf(Math.round(lastFuel / DeviceTicks.SECONDS * 100));
             case CompressorMenu.DATA_OXIDIZER_RATE ->
-                TurbineMenu.shortOf(Math.round(lastOxidizer / AtmosTicks.SECONDS * 100));
+                TurbineMenu.shortOf(Math.round(lastOxidizer / DeviceTicks.SECONDS * 100));
             default -> 0;
         };
     }

@@ -1,10 +1,10 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.client.tgui.TguiScreen;
+import io.github.west3436.ss13.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
-import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import java.util.List;
 import java.util.Locale;

@@ -1,7 +1,9 @@
 package io.github.west3436.zas.atmos.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import io.github.west3436.ss13.device.client.DeviceLoops;
 import io.github.west3436.zas.api.client.ClientSounds;
+import io.github.west3436.zas.api.client.LoopRequest;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
@@ -34,6 +36,7 @@ import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -97,7 +100,9 @@ public final class ZasAtmosClient {
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
-        DeviceLoops.register(NeoForge.EVENT_BUS);
+        // SS13 Framework's device loops play through ZAS³'s sound manager, so they fade in thin air.
+        DeviceLoops.playWith((source, sound, at, volume, range) -> ClientSounds.loop(
+                new LoopRequest(source, sound, SoundSource.BLOCKS, at.x, at.y, at.z, volume, 1f, range)));
         ClientSounds.fadeInThinAir(ZasAtmosMod.MOD_ID);
 
         // Pipe devices' running sounds (CONT-125).

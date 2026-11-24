@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.airlock;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.ss13.api.label.LabelledPart;
 import io.github.west3436.zas.atmos.controller.ConsoleSide;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
@@ -79,7 +80,7 @@ import org.jetbrains.annotations.Nullable;
  *       locked down; the crowbar forces it either way.
  * </ul>
  */
-public class AirlockBlock extends HorizontalDirectionalBlock implements EntityBlock {
+public class AirlockBlock extends HorizontalDirectionalBlock implements EntityBlock, LabelledPart {
     public static final MapCodec<AirlockBlock> CODEC = simpleCodec(AirlockBlock::new);
 
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
@@ -619,5 +620,11 @@ public class AirlockBlock extends HorizontalDirectionalBlock implements EntityBl
             return List.of();
         }
         return new ArrayList<>(airlock.parts(origin, state.getValue(FACING)));
+    }
+
+    /** An airlock's label is kept by its origin ({@link #origin}). */
+    @Override
+    public BlockPos labelledAt(BlockState state, BlockPos pos) {
+        return origin(state, pos);
     }
 }

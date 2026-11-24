@@ -79,6 +79,7 @@ dependencies {
     gametestCompileOnly project(':zas')
     gametestCompileOnly project(':engine')
     gametestCompileOnly project(':zas-atmos')
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
 
     releaseJar project(':dist')
 

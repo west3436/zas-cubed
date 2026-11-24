@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
@@ -30,7 +30,7 @@ public final class PowerChargeTests {
     private static final int TIMEOUT = 600;
 
     /** How long a test waits after its last driven step: see {@link ChargeLog}. */
-    private static final int SETTLE = 2 * AtmosTicks.PERIOD;
+    private static final int SETTLE = 2 * DeviceTicks.PERIOD;
 
     /** The atmos ticks most tests watch. */
     private static final int WATCH = 5;
@@ -41,11 +41,11 @@ public final class PowerChargeTests {
 
     /** The controller's own bill for one atmos tick. */
     private static int own() {
-        return AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+        return AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
     }
 
     private static int bill(TestParts.Kind kind) {
-        return kind.draw * AtmosTicks.PERIOD;
+        return kind.draw * DeviceTicks.PERIOD;
     }
 
     /** A test's site, its chunks force-loaded because it waits in real time, and cleared. */
@@ -223,7 +223,7 @@ public final class PowerChargeTests {
         ChargeLog.watch(
                 seq,
                 h,
-                4 + DevicePower.LEASE_TICKS / AtmosTicks.PERIOD,
+                4 + DevicePower.LEASE_TICKS / DeviceTicks.PERIOD,
                 () -> {
                     if (unpowered[0] < 0 && !vent.power().isPowered()) {
                         unpowered[0] = h.getLevel().getServer().getTickCount();

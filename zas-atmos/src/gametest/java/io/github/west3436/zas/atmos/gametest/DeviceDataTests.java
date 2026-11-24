@@ -1,11 +1,13 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceData;
+import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -20,6 +22,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -70,6 +73,29 @@ public final class DeviceDataTests {
                 h.assertTrue(seen.contains(type), "no block made " + id);
             }
         }
+        h.succeed();
+    }
+
+    /**
+     * A device saved by 1.2.0, before its base was SS13 Framework's, loads as it was and saves the
+     * same tag again (DATA-012): the base's own fields, its format version, its label and its
+     * redstone setting, kept the keys and values 1.2.0 wrote.
+     */
+    @GameTest(template = "empty")
+    public static void data_012_a_device_saved_by_1_2_0_loads_as_it_was(GameTestHelper h) {
+        HolderLookup.Provider registries = h.getLevel().registryAccess();
+        BlockState state = AtmosBlocks.VENT.get().defaultBlockState();
+        CompoundTag saved = new VentBlockEntity(BlockPos.ZERO, state).saveCustomOnly(registries);
+        // What 1.2.0's AtmosDevice and RedstoneControl wrote, spelled out rather than taken from the code.
+        saved.putInt("FormatVersion", 1);
+        saved.putString("Label", "Supply 1");
+        saved.putString("Redstone", "high");
+
+        VentBlockEntity vent = new VentBlockEntity(BlockPos.ZERO, state);
+        vent.loadCustomOnly(saved.copy(), registries);
+        h.assertValueEqual(vent.label(), "Supply 1", "its label");
+        h.assertValueEqual(vent.redstone().mode(), RedstoneControl.Mode.HIGH, "its redstone setting");
+        h.assertValueEqual(vent.saveCustomOnly(registries), saved, "what it saves again");
         h.succeed();
     }
 

@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.firelock;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.ss13.api.label.LabelledPart;
 import io.github.west3436.zas.atmos.airlock.AirlockFirelock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -56,7 +57,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>It isn't in {@code #minecraft:doors}, so villagers don't open it; it is in {@code
  * #zas:zone_boundary}.
  */
-public class FirelockDoorBlock extends DoorBlock implements EntityBlock {
+public class FirelockDoorBlock extends DoorBlock implements EntityBlock, LabelledPart {
     public static final MapCodec<FirelockDoorBlock> CODEC = simpleCodec(FirelockDoorBlock::new);
 
     /** The firelock over the door: open, closed or locked down. */
@@ -292,5 +293,11 @@ public class FirelockDoorBlock extends DoorBlock implements EntityBlock {
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
         return new ItemStack(door(level, pos));
+    }
+
+    /** A firelock door's label is kept by its lower half ({@link #lower}). */
+    @Override
+    public BlockPos labelledAt(BlockState state, BlockPos pos) {
+        return lower(state, pos);
     }
 }

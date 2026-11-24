@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.mutation.HeatMutations;
@@ -9,7 +10,6 @@ import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.controller.Thermostat;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
@@ -214,8 +214,8 @@ public final class ThermostatTests {
         bring(a, 250);
         controller.setTarget(TARGET);
 
-        long own = (long) AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
-        long heating = (long) AtmosServerConfig.get(AtmosServerConfig.HEATER_DRAW) * AtmosTicks.PERIOD;
+        long own = (long) AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
+        long heating = (long) AtmosServerConfig.get(AtmosServerConfig.HEATER_DRAW) * DeviceTicks.PERIOD;
         double watts = AtmosServerConfig.get(AtmosServerConfig.HEATER_WATTS);
         for (int i = 0; i < 3; i++) {
             controller.buffer().set(full);

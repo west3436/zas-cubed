@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.scrubber;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.LabelledMenu;
+import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.LabelledMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import java.util.List;

@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -7,7 +8,6 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterMenu;
 import io.github.west3436.zas.atmos.filter.FilterOption;
@@ -866,7 +866,7 @@ public final class FilterMixerTests {
             device.setOn(true);
             h.assertValueEqual(device.power().draw(), 20, "the draw of a device that's on");
             h.assertValueEqual(
-                    device.power().drawPerAtmosTick(), 20L * AtmosTicks.PERIOD, "the bill of a device that's on");
+                    device.power().drawPerAtmosTick(), 20L * DeviceTicks.PERIOD, "the bill of a device that's on");
 
             // No controller: no power.
             s.cycles(3, device);
@@ -887,7 +887,7 @@ public final class FilterMixerTests {
             h.assertTrue(device.power().isPowered(), "the controller didn't power its device");
             h.assertTrue(device.power().source() == c, "the device's power isn't the controller's");
             int left = g.energy().getEnergyStored() + c.buffer().getEnergyStored();
-            h.assertValueEqual(fe - left, 25 * AtmosTicks.PERIOD, "the FE for the controller and the device");
+            h.assertValueEqual(fe - left, 25 * DeviceTicks.PERIOD, "the FE for the controller and the device");
 
             // It runs.
             h.assertTrue(device.running(), "the powered device isn't running");
@@ -905,7 +905,7 @@ public final class FilterMixerTests {
         }
         T d = device;
         AreaAirControllerBlockEntity controller = c;
-        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * AtmosTicks.PERIOD, () -> {
+        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * DeviceTicks.PERIOD, () -> {
             try {
                 h.assertFalse(controller.powered(), "the controller has power with no generator");
                 h.assertFalse(d.power().isPowered(), "the device's lease outlived its controller's power");

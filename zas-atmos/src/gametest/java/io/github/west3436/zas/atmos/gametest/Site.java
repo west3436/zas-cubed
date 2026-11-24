@@ -128,7 +128,7 @@ final class Site {
      * its parts among the loaded devices. Loading twice is harmless.
      */
     static void loaded(Object be) {
-        if (be instanceof AtmosDevice d && !io.github.west3436.zas.atmos.device.DeviceTicker.isScheduled(d)) {
+        if (be instanceof AtmosDevice d && !io.github.west3436.ss13.device.DeviceTicker.isScheduled(d)) {
             d.onLoad();
         }
     }

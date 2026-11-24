@@ -1,16 +1,16 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivityPayload.Change;
+import io.github.west3436.ss13.device.DeviceActivitySync;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
-import io.github.west3436.zas.atmos.device.DeviceActivityPayload.Change;
-import io.github.west3436.zas.atmos.device.DeviceActivitySync;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
@@ -293,7 +293,7 @@ public final class DeviceSoundTests {
             BatteryTests.formZone(s, 2, 2, 2);
             BatteryTests.swap(heater.battery(), AtmosItems.BATTERY.get().full());
             FakePlayer p = player(s, "zas_heater_sounds");
-            long t = AtmosTicks.now(s.level);
+            long t = DeviceTicks.now(s.level);
 
             s.cycles(2, heater);
             h.assertValueEqual(heater.status(), ThermoStatus.OFF, "the new heater");
@@ -309,7 +309,7 @@ public final class DeviceSoundTests {
 
             heater.setOn(false);
             s.cycle(heater);
-            h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), one(heater, DeviceActivity.IDLE), "switched off");
+            h.assertValueEqual(told(p, t + DeviceTicks.PERIOD), one(heater, DeviceActivity.IDLE), "switched off");
             h.succeed();
         } finally {
             BatteryTests.clear(s);
@@ -331,7 +331,7 @@ public final class DeviceSoundTests {
             s.addKpa(2, 2, 2, CO2, 2);
             BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
             FakePlayer p = player(s, "zas_portable_sounds");
-            long t = AtmosTicks.now(s.level);
+            long t = DeviceTicks.now(s.level);
 
             s.cycles(2, scrubber);
             h.assertValueEqual(told(p, t), List.of(), "off, it reports nothing");
@@ -348,7 +348,7 @@ public final class DeviceSoundTests {
             scrubber.setOn(false);
             s.tick(); // the step's change finishes first
             s.cycle(scrubber);
-            h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), one(scrubber, DeviceActivity.IDLE), "switched off");
+            h.assertValueEqual(told(p, t + DeviceTicks.PERIOD), one(scrubber, DeviceActivity.IDLE), "switched off");
             h.succeed();
         } finally {
             BatteryTests.clear(s);
@@ -365,7 +365,7 @@ public final class DeviceSoundTests {
             RechargerBlockEntity r = recharger(s, 2, 1, 2);
             r.power().setTestPowered(true);
             FakePlayer p = player(s, "zas_recharger_sounds");
-            long t = AtmosTicks.now(s.level);
+            long t = DeviceTicks.now(s.level);
 
             s.cycle(r);
             h.assertValueEqual(told(p, t), List.of(), "with no battery");
@@ -377,7 +377,7 @@ public final class DeviceSoundTests {
 
             BatteryTests.swap(r.battery(), ItemStack.EMPTY);
             s.cycle(r);
-            h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), one(r, DeviceActivity.IDLE), "with no battery again");
+            h.assertValueEqual(told(p, t + DeviceTicks.PERIOD), one(r, DeviceActivity.IDLE), "with no battery again");
             h.succeed();
         } finally {
             BatteryTests.clear(s);
@@ -409,7 +409,7 @@ public final class DeviceSoundTests {
         GameTestHelper h = s.h;
         String name = device.getBlockState().getBlock().toString();
         FakePlayer p = player(s, "zas_switch");
-        long t = AtmosTicks.now(s.level);
+        long t = DeviceTicks.now(s.level);
         int charge = device.energy();
         GasMixture air = s.zone(x, 2, 2).mixture();
 
@@ -427,18 +427,18 @@ public final class DeviceSoundTests {
         s.cycle(device);
         h.assertTrue(lit(s, device), name + " went dark at its first step");
         h.assertTrue(device.energy() < charge, name + " paid nothing at its first step");
-        h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), List.of(), name + ": what its first step changed");
+        h.assertValueEqual(told(p, t + DeviceTicks.PERIOD), List.of(), name + ": what its first step changed");
 
         device.setOn(false);
         h.assertFalse(lit(s, device), name + " is still lit once switched off");
         h.assertValueEqual(
-                told(p, t + 2 * AtmosTicks.PERIOD), one(device, DeviceActivity.IDLE), name + " switched off");
+                told(p, t + 2 * DeviceTicks.PERIOD), one(device, DeviceActivity.IDLE), name + " switched off");
         s.tick(); // the first step's change finishes
         charge = device.energy();
         s.cycle(device);
         h.assertFalse(lit(s, device), name + " lit up at its step while off");
         h.assertValueEqual(device.energy(), charge, name + ": the charge at its step while off");
-        h.assertValueEqual(told(p, t + 3 * AtmosTicks.PERIOD), List.of(), name + ": what its step while off changed");
+        h.assertValueEqual(told(p, t + 3 * DeviceTicks.PERIOD), List.of(), name + ": what its step while off changed");
     }
 
     /**
@@ -499,13 +499,13 @@ public final class DeviceSoundTests {
     /** Switches on what has nothing to do: its block stays dark and it reads as idle, then and at its step. */
     private static void staysDark(Site s, PortableDevice device, String when) {
         FakePlayer p = player(s, "zas_dark_switch");
-        long t = AtmosTicks.now(s.level);
+        long t = DeviceTicks.now(s.level);
         device.setOn(true);
         s.h.assertFalse(lit(s, device), when + ": lit once switched on");
         s.h.assertValueEqual(told(p, t), List.of(), when + ": what it reported once switched on");
         s.cycle(device);
         s.h.assertFalse(lit(s, device), when + ": lit at its step");
-        s.h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), List.of(), when + ": what it reported at its step");
+        s.h.assertValueEqual(told(p, t + DeviceTicks.PERIOD), List.of(), when + ": what it reported at its step");
         device.setOn(false);
     }
 

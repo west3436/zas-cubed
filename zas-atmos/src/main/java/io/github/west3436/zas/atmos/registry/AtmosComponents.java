@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.registry;
 
 import com.mojang.serialization.Codec;
+import io.github.west3436.ss13.device.ItemData;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.ItemData;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.ttv.Signal;
 import java.util.function.Supplier;

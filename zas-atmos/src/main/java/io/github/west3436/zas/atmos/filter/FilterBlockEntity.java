@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.filter;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.inline.SidePortEntity;
@@ -65,7 +65,7 @@ public class FilterBlockEntity extends SidePortEntity {
         GasStore in = networks[BACK].gas();
         GasStore out = networks[FRONT].gas();
         GasStore side = networks[SIDE].gas();
-        double n = FilterMath.moles(in, out, side, selection, target(), AtmosTicks.SECONDS);
+        double n = FilterMath.moles(in, out, side, selection, target(), DeviceTicks.SECONDS);
         if (n < PipeBlockEntity.MIN_FLOW) {
             if (runsDry(in)) {
                 return InlineStatus.INPUT_EMPTY;

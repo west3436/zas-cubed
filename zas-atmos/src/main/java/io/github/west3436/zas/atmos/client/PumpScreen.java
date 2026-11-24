@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.client;
 
-import io.github.west3436.zas.atmos.client.tgui.Readout;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.client.tgui.Ui;
 import io.github.west3436.zas.atmos.pump.PumpFlow;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
 import net.minecraft.network.chat.Component;

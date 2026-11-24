@@ -6,16 +6,16 @@ import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.STONE;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivityPayload;
+import io.github.west3436.ss13.device.DeviceActivitySync;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.VentOrder;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceActivity;
-import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
-import io.github.west3436.zas.atmos.device.DeviceActivitySync;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
@@ -84,7 +84,7 @@ public final class PipeDeviceSoundTests {
         FakePlayer p = TestPlayers.hurtable(a.level, "zas_device_sounds");
         p.moveTo(Vec3.atCenterOf(pos));
         List<DeviceActivityPayload> sent = new ArrayList<>();
-        DeviceActivitySync.syncAt(p, AtmosTicks.now(a.level), sent::add);
+        DeviceActivitySync.syncAt(p, DeviceTicks.now(a.level), sent::add);
         int level = DeviceActivity.IDLE;
         for (DeviceActivityPayload payload : sent) {
             for (DeviceActivityPayload.Change change : payload.changes()) {

@@ -1,11 +1,11 @@
 package io.github.west3436.zas.atmos.vent;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
@@ -62,8 +62,8 @@ public class PassiveVentBlockEntity extends PipeNodeEntity {
                 net.volume(),
                 sample.mixture(),
                 sample.state() == AtmosphereState.AMBIENT,
-                1 - Math.pow(1 - PipeBlockEntity.OPEN_END_RATIO, AtmosTicks.SECONDS));
+                1 - Math.pow(1 - PipeBlockEntity.OPEN_END_RATIO, DeviceTicks.SECONDS));
         exchange(level, port, point, flow);
-        GasJets.openEnd(level, worldPosition, facing, flow.net() / AtmosTicks.SECONDS, DeviceJets.MOUTH);
+        GasJets.openEnd(level, worldPosition, facing, flow.net() / DeviceTicks.SECONDS, DeviceJets.MOUTH);
     }
 }

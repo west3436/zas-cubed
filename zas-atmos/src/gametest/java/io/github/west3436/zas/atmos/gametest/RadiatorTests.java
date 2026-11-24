@@ -4,6 +4,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -15,7 +16,6 @@ import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
@@ -357,7 +357,7 @@ public final class RadiatorTests {
                 double tz = zone.mixture().temperature();
                 double cell = RadiatorMath.cellCapacity(
                         GasProperties.heatCapacity(zone.mixture().moles()), zone.volume());
-                double coupling = 5 * RadiatorMath.convection(conductance, AtmosTicks.SECONDS, cell);
+                double coupling = 5 * RadiatorMath.convection(conductance, DeviceTicks.SECONDS, cell);
                 double expected = RadiatorMath.settle(c, t, coupling, coupling * tz);
                 double before = energy(zone);
 
@@ -503,14 +503,14 @@ public final class RadiatorTests {
                 GasStore gas = run[0].network().gas();
                 double c = gas.heatCapacity();
                 double t = gas.temperature();
-                double coupling = run.length * RadiatorMath.radiation(emissivity, AtmosTicks.SECONDS, t, background);
+                double coupling = run.length * RadiatorMath.radiation(emissivity, DeviceTicks.SECONDS, t, background);
                 double expected = RadiatorMath.settle(c, t, coupling, coupling * background);
 
                 s.cycle(run);
 
                 double now = run[0].network().gas().temperature();
                 s.close(now, expected, 1e-9 * t, "round " + i + ": the network's temperature");
-                double watts = c * (t - now) / AtmosTicks.SECONDS;
+                double watts = c * (t - now) / DeviceTicks.SECONDS;
                 double law = run.length
                         * emissivity
                         * RadiatorMath.STEFAN_BOLTZMANN

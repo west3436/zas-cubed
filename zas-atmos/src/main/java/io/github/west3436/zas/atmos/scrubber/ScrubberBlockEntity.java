@@ -1,5 +1,10 @@
 package io.github.west3436.zas.atmos.scrubber;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.device.RedstoneControlled;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -9,14 +14,9 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.ScrubberControl;
 import io.github.west3436.zas.atmos.controller.ScrubberOrder;
 import io.github.west3436.zas.atmos.controller.ThermostatControl;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.RedstoneControl;
-import io.github.west3436.zas.atmos.device.RedstoneControlled;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.heater.ThermoCoil;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
@@ -316,7 +316,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity
         }
         Map<ResourceLocation, Double> want = ScrubberMath.take(
                 sample.mixture(),
-                shown.litres() * AtmosTicks.SECONDS,
+                shown.litres() * DeviceTicks.SECONDS,
                 shown == ScrubberMode.SCRUB ? selection : ScrubberMath.EVERY_GAS,
                 buffer);
         double total = 0;

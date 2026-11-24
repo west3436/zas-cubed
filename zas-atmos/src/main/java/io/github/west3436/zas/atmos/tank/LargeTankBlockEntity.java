@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.tank;
 
-import io.github.west3436.zas.atmos.device.Comparators;
+import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
@@ -46,6 +46,6 @@ public class LargeTankBlockEntity extends PipeNodeEntity {
 
     /** What a comparator at either half reads (CONT-174): its pressure over its rating, 15 just short of it. */
     public int signal() {
-        return Comparators.pressure(network().gas().pressure(), ContainerFailure.CANISTER_RATED_KPA);
+        return Comparators.fill(network().gas().pressure() / ContainerFailure.CANISTER_RATED_KPA);
     }
 }

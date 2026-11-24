@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -10,7 +11,6 @@ import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
@@ -203,7 +203,7 @@ public final class BatteryTests {
             h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heater on the test FE item");
             h.assertValueEqual(
                     heater.energy(),
-                    TestParts.FE_ITEM_CAPACITY - 60 * AtmosTicks.PERIOD,
+                    TestParts.FE_ITEM_CAPACITY - 60 * DeviceTicks.PERIOD,
                     "the test FE item after a step of heating");
 
             // The recharger charges an empty one: 28 FE/t over the atmos tick.
@@ -211,7 +211,8 @@ public final class BatteryTests {
             recharger.power().setTestPowered(true);
             s.cycle(recharger);
             h.assertValueEqual(recharger.status(), RechargerBlockEntity.Status.CHARGING, "the recharger");
-            h.assertValueEqual(recharger.energy(), 28 * AtmosTicks.PERIOD, "the test FE item after a step of charging");
+            h.assertValueEqual(
+                    recharger.energy(), 28 * DeviceTicks.PERIOD, "the test FE item after a step of charging");
             h.succeed();
         } finally {
             clear(s);
@@ -238,7 +239,7 @@ public final class BatteryTests {
             s.set(2, 2, 0, TestParts.battery().defaultBlockState());
             AreaAirControllerBlockEntity c = s.controller(2);
             RechargerBlockEntity r = recharger(s, 2, 1, 3);
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.RECHARGER_DRAW), 40, "the configured draw");
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.RECHARGER_RATE), 28, "the configured rate");
             h.assertValueEqual(r.power().priority(), PowerPriority.AUXILIARY, "the recharger's group");
@@ -254,20 +255,20 @@ public final class BatteryTests {
             BlockState shown = s.level.getBlockState(r.getBlockPos());
             h.assertTrue(shown.getValue(RechargerBlock.BATTERY), "no battery shown");
             h.assertValueEqual(shown.getValue(RechargerBlock.CHARGE), 0, "the empty battery's gauge");
-            h.assertValueEqual(r.power().drawPerAtmosTick(), 40L * AtmosTicks.PERIOD, "the draw per atmos tick");
+            h.assertValueEqual(r.power().drawPerAtmosTick(), 40L * DeviceTicks.PERIOD, "the draw per atmos tick");
             for (int i = 0; i < 4 && !r.power().isPowered(); i++) {
                 s.cycle(c, r);
             }
             h.assertTrue(r.power().source() == c, "the controller didn't power the recharger in its room");
             h.assertValueEqual(
                     c.buffer().getEnergyStored(),
-                    10_000 - own - 40 * AtmosTicks.PERIOD,
+                    10_000 - own - 40 * DeviceTicks.PERIOD,
                     "the buffer on the paying step");
             h.assertValueEqual(r.status(), RechargerBlockEntity.Status.CHARGING, "the recharger in a powered room");
-            h.assertValueEqual(r.energy(), 28 * AtmosTicks.PERIOD, "FE into the battery on the paying step");
+            h.assertValueEqual(r.energy(), 28 * DeviceTicks.PERIOD, "FE into the battery on the paying step");
             int before = r.energy();
             s.cycle(c, r);
-            h.assertValueEqual(r.energy() - before, 28 * AtmosTicks.PERIOD, "FE into the battery over an atmos tick");
+            h.assertValueEqual(r.energy() - before, 28 * DeviceTicks.PERIOD, "FE into the battery over an atmos tick");
             h.assertTrue(
                     c.parts().stream().anyMatch(p -> p.pos().equals(r.getBlockPos()) && p.powered()),
                     "the controller doesn't list the recharger as powered");
@@ -392,7 +393,7 @@ public final class BatteryTests {
             heater.setOn(true);
             Object part = heater;
             h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "the heater is a part");
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             for (int i = 0; i < 4 && heater.status() != ThermoStatus.HEATING; i++) {
                 s.cycle(c, heater);
             }
@@ -401,7 +402,7 @@ public final class BatteryTests {
             int before = heater.energy();
             s.cycle(c, heater);
             h.assertTrue(c.powered(), "the controller is unpowered");
-            h.assertValueEqual(heater.energy(), before - 60 * AtmosTicks.PERIOD, "the heater's battery after a step");
+            h.assertValueEqual(heater.energy(), before - 60 * DeviceTicks.PERIOD, "the heater's battery after a step");
             h.assertValueEqual(c.buffer().getEnergyStored(), 10_000 - own, "the buffer paid for the heater");
             h.assertTrue(
                     c.parts().stream().noneMatch(p -> p.pos().equals(heater.getBlockPos())),

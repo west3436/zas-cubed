@@ -1,5 +1,7 @@
 package io.github.west3436.zas.atmos.portable;
 
+import io.github.west3436.ss13.device.Comparators;
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -8,9 +10,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.api.relocation.Relocations;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
-import io.github.west3436.zas.atmos.device.Comparators;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.failure.TankFailure;
@@ -119,7 +119,7 @@ public abstract class PortableGasDevice extends PortableDevice {
      */
     @Override
     public int signal() {
-        return Comparators.pressure(store.pressure(), ScrubberMath.STALL_KPA);
+        return Comparators.fill(store.pressure() / ScrubberMath.STALL_KPA);
     }
 
     /** Its held tank's slot. */
@@ -261,7 +261,7 @@ public abstract class PortableGasDevice extends PortableDevice {
 
     /** Pays its battery for a step. @return the share of the step the charge paid for, 0 to 1. */
     private double pay(IEnergyStorage energy, boolean simulate) {
-        int cost = drawPerTick() * AtmosTicks.PERIOD;
+        int cost = drawPerTick() * DeviceTicks.PERIOD;
         return cost <= 0 ? 1 : (double) energy.extractEnergy(cost, simulate) / cost;
     }
 

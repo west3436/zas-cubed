@@ -1,14 +1,14 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.client.tgui.Readout;
+import io.github.west3436.ss13.client.tgui.TguiScreen;
+import io.github.west3436.ss13.client.tgui.Ui;
+import io.github.west3436.ss13.client.tgui.Ui.Face;
+import io.github.west3436.ss13.client.tgui.Ui.Tone;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity.Slot;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerMenu;
 import io.github.west3436.zas.atmos.airlock.AirlockCycle;
-import io.github.west3436.zas.atmos.client.tgui.Readout;
-import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
-import io.github.west3436.zas.atmos.client.tgui.Ui;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
-import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
-import io.github.west3436.zas.atmos.label.Labels;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

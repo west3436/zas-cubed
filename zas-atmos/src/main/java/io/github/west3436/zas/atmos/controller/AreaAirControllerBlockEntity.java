@@ -1,5 +1,9 @@
 package io.github.west3436.zas.atmos.controller;
 
+import io.github.west3436.ss13.api.label.Labelled;
+import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -13,16 +17,12 @@ import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZoneIndex;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockLogic;
 import io.github.west3436.zas.atmos.heater.AirConditionerMath;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
 import io.github.west3436.zas.atmos.heater.ThermoCoil;
-import io.github.west3436.zas.atmos.label.Labelled;
-import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.PowerFeed;
@@ -167,7 +167,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         sample = Atmospheres.at(level, airPoint());
         keepPinned(level);
 
-        long own = (long) AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+        long own = (long) AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
         powered = buffer.take(own);
         List<PoweredDevice> covered = covered(level);
         coverage();
@@ -424,8 +424,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         List<ThermoCoil> coils = new ArrayList<>();
         double c = GasProperties.heatCapacity(sample.mixture().moles());
         double need = kind == ThermoCoil.Kind.HEATS
-                ? HeaterMath.heat(c, temperature, target, AtmosTicks.SECONDS, Double.MAX_VALUE)
-                : AirConditionerMath.cool(c, temperature, target, AtmosTicks.SECONDS, Double.MAX_VALUE);
+                ? HeaterMath.heat(c, temperature, target, DeviceTicks.SECONDS, Double.MAX_VALUE)
+                : AirConditionerMath.cool(c, temperature, target, DeviceTicks.SECONDS, Double.MAX_VALUE);
         for (PoweredDevice d : covered) {
             if (d instanceof ThermostatControl t
                     && t.coil().kind() == kind
@@ -452,7 +452,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             double most = Math.min(coil.mostPerStep(), coil.joulesFor(spare));
             double joules = Thermostat.share(need, left, most);
             coil.order(joules);
-            long cost = (long) coil.draw() * AtmosTicks.PERIOD;
+            long cost = (long) coil.draw() * DeviceTicks.PERIOD;
             if (!buffer.take(cost)) {
                 coil.order(0); // can't happen: joulesFor keeps the cost within the share
                 continue;

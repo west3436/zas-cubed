@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -8,7 +9,6 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlock;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMath;
@@ -524,7 +524,7 @@ public final class ElectrolyzerTests {
             h.assertValueEqual(e.power().drawPerAtmosTick(), 0L, "the bill of one that's off");
             e.setOn(true);
             h.assertValueEqual(e.power().draw(), 80, "the draw of one that's on");
-            h.assertValueEqual(e.power().drawPerAtmosTick(), 80L * AtmosTicks.PERIOD, "the bill of one that's on");
+            h.assertValueEqual(e.power().drawPerAtmosTick(), 80L * DeviceTicks.PERIOD, "the bill of one that's on");
 
             // No controller: no power, on and beside a burning generator.
             s.cycles(3, e);
@@ -545,7 +545,7 @@ public final class ElectrolyzerTests {
             h.assertTrue(e.power().isPowered(), "the controller didn't power it");
             h.assertTrue(e.power().source() == c, "its power isn't the controller's");
             int left = g.energy().getEnergyStored() + c.buffer().getEnergyStored();
-            h.assertValueEqual(fe - left, 85 * AtmosTicks.PERIOD, "the FE for the controller and the electrolyzer");
+            h.assertValueEqual(fe - left, 85 * DeviceTicks.PERIOD, "the FE for the controller and the electrolyzer");
 
             // It makes gas.
             h.assertTrue(e.running(), "the powered electrolyzer isn't running");
@@ -565,7 +565,7 @@ public final class ElectrolyzerTests {
         }
         ElectrolyzerBlockEntity electrolyzer = e;
         AreaAirControllerBlockEntity controller = c;
-        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * AtmosTicks.PERIOD, () -> {
+        h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * DeviceTicks.PERIOD, () -> {
             try {
                 h.assertFalse(controller.powered(), "the controller has power with no generator");
                 h.assertFalse(electrolyzer.power().isPowered(), "its lease outlived its controller's power");

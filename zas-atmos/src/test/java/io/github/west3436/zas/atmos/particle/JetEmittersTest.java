@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.west3436.zas.atmos.device.DeviceActivity;
+import io.github.west3436.ss13.device.DeviceActivity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;

@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.portable.PortableBlock;
 import io.github.west3436.zas.atmos.portable.PortablePumpBlockEntity;
@@ -50,7 +50,7 @@ public final class PortablePumpTests {
     private static final double T = 293.15;
 
     /** What a step of pumping costs the battery, FE. */
-    private static final int STEP = 20 * AtmosTicks.PERIOD;
+    private static final int STEP = 20 * DeviceTicks.PERIOD;
 
     private PortablePumpTests() {}
 
@@ -389,7 +389,7 @@ public final class PortablePumpTests {
             h.assertValueEqual(pump.status(), PortableStatus.WORKING, "the pump in the controller's room");
             pump.setSiphon(false);
             c.toggleLink(pump.getBlockPos());
-            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             int before = pump.energy();
             int buffer = c.buffer().getEnergyStored();
             s.cycle(c, pump);

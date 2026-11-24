@@ -2,7 +2,7 @@ package io.github.west3436.zas.s10.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import io.github.west3436.zas.atmos.device.DeviceSchedule;
+import io.github.west3436.ss13.device.DeviceSchedule;
 import io.github.west3436.zas.s10.BenchHooks;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.At;
 abstract class DeviceStepMixin {
     @WrapOperation(
             method = "tick",
-            at = @At(value = "INVOKE", target = "Lio/github/west3436/zas/atmos/device/DeviceSchedule$Member;step()V"))
+            at = @At(value = "INVOKE", target = "Lio/github/west3436/ss13/device/DeviceSchedule$Member;step()V"))
     private void zas_s10$time(DeviceSchedule.Member member, Operation<Void> original) {
         long t = BenchHooks.enterDevice();
         try {

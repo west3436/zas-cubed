@@ -1,7 +1,7 @@
 package io.github.west3436.zas.atmos.pipe;
 
 import com.mojang.serialization.MapCodec;
-import io.github.west3436.zas.atmos.device.BlockTurns;
+import io.github.west3436.ss13.device.BlockTurns;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.core.BlockPos;

@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.compat.jade;
 
+import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.simulation.AtmosService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestAssertException;

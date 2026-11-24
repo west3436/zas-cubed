@@ -1,12 +1,12 @@
 package io.github.west3436.zas.atmos.pipe;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.ServerThreads;
 import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
-import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.Objects;
 import java.util.TreeMap;
