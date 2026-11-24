@@ -2,11 +2,11 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     },
     {
       "type": "neoforge:item_exists",
@@ -14,7 +14,7 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     },
     {
       "type": "neoforge:item_exists",
@@ -22,7 +22,7 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     }
   ],
   "type": "minecraft:crafting_shaped",
@@ -37,19 +37,19 @@
       "item": "minecraft:iron_ingot"
     },
     "W": {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     "B": {
-      "item": "zas_atmos:circuit_board"
+      "item": "ss13_framework:circuit_board"
     },
     "P": {
       "item": "zas_atmos:pipe"
     },
     "M": {
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     },
     "S": {
-      "item": "zas_atmos:scanning_module"
+      "item": "ss13_framework:scanning_module"
     }
   },
   "result": {

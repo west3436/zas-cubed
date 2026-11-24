@@ -6,11 +6,11 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     {
       "type": "neoforge:item_exists",
@@ -31,10 +31,10 @@
       "item": "zas_atmos:pressure_pump"
     },
     {
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     }
   ],
   "result": {

@@ -10,7 +10,7 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:timer_assembly"
+      "item": "ss13_framework:timer_assembly"
     }
   ],
   "type": "minecraft:crafting_shapeless",
@@ -20,7 +20,7 @@
       "item": "zas_atmos:manual_valve"
     },
     {
-      "item": "zas_atmos:timer_assembly"
+      "item": "ss13_framework:timer_assembly"
     }
   ],
   "result": {

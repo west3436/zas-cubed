@@ -6,7 +6,7 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     },
     {
       "type": "neoforge:item_exists",
@@ -14,7 +14,7 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     }
   ],
   "type": "minecraft:crafting_shaped",
@@ -26,13 +26,13 @@
   ],
   "key": {
     "S": {
-      "item": "zas_atmos:plasteel_sheet"
+      "item": "ss13_framework:plasteel_sheet"
     },
     "P": {
       "item": "zas_atmos:pipe"
     },
     "F": {
-      "item": "zas_atmos:machine_frame"
+      "item": "ss13_framework:machine_frame"
     }
   },
   "result": {

@@ -6,11 +6,11 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     }
   ],
   "type": "minecraft:crafting_shaped",
@@ -25,10 +25,10 @@
       "item": "minecraft:iron_ingot"
     },
     "E": {
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     "M": {
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     }
   },
   "result": {

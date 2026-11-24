@@ -2,7 +2,7 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
       "type": "neoforge:item_exists",
@@ -10,11 +10,11 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:reinforced_glass"
+      "item": "ss13_framework:reinforced_glass"
     }
   ],
   "type": "minecraft:crafting_shaped",
@@ -29,13 +29,13 @@
       "item": "minecraft:iron_ingot"
     },
     "G": {
-      "item": "zas_atmos:reinforced_glass"
+      "item": "ss13_framework:reinforced_glass"
     },
     "E": {
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     "M": {
-      "item": "zas_atmos:micro_manipulator"
+      "item": "ss13_framework:micro_manipulator"
     }
   },
   "result": {

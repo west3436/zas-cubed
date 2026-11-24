@@ -6,28 +6,28 @@
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:subspace_ansible"
+      "item": "ss13_framework:subspace_ansible"
     }
   ],
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
     {
-      "item": "zas_atmos:electronics"
+      "item": "ss13_framework:electronics"
     },
     {
-      "item": "zas_atmos:console_screen"
+      "item": "ss13_framework:console_screen"
     },
     {
-      "item": "zas_atmos:subspace_ansible"
+      "item": "ss13_framework:subspace_ansible"
     },
     {
       "item": "minecraft:iron_ingot"

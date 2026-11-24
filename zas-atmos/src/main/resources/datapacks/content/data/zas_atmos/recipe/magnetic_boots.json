@@ -2,11 +2,11 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
       "type": "neoforge:item_exists",
@@ -20,13 +20,13 @@
       "item": "minecraft:iron_boots"
     },
     {
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
-      "item": "zas_atmos:capacitor"
+      "item": "ss13_framework:capacitor"
     },
     {
-      "item": "zas_atmos:cable_coil"
+      "item": "ss13_framework:cable_coil"
     }
   ],
   "result": {

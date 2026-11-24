@@ -81,18 +81,27 @@ neoForge {
     }
 }
 
-// GameTests start from a fresh world, as in :zas: saved zones would otherwise come back. The one
-// thing in it is the station a server of release 0.1.0 saved, three chunks far from every test's
-// place, which SavedWorldTests loads as an upgraded server would (DATA-012). The level's own files
-// aren't copied: the test server makes its own flat world around the station.
+// GameTests start from a fresh world, as in :zas: saved zones would otherwise come back. The only
+// things in it are what earlier releases saved, far from every test's place, which SavedWorldTests
+// loads as an upgraded server would (DATA-012): the station a server of release 0.1.0 saved, three
+// chunks, and 1.2.0's chest and player of crafting components, one chunk in another region file and
+// a player's file. 1.2.0's expected.json is copied as expected-1.2.0.json beside 0.1.0's. The level's
+// own files aren't copied: the test server makes its own flat world around them.
 def savedWorld = project(':zas').file('src/test/resources/fixtures/saves/0.1.0')
+def savedWorld120 = project(':zas').file('src/test/resources/fixtures/saves/1.2.0')
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
     inputs.dir(savedWorld).withPropertyName('savedWorld')
+    inputs.dir(savedWorld120).withPropertyName('savedWorld120')
     doFirst {
         delete layout.projectDirectory.dir('run/world')
         copy {
             from savedWorld
             into layout.projectDirectory.dir('run/world')
+        }
+        copy {
+            from savedWorld120
+            into layout.projectDirectory.dir('run/world')
+            rename 'expected.json', 'expected-1.2.0.json'
         }
     }
 }
