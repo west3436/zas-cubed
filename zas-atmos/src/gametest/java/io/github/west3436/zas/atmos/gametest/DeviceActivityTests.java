@@ -301,15 +301,16 @@ public final class DeviceActivityTests {
     }
 
     /**
-     * DATA-018: the bytes, measured: 9 a change, and 21 a message with its channel's name. So however
-     * much a station changes, a player costs at most 1,230 B/s.
+     * DATA-018: the bytes, measured: 9 a change, and 26 a message with its channel's name, SS13
+     * Framework's {@code ss13_framework:activity}. So however much a station changes, a player costs at
+     * most 1,255 B/s.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void data_018_what_a_message_costs(GameTestHelper h) {
         FriendlyByteBuf name = new FriendlyByteBuf(Unpooled.buffer());
         ResourceLocation.STREAM_CODEC.encode(name, DeviceActivityPayload.TYPE.id());
         int overhead = 1 + name.readableBytes();
-        h.assertValueEqual(overhead, 20, "a packet's id and channel");
+        h.assertValueEqual(overhead, 25, "a packet's id and channel");
         for (int n : new int[] {0, 1, 10, DeviceActivityPayload.MAX_CHANGES}) {
             List<Change> changes = new ArrayList<>();
             for (int i = 0; i < n; i++) {
@@ -323,7 +324,7 @@ public final class DeviceActivityTests {
             h.assertValueEqual(DeviceActivityPayload.CODEC.decode(buf), payload, "the round trip of " + n);
             if (n == DeviceActivityPayload.MAX_CHANGES) {
                 int perSecond = (overhead + bytes) * 20 / DeviceActivitySync.SEND_TICKS;
-                h.assertValueEqual(perSecond, 1_230, "the most a player costs, in B/s");
+                h.assertValueEqual(perSecond, 1_255, "the most a player costs, in B/s");
             }
         }
         h.succeed();
