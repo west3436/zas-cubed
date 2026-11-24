@@ -2,14 +2,15 @@ package io.github.west3436.zas.compat.emi.gametest;
 
 import dev.emi.emi.api.EmiInitRegistry;
 import dev.emi.emi.api.EmiRegistry;
-import io.github.west3436.zas.compat.VersionGate;
-import io.github.west3436.zas.compat.VersionGate.Verdict;
+import io.github.west3436.ss13.compat.PluginGate;
+import io.github.west3436.ss13.compat.VersionGate;
+import io.github.west3436.ss13.compat.VersionGate.Verdict;
+import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.compat.emi.ZasEmiPlugin;
 import io.github.west3436.zas.compat.viewer.GasEntry;
 import io.github.west3436.zas.compat.viewer.GasStack;
 import io.github.west3436.zas.compat.viewer.ReactionEntry;
 import io.github.west3436.zas.compat.viewer.ViewerData;
-import io.github.west3436.zas.compat.viewer.ViewerGate;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.reaction.ReactionDefinition;
 import io.github.west3436.zas.gas.ClientGasRegistry;
@@ -68,7 +69,7 @@ public final class EmiPluginTests {
                 .toString();
         h.assertTrue(installed.contains("+"), "EMI's version is written without the game's: " + installed);
         h.assertValueEqual(VersionGate.check(installed, ZasEmiPlugin.SUPPORTED), Verdict.SUPPORTED, "EMI " + installed);
-        ViewerGate gate = new ViewerGate(ZasEmiPlugin.EMI, ZasEmiPlugin.SUPPORTED);
+        PluginGate gate = new PluginGate(ZasMod.MOD_ID, ZasEmiPlugin.EMI, ZasEmiPlugin.SUPPORTED);
         h.assertTrue(gate.on(), "the plugin's gate is closed to EMI " + installed);
         h.assertValueEqual(gate.warnings(), 0, "warnings");
         h.succeed();
@@ -140,7 +141,7 @@ public final class EmiPluginTests {
      */
     @GameTest(template = "empty")
     public static void compat_002_outside_its_range_the_plugin_registers_nothing_and_warns_once(GameTestHelper h) {
-        ViewerGate closed = new ViewerGate(ZasEmiPlugin.EMI, "[2,3)");
+        PluginGate closed = new PluginGate(ZasMod.MOD_ID, ZasEmiPlugin.EMI, "[2,3)");
         ZasEmiPlugin plugin = new ZasEmiPlugin(closed);
         ClientGasRegistry.accept(GasDefinitionsPayload.of(ServerGasRegistry.current()));
         try {

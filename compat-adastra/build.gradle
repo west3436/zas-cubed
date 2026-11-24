@@ -19,7 +19,7 @@ repositories {
 }
 
 // Ad Astra 1.16.26 for NeoForge 1.21.1, the version the adapter is tested with. The range the
-// adapter accepts is its row in zas's Adapters table.
+// adapter accepts is its row in zas's adapter table (ZasAdapters).
 def adAstra = 'maven.modrinth:ad-astra:9pnKHdCG'
 def adAstraLibraries = [
     'maven.modrinth:resourceful-lib:x99nCLTm',    // 3.0.12
@@ -52,6 +52,8 @@ dependencies {
 
     // The tests alone may use the framework's hooks: driving atmos ticks, the preset, the loader.
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
     gametestCompileOnly project(':engine')
 
     releaseJar project(':dist')

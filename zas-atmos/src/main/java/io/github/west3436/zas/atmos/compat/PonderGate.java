@@ -1,14 +1,13 @@
 package io.github.west3436.zas.atmos.compat;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.ss13.compat.Adapters;
+import io.github.west3436.ss13.compat.VersionGate;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforgespi.language.IModFileInfo;
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.VersionRange;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -35,10 +34,9 @@ import org.slf4j.Logger;
  *
  * <p>No {@code neoforge.mods.toml} gives Ponder a version range, since a range on an optional
  * dependency stops the game when the installed version is outside it. This class names nothing of
- * Ponder's, so a game without Ponder may load it. {@code zas}'s adapter loader has the same version
- * check, but it is internal to {@code zas}: this mod compiles against {@code zas-api} and SS13
- * Framework, never {@code zas} internals (CONT-095), so the few lines are repeated here, as in the
- * Jade adapter.
+ * Ponder's, so a game without Ponder may load it. The version check is SS13 Framework's ({@link
+ * VersionGate}), the one {@code zas}'s adapter loader makes too; this mod compiles against {@code
+ * zas-api} and SS13 Framework, never {@code zas} internals (CONT-095).
  */
 public final class PonderGate {
     /** Ponder's mod id. */
@@ -104,7 +102,7 @@ public final class PonderGate {
         if (ponder == null) {
             return Verdict.ABSENT;
         }
-        if (!supports(ponder, SUPPORTED)) {
+        if (!VersionGate.supports(ponder, SUPPORTED)) {
             return Verdict.UNSUPPORTED;
         }
         return addonHasScenes ? Verdict.ADDON_HAS_SCENES : Verdict.ON;
@@ -115,7 +113,8 @@ public final class PonderGate {
      * asks: what a client with these mods does. Any thread.
      */
     public static Verdict verdict() {
-        return decide(ZasAtmosMod.contentEnabled(), installed(PONDER), addonHasScenes());
+        return decide(
+                ZasAtmosMod.contentEnabled(), Adapters.installedVersion(PONDER).orElse(null), addonHasScenes());
     }
 
     /**
@@ -136,7 +135,7 @@ public final class PonderGate {
             return;
         }
         asked = true;
-        String ponder = installed(PONDER);
+        String ponder = Adapters.installedVersion(PONDER).orElse(null);
         switch (verdict()) {
             case CONTENT_OFF -> LOGGER.debug("The content is off, so the Ponder scenes stay off");
             case ABSENT -> LOGGER.debug("Ponder isn't installed, so the Ponder scenes stay off");
@@ -148,7 +147,7 @@ public final class PonderGate {
             case ADDON_HAS_SCENES ->
                 LOGGER.info(
                         "ZAS³ Ponder {} registers its own copy of the Ponder scenes, so the built-in ones stay off",
-                        installed(ADDON));
+                        Adapters.installedVersion(ADDON).orElse(null));
             case ON -> {
                 try {
                     enter();
@@ -160,33 +159,6 @@ public final class PonderGate {
                 LOGGER.info("The Ponder scenes are on, with Ponder {}", ponder);
             }
         }
-    }
-
-    /**
-     * Whether a version is in a range. Versions compare by Maven's rules, as the loader's do.
-     *
-     * @throws IllegalArgumentException if {@code range} isn't a range with bounds
-     */
-    static boolean supports(String installed, String range) {
-        VersionRange supported;
-        try {
-            supported = VersionRange.createFromVersionSpec(range);
-        } catch (InvalidVersionSpecificationException e) {
-            throw new IllegalArgumentException("Not a version range: " + range, e);
-        }
-        if (!supported.hasRestrictions()) {
-            // Maven reads a bare version as a preference that every version satisfies.
-            throw new IllegalArgumentException("Not a version range, as it has no bounds: " + range);
-        }
-        return supported.containsVersion(new DefaultArtifactVersion(installed));
-    }
-
-    /** The installed version of a mod, as its metadata gives it, or null if it isn't installed. */
-    private static @Nullable String installed(String modId) {
-        return ModList.get()
-                .getModContainerById(modId)
-                .map(mod -> mod.getModInfo().getVersion().toString())
-                .orElse(null);
     }
 
     /** Looks in the addon's jar for its own scenes, as a file, which loads nothing. */

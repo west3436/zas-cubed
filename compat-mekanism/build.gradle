@@ -59,6 +59,8 @@ dependencies {
 
     // GameTests (only) may ask the framework what it loaded. main stays API-only.
     gametestCompileOnly project(':zas')
+    // zas's adapter table, which the tests ask, is SS13 Framework's Adapters.
+    gametestCompileOnly "io.github.west3436:ss13-framework:${framework_version}"
 
     releaseJar project(':dist')
 
