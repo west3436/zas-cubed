@@ -1,9 +1,10 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerProvider;
 import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -74,15 +75,25 @@ public final class DeviceTests {
         TestDevice.Entity d = place(h, new BlockPos(0, 1, 0));
         DevicePower power = d.power();
         h.assertFalse(power.isPowered(), "powered with no provider");
-        h.assertValueEqual(power.drawPerAtmosTick(), 10L * DeviceTicks.PERIOD, "FE per atmos tick");
-        Object provider = "test provider";
-        power.supply(provider);
+        h.assertValueEqual(power.drawPerStep(), 10L * DeviceTicks.PERIOD, "FE per atmos tick");
+        PowerProvider provider = new PowerProvider() {
+            @Override
+            public int precedence() {
+                return BACKUP;
+            }
+
+            @Override
+            public boolean providing() {
+                return true;
+            }
+        };
+        h.assertTrue(power.supply(provider), "a provider with no rival didn't power it");
         h.assertTrue(power.isPowered(), "unpowered after a supply");
         h.assertTrue(power.source() == provider, "the source is the provider");
-        h.assertTrue(power.suppliedThisAtmosTick(), "a supply this atmos tick isn't seen");
+        h.assertTrue(power.suppliedThisStep(), "a supply this atmos tick isn't seen");
         h.runAfterDelay(DevicePower.LEASE_TICKS - 1, () -> {
             h.assertTrue(power.isPowered(), "the lease ran out early");
-            h.assertFalse(power.suppliedThisAtmosTick(), "a supply two atmos ticks ago counts as this one's");
+            h.assertFalse(power.suppliedThisStep(), "a supply two atmos ticks ago counts as this one's");
         });
         h.runAfterDelay(DevicePower.LEASE_TICKS + 1, () -> {
             h.assertFalse(power.isPowered(), "powered after the lease ran out");

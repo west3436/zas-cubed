@@ -1,9 +1,11 @@
 package io.github.west3436.zas.atmos.turbine;
 
+import io.github.west3436.ss13.api.power.EnergyStore;
 import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.ss13.device.RedstoneControlled;
+import io.github.west3436.ss13.power.WorkToFe;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -13,8 +15,6 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
-import io.github.west3436.zas.atmos.power.EnergyStore;
-import io.github.west3436.zas.atmos.power.WorkToFe;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.List;

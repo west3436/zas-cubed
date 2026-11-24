@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -153,17 +154,18 @@ public final class PortableScrubberTests {
                     "coal went in the tank slot");
             h.assertValueEqual(
                     scrubber.tank()
-                            .insertItem(0, AtmosItems.BATTERY.get().full(), false)
+                            .insertItem(0, FrameworkItems.BATTERY.get().full(), false)
                             .getCount(),
                     1,
                     "a battery went in the tank slot");
 
             // A shift-click puts a battery and a tank in their own slots, and takes them out again.
-            hand.getInventory().setItem(9, AtmosItems.BATTERY.get().full());
+            hand.getInventory().setItem(9, FrameworkItems.BATTERY.get().full());
             hand.getInventory().setItem(10, tank(new GasParcel(Map.of(O2, 1.0), T)));
             menu.quickMoveStack(hand, 2);
             menu.quickMoveStack(hand, 3);
-            h.assertTrue(scrubber.battery().battery().is(AtmosItems.BATTERY.get()), "the battery isn't in its slot");
+            h.assertTrue(
+                    scrubber.battery().battery().is(FrameworkItems.BATTERY.get()), "the battery isn't in its slot");
             h.assertTrue(scrubber.tank().tank().is(AtmosItems.EMPTY_TANK.get()), "the tank isn't in its slot");
             menu.quickMoveStack(hand, 0);
             menu.quickMoveStack(hand, 1);
@@ -171,7 +173,7 @@ public final class PortableScrubberTests {
             h.assertTrue(scrubber.tank().tank().isEmpty(), "the tank stayed in its slot");
 
             // A full battery: it waits for the air to settle, then scrubs.
-            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(scrubber.battery(), FrameworkItems.BATTERY.get().full());
             h.assertValueEqual(scrubber.energy(), 100_000, "the full battery");
             s.cycle(scrubber);
             h.assertValueEqual(scrubber.status(), PortableStatus.WAITING, "the scrubber before its cell settled");
@@ -207,7 +209,7 @@ public final class PortableScrubberTests {
             h.assertValueEqual(menu.energy(), scrubber.energy(), "the GUI's charge");
 
             // Too little charge: it moves what the charge pays for, then stops.
-            BatteryTests.swap(scrubber.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), STEP / 2));
+            BatteryTests.swap(scrubber.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), STEP / 2));
             air = s.zone(2, 2, 2).mixture();
             want = PortableScrubberMath.take(
                             air, GasSelection.DEFAULT, scrubber.store().mixture())
@@ -223,7 +225,7 @@ public final class PortableScrubberTests {
             h.assertFalse(lit(s, scrubber), "lit on an empty battery");
 
             // With nothing to scrub, it stops and draws nothing.
-            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(scrubber.battery(), FrameworkItems.BATTERY.get().full());
             s.removeGas(2, 2, 2, CO2);
             s.cycle(scrubber);
             h.assertValueEqual(scrubber.status(), PortableStatus.NOTHING_TO_MOVE, "the scrubber in clean air");
@@ -237,7 +239,7 @@ public final class PortableScrubberTests {
 
             // In open air it has no room, and leaves its battery alone.
             PortableScrubberBlockEntity outside = scrubber(s, 8, 1, 2);
-            BatteryTests.swap(outside.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(outside.battery(), FrameworkItems.BATTERY.get().full());
             outside.setOn(true);
             s.cycles(5, outside);
             h.assertValueEqual(outside.status(), PortableStatus.NO_ROOM, "the scrubber in open air");
@@ -246,7 +248,7 @@ public final class PortableScrubberTests {
             // Broken, it drops its battery and its tank.
             outside.tank().insertItem(0, tank(new GasParcel(Map.of(O2, 1.0), T)), false);
             s.set(8, 1, 2, Site.AIR);
-            h.assertTrue(dropped(s, 8, 1, 2, AtmosItems.BATTERY.get()), "it dropped no battery");
+            h.assertTrue(dropped(s, 8, 1, 2, FrameworkItems.BATTERY.get()), "it dropped no battery");
             h.assertTrue(dropped(s, 8, 1, 2, AtmosItems.EMPTY_TANK.get()), "it dropped no tank");
             h.succeed();
         } finally {
@@ -269,7 +271,7 @@ public final class PortableScrubberTests {
             BatteryTests.formZone(s, 2, 2, 2);
             s.addKpa(2, 2, 2, CO2, 2);
             double room = co2(s);
-            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(scrubber.battery(), FrameworkItems.BATTERY.get().full());
             h.assertTrue(
                     scrubber.tank()
                             .insertItem(0, tank(new GasParcel(Map.of(O2, 5.0, CO2, 2.0), T)), false)
@@ -315,7 +317,7 @@ public final class PortableScrubberTests {
 
             // Half a step's charge scrubs half the tank's CO2; then an empty battery stops it.
             scrubber.tank().insertItem(0, tank(new GasParcel(Map.of(O2, 5.0, CO2, 2.0), T)), false);
-            BatteryTests.swap(scrubber.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), STEP / 2));
+            BatteryTests.swap(scrubber.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), STEP / 2));
             s.cycle(scrubber);
             h.assertValueEqual(scrubber.status(), PortableStatus.WORKING, "the scrubber on its last charge");
             s.close(
@@ -329,7 +331,7 @@ public final class PortableScrubberTests {
             s.close(GasTankItem.gas(scrubber.tank().tank()).moles().get(CO2), 1.0, 1e-9, "the tank's CO2 at empty");
 
             // A store at 50 atm stops it, drawing nothing.
-            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(scrubber.battery(), FrameworkItems.BATTERY.get().full());
             double full = ScrubberMath.STALL_KPA * PortableGasDevice.STORE_LITRES / (GasMixture.GAS_CONSTANT * T);
             scrubber.store().set(new GasParcel(Map.of(CO2, full), T));
             s.cycle(scrubber);
@@ -343,7 +345,7 @@ public final class PortableScrubberTests {
 
             // In open air, a held tank still works: it needs no zone.
             PortableScrubberBlockEntity outside = scrubber(s, 8, 1, 2);
-            BatteryTests.swap(outside.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(outside.battery(), FrameworkItems.BATTERY.get().full());
             outside.tank().insertItem(0, tank(new GasParcel(Map.of(O2, 5.0, CO2, 2.0), T)), false);
             outside.setOn(true);
             s.cycle(outside);
@@ -380,12 +382,12 @@ public final class PortableScrubberTests {
             s.set(2, 2, 0, TestParts.battery().defaultBlockState());
             AreaAirControllerBlockEntity c = s.controller(2);
             PortableScrubberBlockEntity scrubber = scrubber(s, 2, 1, 3);
-            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(scrubber.battery(), FrameworkItems.BATTERY.get().full());
             scrubber.setOn(true);
             BatteryTests.formZone(s, 2, 2, 2);
             s.addKpa(2, 2, 2, CO2, 2);
             Object part = scrubber;
-            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "it is a part");
+            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredPart, "it is a part");
             untilWorking(s, scrubber, c);
             c.toggleLink(scrubber.getBlockPos());
             int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;

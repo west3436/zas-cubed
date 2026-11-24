@@ -12,7 +12,7 @@ import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.turbine.CompressorBlockEntity;
@@ -101,7 +101,7 @@ public final class Multitool {
         if (be instanceof TurbineBlockEntity || be instanceof CompressorBlockEntity) {
             return TURBINE_PART;
         }
-        if (be instanceof PoweredDevice
+        if (be instanceof PoweredPart
                 || be instanceof AirSensorBlockEntity
                 || be instanceof VentBlockEntity
                 || block instanceof IgniterBlock) {
@@ -133,7 +133,7 @@ public final class Multitool {
             return state.getBlock() instanceof FirelockBlock
                     || state.getBlock() instanceof FirelockDoorBlock
                     || state.getBlock() instanceof CentralControllerBlock
-                    || level.getBlockEntity(target) instanceof PoweredDevice;
+                    || level.getBlockEntity(target) instanceof PoweredPart;
         }
 
         @Override

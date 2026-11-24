@@ -5,9 +5,9 @@ import io.github.west3436.ss13.client.tgui.TguiScreen;
 import io.github.west3436.ss13.client.tgui.Ui;
 import io.github.west3436.ss13.client.tgui.Ui.Face;
 import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.heater.ThermoMachineMenu;
 import io.github.west3436.zas.atmos.heater.ThermoStatus;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.Locale;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -82,7 +82,7 @@ final class ThermoMachineScreen<M extends ThermoMachineMenu> extends TguiScreen<
         int slotX = leftPos + ThermoMachineMenu.BATTERY_X;
         int slotY = topPos + ThermoMachineMenu.BATTERY_Y;
         if (!menu.getSlot(0).hasItem()) {
-            ui.ghost(slotX, slotY, new ItemStack(AtmosItems.BATTERY.get()));
+            ui.ghost(slotX, slotY, new ItemStack(FrameworkItems.BATTERY.get()));
         }
         int barX = slotX + 19;
         DeviceParts.charge(ui, barX, slotY + 3, x + w - Ui.PAD - barX, Ui.ROW, menu.energy(), menu.capacity());

@@ -4,6 +4,7 @@ import io.github.west3436.ss13.device.DeviceActivity;
 import io.github.west3436.ss13.device.DeviceActivityPayload.Change;
 import io.github.west3436.ss13.device.DeviceActivitySync;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.SoundLog;
 import io.github.west3436.ss13.testkit.TestPlayers;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -205,12 +206,12 @@ public final class DeviceSoundTests {
             s.cycles(2, r);
             played(h, at, "with no battery");
 
-            BatteryTests.swap(r.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            BatteryTests.swap(r.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             s.cycles(2, r);
             h.assertValueEqual(r.status(), RechargerBlockEntity.Status.CHARGING, "with an empty battery");
             played(h, at, "as it starts charging", AtmosSounds.RECHARGER_ON);
 
-            BatteryTests.swap(r.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), 100_000 - 100));
+            BatteryTests.swap(r.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), 100_000 - 100));
             s.cycle(r);
             played(h, at, "topping up");
             s.cycles(2, r);
@@ -222,7 +223,7 @@ public final class DeviceSoundTests {
             h.assertValueEqual(r.status(), RechargerBlockEntity.Status.NO_BATTERY, "the full battery taken out");
             played(h, at, "with a full battery taken out");
 
-            BatteryTests.swap(r.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            BatteryTests.swap(r.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             s.cycles(2, r);
             played(h, at, "charging again", AtmosSounds.RECHARGER_ON);
             r.power().setTestPowered(false);
@@ -292,7 +293,7 @@ public final class DeviceSoundTests {
             s.room(0, 4);
             HeaterBlockEntity heater = heater(s, 2, 1, 2);
             BatteryTests.formZone(s, 2, 2, 2);
-            BatteryTests.swap(heater.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(heater.battery(), FrameworkItems.BATTERY.get().full());
             FakePlayer p = player(s, "zas_heater_sounds");
             long t = DeviceTicks.now(s.level);
 
@@ -330,7 +331,7 @@ public final class DeviceSoundTests {
             PortableScrubberBlockEntity scrubber = scrubber(s, 2, 1, 2);
             BatteryTests.formZone(s, 2, 2, 2);
             s.addKpa(2, 2, 2, CO2, 2);
-            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(scrubber.battery(), FrameworkItems.BATTERY.get().full());
             FakePlayer p = player(s, "zas_portable_sounds");
             long t = DeviceTicks.now(s.level);
 
@@ -371,7 +372,7 @@ public final class DeviceSoundTests {
             s.cycle(r);
             h.assertValueEqual(told(p, t), List.of(), "with no battery");
 
-            BatteryTests.swap(r.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            BatteryTests.swap(r.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             s.cycle(r);
             h.assertValueEqual(r.status(), RechargerBlockEntity.Status.CHARGING, "with an empty battery");
             h.assertValueEqual(told(p, t), one(r, DeviceActivity.WORKING), "while it charges");
@@ -396,7 +397,7 @@ public final class DeviceSoundTests {
         s.room(x0, x0 + 4);
         T device = place.apply(x0 + 2);
         BatteryTests.formZone(s, x0 + 2, 2, 2);
-        BatteryTests.swap(device.battery(), AtmosItems.BATTERY.get().full());
+        BatteryTests.swap(device.battery(), FrameworkItems.BATTERY.get().full());
         s.cycles(CellWatch.SETTLE_STEPS + 1, device);
         return device;
     }
@@ -483,7 +484,7 @@ public final class DeviceSoundTests {
             followsItsSwitch(s, scrubber, 8);
 
             PortableScrubberBlockEntity onTank = scrubber(s, 14, 1, 2);
-            BatteryTests.swap(onTank.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(onTank.battery(), FrameworkItems.BATTERY.get().full());
             ItemStack tank = new ItemStack(AtmosItems.EMPTY_TANK.get());
             GasTankItem.setGas(tank, new GasParcel(Map.of(CO2, 1.0), 293.15));
             onTank.tank().insertItem(0, tank, false);
@@ -525,7 +526,7 @@ public final class DeviceSoundTests {
             staysDark(s, scrubber, "a scrubber in clean air");
             h.assertValueEqual(scrubber.status(), PortableStatus.NOTHING_TO_MOVE, "the scrubber in clean air");
             s.addKpa(2, 2, 2, CO2, 2);
-            BatteryTests.swap(scrubber.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            BatteryTests.swap(scrubber.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             staysDark(s, scrubber, "a scrubber on an empty battery");
             h.assertValueEqual(scrubber.status(), PortableStatus.BATTERY_EMPTY, "the scrubber on an empty battery");
             BatteryTests.swap(scrubber.battery(), ItemStack.EMPTY);
@@ -541,7 +542,7 @@ public final class DeviceSoundTests {
             staysDark(s, heater, "a heater past its setpoint");
             h.assertValueEqual(heater.status(), ThermoStatus.AT_SETPOINT, "the heater past its setpoint");
             heater.setSetpoint(HeaterMath.MAX_SETPOINT);
-            BatteryTests.swap(heater.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            BatteryTests.swap(heater.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             staysDark(s, heater, "a heater on an empty battery");
             h.assertValueEqual(heater.status(), ThermoStatus.BATTERY_EMPTY, "the heater on an empty battery");
             BatteryTests.swap(heater.battery(), ItemStack.EMPTY);
@@ -550,13 +551,13 @@ public final class DeviceSoundTests {
 
             // In open air, outside the rooms.
             PortableScrubberBlockEntity outdoors = scrubber(s, 2, 1, 6);
-            BatteryTests.swap(outdoors.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(outdoors.battery(), FrameworkItems.BATTERY.get().full());
             s.cycles(CellWatch.SETTLE_STEPS + 1, outdoors);
             staysDark(s, outdoors, "a scrubber in open air");
             h.assertValueEqual(outdoors.status(), PortableStatus.NO_ROOM, "the scrubber in open air");
             HeaterBlockEntity cold = heater(s, 8, 1, 6);
             cold.setSetpoint(HeaterMath.MAX_SETPOINT);
-            BatteryTests.swap(cold.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(cold.battery(), FrameworkItems.BATTERY.get().full());
             staysDark(s, cold, "a heater in open air");
             h.assertValueEqual(cold.status(), ThermoStatus.NO_ROOM, "the heater in open air");
             h.succeed();
@@ -579,7 +580,7 @@ public final class DeviceSoundTests {
             PortableScrubberBlockEntity scrubber = scrubber(s, 2, 1, 2);
             BatteryTests.formZone(s, 2, 2, 2);
             s.addKpa(2, 2, 2, CO2, 2);
-            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(scrubber.battery(), FrameworkItems.BATTERY.get().full());
             for (int i = 0; i < CellWatch.SETTLE_STEPS; i++) {
                 flips(scrubber, true);
                 h.assertFalse(lit(s, scrubber), "lit once switched on while its cell settles");

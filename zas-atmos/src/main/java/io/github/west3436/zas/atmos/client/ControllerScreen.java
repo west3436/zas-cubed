@@ -594,7 +594,13 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
         ui.line(DeviceParts.position(pos), positionX, y, Ui.ROW, Ui.LABEL, Face.BODY);
         String from = p.inZone() && p.linked() ? "zone_and_link" : p.inZone() ? "zone" : "link";
         ui.line(text("from." + from), fromX, y, Ui.ROW, Ui.WHITE, Face.BODY);
-        if (p.powered()) {
+        if (p.byAnother()) {
+            // Another provider, such as an APC or an airlock controller, powers it; this one orders it.
+            Component shown = text(p.powered() ? "part_another" : "part_off");
+            ui.lineRight(shown, powerRight, y, Ui.ROW, p.powered() ? Ui.GOOD : Ui.DIM, Face.BODY);
+            int width = (int) Math.ceil(ui.width(shown, Face.BODY));
+            ui.tooltip(powerRight - width, y, width, Ui.ROW, text("part_another.tooltip"));
+        } else if (p.powered()) {
             ui.lineRight(icon(POWER_ICON, text("part_on")), powerRight, y, Ui.ROW, Ui.GOOD, Face.BODY);
         } else {
             ui.lineRight(text("part_off"), powerRight, y, Ui.ROW, Ui.DIM, Face.BODY);

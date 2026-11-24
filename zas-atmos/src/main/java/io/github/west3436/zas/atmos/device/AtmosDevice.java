@@ -3,9 +3,7 @@ package io.github.west3436.zas.atmos.device;
 import io.github.west3436.ss13.device.DeviceBlockEntity;
 import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.ss13.device.DeviceTicks;
-import io.github.west3436.ss13.device.LoadedBlocks;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -31,7 +29,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * {@link io.github.west3436.zas.api.atmosphere.Atmospheres} and changes with {@link
  * io.github.west3436.zas.api.mutation.GasMutations}, through a {@link ZonePort} per port so that each
  * port has at most one mutation outstanding (CONT-072). A device that draws power implements {@link
- * PoweredDevice}.
+ * PoweredPart}; the framework's base holds its lease while it waits, and has it wait with the device
+ * that powers it (architecture §11.2).
  *
  * <p>A device a player can label names {@link io.github.west3436.ss13.api.label.Labelled}, and the
  * base keeps its label.
@@ -99,29 +98,6 @@ public abstract class AtmosDevice extends DeviceBlockEntity {
     @Override
     protected final void deviceTick(ServerLevel level) {
         atmosTick(level);
-    }
-
-    /**
-     * A part waits with the device that last powered it, if that is loaded and waiting (architecture
-     * §11.2), as the provider powers nothing while it waits. Asking loads nothing.
-     */
-    @Override
-    protected final boolean waitsForAnother() {
-        return this instanceof PoweredDevice part
-                && part.power().source() instanceof AtmosDevice provider
-                && provider != this
-                && !provider.isRemoved()
-                && DeviceTicker.isScheduled(provider)
-                && provider.level instanceof ServerLevel there
-                && !LoadedBlocks.ticking(there, provider.worldPosition);
-    }
-
-    /** A part that waits keeps its power ({@link DevicePower#hold}), so the wait never reads as a power cut. */
-    @Override
-    protected final void whilePassedOver() {
-        if (this instanceof PoweredDevice part) {
-            part.power().hold();
-        }
     }
 
     /** A block changed in place, as when it is turned, may have moved the device's air point. */

@@ -4,6 +4,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import io.github.west3436.ss13.device.LoadedBlocks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -454,7 +455,7 @@ public final class PipeSaveTests {
                 AtmosBlocks.PORTABLE_PUMP.get().defaultBlockState().setValue(PortableBlock.FACING, Direction.NORTH));
         PortablePumpBlockEntity[] pump = {a.entity(2, Y, Z)};
         pump[0].store().add(new GasParcel(Map.of(GAS, 100.0), T));
-        BatteryTests.swap(pump[0].battery(), AtmosItems.BATTERY.get().full());
+        BatteryTests.swap(pump[0].battery(), FrameworkItems.BATTERY.get().full());
         pump[0].tank().insertItem(0, new ItemStack(AtmosItems.EMPTY_TANK.get()), false);
         pump[0].setTarget(1_000);
         pump[0].setOn(true);

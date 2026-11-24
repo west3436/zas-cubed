@@ -1,10 +1,11 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -72,7 +73,7 @@ public final class TestDevice {
     }
 
     /** The test device's block entity: it records each step's game tick and thread. */
-    public static final class Entity extends AtmosDevice implements PoweredDevice {
+    public static final class Entity extends AtmosDevice implements PoweredPart {
         /** The game ticks it stepped at. */
         public final List<Long> steps = new ArrayList<>();
         /** The game ticks it stepped at while powered. */
@@ -88,7 +89,8 @@ public final class TestDevice {
         /** Whether it says it has stopped at each step (DATA-017). */
         public boolean stopping;
 
-        private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, () -> draw, this::now);
+        private final DevicePower power =
+                new DevicePower(PowerChannel.ENVIRONMENT, PowerPriority.HIGH, () -> draw, this::now);
 
         Entity(BlockPos pos, BlockState state) {
             super(type, pos, state);

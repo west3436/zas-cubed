@@ -1,5 +1,7 @@
 package io.github.west3436.zas.atmos.electrolyzer;
 
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -9,7 +11,6 @@ import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipePort;
-import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -50,7 +51,7 @@ public class ElectrolyzerBlockEntity extends InlineDeviceEntity {
     private final ElectrolyzerTank tank = new ElectrolyzerTank(this::waterChanged);
 
     public ElectrolyzerBlockEntity(BlockPos pos, BlockState state) {
-        super(AtmosBlockEntities.ELECTROLYZER.get(), pos, state, 2, PowerPriority.AUXILIARY);
+        super(AtmosBlockEntities.ELECTROLYZER.get(), pos, state, 2, PowerChannel.EQUIPMENT, PowerPriority.NORMAL);
     }
 
     /** Its water tank, which the fluid capability on its back offers. */

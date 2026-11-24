@@ -58,8 +58,8 @@ neoForge {
 // GameTests start from a fresh world, as in :zas: saved zones would otherwise come back. The only
 // things in it are what earlier releases saved, far from every test's place, which SavedWorldTests
 // loads as an upgraded server would (DATA-012): the station a server of release 0.1.0 saved, three
-// chunks, and 1.2.0's chest and player of crafting components, one chunk in another region file and
-// a player's file. 1.2.0's expected.json is copied as expected-1.2.0.json beside 0.1.0's. The level's
+// chunks, and 1.2.0's chest and player of crafting components and its chest of batteries, a chunk
+// each in two other region files, and a player's file. 1.2.0's expected.json is copied as expected-1.2.0.json beside 0.1.0's. The level's
 // own files aren't copied: the test server makes its own flat world around them.
 def savedWorld = project(':zas').file('src/test/resources/fixtures/saves/0.1.0')
 def savedWorld120 = project(':zas').file('src/test/resources/fixtures/saves/1.2.0')

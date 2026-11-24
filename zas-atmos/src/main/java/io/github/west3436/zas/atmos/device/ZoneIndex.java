@@ -16,7 +16,7 @@ import io.github.west3436.zas.api.event.ZoneRelocatedEvent;
 import io.github.west3436.zas.api.event.ZoneResumedEvent;
 import io.github.west3436.zas.api.event.ZoneSealedEvent;
 import io.github.west3436.zas.api.event.ZoneSplitEvent;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -63,21 +63,21 @@ public final class ZoneIndex {
 
     /** A part and its zone as last asked. */
     private static final class Entry {
-        final PoweredDevice part;
+        final PoweredPart part;
         final BlockPos pos;
         final long order;
 
         @Nullable
         ZoneId zone;
 
-        Entry(PoweredDevice part, BlockPos pos, long order) {
+        Entry(PoweredPart part, BlockPos pos, long order) {
             this.part = part;
             this.pos = pos;
             this.order = order;
         }
     }
 
-    private final Map<PoweredDevice, Entry> entries = new HashMap<>();
+    private final Map<PoweredPart, Entry> entries = new HashMap<>();
     private final Map<BlockPos, Entry> byPos = new HashMap<>();
     private final Map<ZoneId, Set<Entry>> byZone = new HashMap<>();
     private final Set<Entry> unzoned = new HashSet<>();
@@ -128,7 +128,7 @@ public final class ZoneIndex {
 
     /** Adds a device that has joined its level's schedule, if it is a powered part. */
     static void join(ServerLevel level, AtmosDevice device) {
-        if (device instanceof PoweredDevice part) {
+        if (device instanceof PoweredPart part) {
             LEVELS.computeIfAbsent(level.dimension(), k -> new ZoneIndex()).add(part, device.getBlockPos());
         }
     }
@@ -136,7 +136,7 @@ public final class ZoneIndex {
     /** Drops a device that has left its level's schedule. */
     static void leave(ServerLevel level, AtmosDevice device) {
         ZoneIndex index = LEVELS.get(level.dimension());
-        if (index != null && device instanceof PoweredDevice part) {
+        if (index != null && device instanceof PoweredPart part) {
             index.drop(part);
         }
     }
@@ -144,7 +144,7 @@ public final class ZoneIndex {
     /** Has a part's zone asked again at the next lookup: it has stepped, or its block has changed. */
     static void mark(ServerLevel level, AtmosDevice device) {
         ZoneIndex index = LEVELS.get(level.dimension());
-        if (index != null && device instanceof PoweredDevice part) {
+        if (index != null && device instanceof PoweredPart part) {
             Entry e = index.entries.get(part);
             if (e != null) {
                 index.stale.add(e);
@@ -172,7 +172,7 @@ public final class ZoneIndex {
      * @param links the positions linked to it
      * @return a new list
      */
-    public static List<PoweredDevice> covered(ServerLevel level, Optional<ZoneId> zone, Collection<BlockPos> links) {
+    public static List<PoweredPart> covered(ServerLevel level, Optional<ZoneId> zone, Collection<BlockPos> links) {
         ZoneIndex index = LEVELS.get(level.dimension());
         if (index == null) {
             return new ArrayList<>();
@@ -190,7 +190,7 @@ public final class ZoneIndex {
             }
         }
         found.sort(Comparator.comparingLong(e -> e.order));
-        List<PoweredDevice> out = new ArrayList<>(found.size());
+        List<PoweredPart> out = new ArrayList<>(found.size());
         for (Entry e : found) {
             out.add(e.part);
         }
@@ -201,13 +201,13 @@ public final class ZoneIndex {
      * Whether a part's air point was in a zone at the last lookup, which {@link #covered} has just
      * made.
      */
-    public static boolean inZone(ServerLevel level, PoweredDevice part, ZoneId zone) {
+    public static boolean inZone(ServerLevel level, PoweredPart part, ZoneId zone) {
         ZoneIndex index = LEVELS.get(level.dimension());
         Entry e = index == null ? null : index.entries.get(part);
         return e != null && zone.equals(e.zone);
     }
 
-    private void add(PoweredDevice part, BlockPos pos) {
+    private void add(PoweredPart part, BlockPos pos) {
         if (entries.containsKey(part)) {
             return;
         }
@@ -218,7 +218,7 @@ public final class ZoneIndex {
         stale.add(e);
     }
 
-    private void drop(PoweredDevice part) {
+    private void drop(PoweredPart part) {
         Entry e = entries.remove(part);
         if (e == null) {
             return;

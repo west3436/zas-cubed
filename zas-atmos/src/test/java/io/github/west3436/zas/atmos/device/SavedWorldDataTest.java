@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.device;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonArray;
@@ -356,6 +357,52 @@ class SavedWorldDataTest {
 
         CompoundTag player = RELEASE_1_2_0.player(expected.get("player").getAsString());
         sameStacks(expected.getAsJsonArray("inventory"), player.getList("Inventory", Tag.TAG_COMPOUND), "the player");
+    }
+
+    /**
+     * 1.2.0's chest of batteries holds each tier under its old {@code zas_atmos:} id, charged in the
+     * old {@code zas_atmos:energy} component as {@code expected.json} lists it, or with no charge
+     * saved where it lists none, so the GameTest that loads them as SS13 Framework's batteries reads
+     * what 1.2.0 wrote.
+     */
+    @Test
+    void data_012_batteries_saved_by_1_2_0_have_their_old_ids_and_charge() {
+        JsonObject batteries = RELEASE_1_2_0.expected().getAsJsonObject("batteries");
+        JsonArray chunk = batteries.getAsJsonArray("chunk");
+        ListTag blockEntities = RELEASE_1_2_0
+                .chunk(chunk.get(0).getAsInt(), chunk.get(1).getAsInt())
+                .getList("block_entities", Tag.TAG_COMPOUND);
+        assertEquals(1, blockEntities.size());
+        CompoundTag chest = blockEntities.getCompound(0);
+        assertEquals("minecraft:chest", chest.getString("id"));
+        JsonArray at = batteries.getAsJsonArray("chest_at");
+        assertEquals(
+                List.of(at.get(0).getAsInt(), at.get(1).getAsInt(), at.get(2).getAsInt()),
+                List.of(chest.getInt("x"), chest.getInt("y"), chest.getInt("z")));
+        Map<Integer, String> listed = new TreeMap<>();
+        Map<Integer, String> held = new TreeMap<>();
+        for (JsonElement e : batteries.getAsJsonArray("chest")) {
+            JsonObject stack = e.getAsJsonObject();
+            String id = stack.get("id").getAsString();
+            assertTrue(id.startsWith(MOD) && id.endsWith("battery"), "the chest lists " + id);
+            String energy = stack.has("energy") ? stack.get("energy").getAsString() : "none";
+            listed.put(
+                    stack.get("slot").getAsInt(), id + " x" + stack.get("count").getAsInt() + " " + energy);
+        }
+        ListTag items = chest.getList("Items", Tag.TAG_COMPOUND);
+        for (int i = 0; i < items.size(); i++) {
+            CompoundTag stack = items.getCompound(i);
+            CompoundTag components = stack.getCompound("components");
+            assertTrue(
+                    components.getAllKeys().stream().allMatch((MOD + "energy")::equals),
+                    "a battery saved with " + components.getAllKeys());
+            String energy = components.contains(MOD + "energy")
+                    ? String.valueOf(components.getCompound(MOD + "energy").getInt(ItemData.VALUE_KEY))
+                    : "none";
+            held.put(stack.getInt("Slot"), stack.getString("id") + " x" + stack.getInt("count") + " " + energy);
+        }
+        assertFalse(listed.isEmpty(), "the chest lists no batteries");
+        assertEquals(listed, held, "the chest of batteries");
     }
 
     /** Saved stacks are the ones listed, each a component under its {@code zas_atmos:} id. */

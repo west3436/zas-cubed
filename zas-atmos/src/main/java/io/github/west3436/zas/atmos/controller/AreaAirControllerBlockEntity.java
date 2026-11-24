@@ -2,6 +2,9 @@ package io.github.west3436.zas.atmos.controller;
 
 import io.github.west3436.ss13.api.label.Labelled;
 import io.github.west3436.ss13.api.label.Labels;
+import io.github.west3436.ss13.api.power.EnergyStore;
+import io.github.west3436.ss13.api.power.PowerFeed;
+import io.github.west3436.ss13.api.power.PowerProvider;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
@@ -23,10 +26,7 @@ import io.github.west3436.zas.atmos.firelock.FirelockLogic;
 import io.github.west3436.zas.atmos.heater.AirConditionerMath;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
 import io.github.west3436.zas.atmos.heater.ThermoCoil;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.EnergyStore;
-import io.github.west3436.zas.atmos.power.PowerFeed;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.ArrayList;
@@ -54,6 +54,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The area air controller's work, once per atmos tick (CONT-040 to CONT-049, CONT-062 to CONT-068,
@@ -69,7 +70,10 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  *       2 at once ({@link BreachAlarm}, CONT-043), and so is a triggered fire alarm it covers
  *       ({@link FireAlarmBlockEntity}, CONT-044).
  *   <li>Finds the parts in its zone and those linked to it (CONT-042), powers them in priority order
- *       (CONT-064, CONT-068) and commands its vents and scrubbers for its mode (CONT-041). With a
+ *       (CONT-064, CONT-068) and commands its vents and scrubbers for its mode (CONT-041). It is a
+ *       power provider under SS13 Framework's contract at {@link PowerProvider#BACKUP}: a part that
+ *       a provider of higher precedence also claims, such as an APC or an airlock controller, is
+ *       powered by that one, and the controller still orders it. With a
  *       target temperature, its thermostat orders the heaters of the vents in its zone, or the air
  *       conditioners of its scrubbers there, from what is left once they are paid, and pays for
  *       that heat ({@link Thermostat}, CONT-165).
@@ -80,14 +84,23 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * <p>It records what a step costs ({@link #demand()}), so a central atmospherics controller that has
  * claimed it can pay what its buffer doesn't hold before its next step (CONT-120).
  */
-public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuProvider, Labelled {
+public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuProvider, Labelled, PowerProvider {
     /**
      * A part the controller covers, as the GUI lists it (CONT-049).
      *
+     * @param powered whether it has power this step, from the controller or from another provider
+     * @param byAnother whether another provider, of higher precedence, powers it, such as an APC or an
+     *     airlock controller: the controller only orders it
      * @param label what a player called it, or the empty string
      */
     public record Part(
-            ResourceLocation block, BlockPos pos, boolean inZone, boolean linked, boolean powered, String label) {}
+            ResourceLocation block,
+            BlockPos pos,
+            boolean inZone,
+            boolean linked,
+            boolean powered,
+            boolean byAnother,
+            String label) {}
 
     private final EnergyStore buffer = new EnergyStore(
             () -> AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_BUFFER), true, false, this::setChanged);
@@ -169,7 +182,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
 
         long own = (long) AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
         powered = buffer.take(own);
-        List<PoweredDevice> covered = covered(level);
+        List<PoweredPart> covered = covered(level);
         coverage();
         if (!powered) {
             demand = fullBill(own, covered);
@@ -178,7 +191,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             breach = false;
             fire = false;
             thermostat = Double.isNaN(target) ? Thermostat.State.OFF : Thermostat.State.IDLE;
-            parts = describe(covered, new boolean[covered.size()]);
+            parts = describe(covered, null);
             setStatus(level, ControllerStatus.UNPOWERED);
             return;
         }
@@ -215,7 +228,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         // the bill, from what is left (CONT-166, CONT-167).
         VentOrder vent = mode.vent(preset).from(getBlockPos());
         ScrubberOrder scrubber = mode.scrubber(preset).from(getBlockPos());
-        for (PoweredDevice d : covered) {
+        for (PoweredPart d : covered) {
             if (d instanceof VentControl v) {
                 v.ventOrder(vent);
             }
@@ -223,9 +236,9 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
                 s.scrubberOrder(scrubber);
             }
         }
-        boolean[] supplied = feed(covered, own);
+        List<PowerFeed.Outcome> fed = feed(covered, own);
         demand += thermostat(level, covered);
-        parts = describe(covered, supplied);
+        parts = describe(covered, fed);
         setStatus(level, ControllerStatus.of(danger.level()));
         if (!wasAlarming && alarming()) {
             // The firelocks it covers close now, not at their own steps up to an atmos tick later.
@@ -318,7 +331,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
      * level's {@link ZoneIndex}. A link to a loaded block that is no longer a part or a firelock is
      * dropped; one in a chunk that isn't loaded in full is kept, and read without loading it.
      */
-    private List<PoweredDevice> covered(ServerLevel level) {
+    private List<PoweredPart> covered(ServerLevel level) {
         links.removeIf(p -> LoadedBlocks.chunk(level, p) != null && !linkable(LoadedBlocks.entity(level, p)));
         Optional<ZoneId> zone = sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.PAUSED
                 ? sample.zone()
@@ -328,7 +341,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
 
     /** What can be linked with the multitool: a powered part (CONT-042) or a firelock (CONT-043). */
     public static boolean linkable(BlockEntity be) {
-        return be instanceof PoweredDevice || (be instanceof FirelockLogic.Holder f && f.hasFirelock());
+        return be instanceof PoweredPart || (be instanceof FirelockLogic.Holder f && f.hasFirelock());
     }
 
     /** Records the zone the controller covers for firelocks (CONT-043): its own, as of this step. */
@@ -374,8 +387,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return fire;
     }
 
-    private static boolean fireAlarmed(List<PoweredDevice> covered) {
-        for (PoweredDevice d : covered) {
+    private static boolean fireAlarmed(List<PoweredPart> covered) {
+        for (PoweredPart d : covered) {
             if (d instanceof FireAlarmBlockEntity alarm && alarm.triggered()) {
                 return true;
             }
@@ -390,14 +403,24 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
 
     /**
      * What a step costs with every covered part paid, at what each draws now: its own draw and theirs,
-     * including those another provider paid for this time, which may fall to it next time.
+     * including those another controller paid for this time, which may fall to it next time. A part
+     * held by a provider of higher precedence, such as an APC or an airlock controller, isn't
+     * counted: that one pays for it, and the part falls to this controller only when that one goes.
      */
-    private static long fullBill(long own, List<PoweredDevice> covered) {
+    private long fullBill(long own, List<PoweredPart> covered) {
         long cost = own;
-        for (PoweredDevice d : covered) {
-            cost += d.power().drawPerAtmosTick();
+        for (PoweredPart d : covered) {
+            if (!heldByAnother(d)) {
+                cost += d.power().drawPerStep();
+            }
         }
         return cost;
+    }
+
+    /** Whether a provider of higher precedence, such as an APC or an airlock controller, holds a part. */
+    private boolean heldByAnother(PoweredPart d) {
+        PowerProvider holder = d.power().claimant();
+        return holder != null && holder != this && holder.precedence() > precedence();
     }
 
     /**
@@ -412,7 +435,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
      *
      * @return the FE it spent
      */
-    private long thermostat(ServerLevel level, List<PoweredDevice> covered) {
+    private long thermostat(ServerLevel level, List<PoweredPart> covered) {
         double temperature = sample.state() == AtmosphereState.ZONED ? sample.temperature() : Double.NaN;
         thermostat = Thermostat.next(
                 thermostat, temperature, target, AtmosServerConfig.get(AtmosServerConfig.THERMOSTAT_BAND));
@@ -426,7 +449,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         double need = kind == ThermoCoil.Kind.HEATS
                 ? HeaterMath.heat(c, temperature, target, DeviceTicks.SECONDS, Double.MAX_VALUE)
                 : AirConditionerMath.cool(c, temperature, target, DeviceTicks.SECONDS, Double.MAX_VALUE);
-        for (PoweredDevice d : covered) {
+        for (PoweredPart d : covered) {
             if (d instanceof ThermostatControl t
                     && t.coil().kind() == kind
                     && t.thermostatReady()
@@ -464,49 +487,44 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     }
 
     /**
-     * Powers the covered parts from the buffer, in priority order (CONT-064, CONT-068).
+     * Claims the covered parts and powers those it holds from the buffer, in priority order (CONT-064,
+     * CONT-068), through SS13 Framework's {@link PowerFeed#serve}: a part a provider of higher
+     * precedence holds is left to that one, and a part whose step is paid for already, by another
+     * controller or through a link, isn't paid again.
      *
-     * @return for each part, whether it is paid for this atmos tick
+     * @return for each part, what became of it
      */
-    private boolean[] feed(List<PoweredDevice> covered, long own) {
-        List<PowerFeed.Demand> demands = new ArrayList<>();
-        List<Integer> unpaid = new ArrayList<>();
-        boolean[] supplied = new boolean[covered.size()];
-        for (int i = 0; i < covered.size(); i++) {
-            DevicePower p = covered.get(i).power();
-            if (p.suppliedThisAtmosTick()) {
-                supplied[i] = true; // paid already, by another controller or through a link
-            } else {
-                demands.add(new PowerFeed.Demand(p.priority(), p.drawPerAtmosTick()));
-                unpaid.add(i);
-            }
-        }
+    private List<PowerFeed.Outcome> feed(List<PoweredPart> covered, long own) {
+        PowerFeed.Served served = PowerFeed.serve(this, covered, buffer.getEnergyStored());
+        buffer.take(served.spent());
         demand = fullBill(own, covered);
-        PowerFeed.Plan plan = PowerFeed.plan(buffer.getEnergyStored(), demands);
-        buffer.take(plan.spent());
-        for (int j = 0; j < unpaid.size(); j++) {
-            if (plan.powered()[j]) {
-                int i = unpaid.get(j);
-                covered.get(i).power().supply(this);
-                supplied[i] = true;
-            }
-        }
-        return supplied;
+        return served.outcomes();
     }
 
-    private List<Part> describe(List<PoweredDevice> covered, boolean[] supplied) {
+    /**
+     * The parts as the GUI lists them. A part another provider holds is "powered by another", and
+     * has power while that one powers it.
+     *
+     * @param fed what became of each part at this step, or null if the controller powered none
+     */
+    private List<Part> describe(List<PoweredPart> covered, @Nullable List<PowerFeed.Outcome> fed) {
         Optional<ZoneId> zone = sample == null ? Optional.empty() : sample.zone();
         List<Part> out = new ArrayList<>();
         for (int i = 0; i < covered.size(); i++) {
             BlockEntity be = (BlockEntity) covered.get(i);
             ServerLevel level = (ServerLevel) be.getLevel();
             boolean in = zone.isPresent() && level != null && ZoneIndex.inZone(level, covered.get(i), zone.get());
+            boolean byAnother = heldByAnother(covered.get(i));
+            boolean powered = byAnother
+                    ? covered.get(i).power().isPowered()
+                    : fed != null && fed.get(i).powered();
             out.add(new Part(
                     BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()),
                     be.getBlockPos(),
                     in,
                     links.contains(be.getBlockPos()),
-                    supplied[i],
+                    powered,
+                    byAnother,
                     be instanceof Labelled named ? named.label() : ""));
         }
         return List.copyOf(out);
@@ -612,10 +630,24 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return powered;
     }
 
+    // ---- The power contract ----------------------------------------------------------------
+
+    /** {@link PowerProvider#BACKUP}: an APC or an airlock controller covering a part powers it instead. */
+    @Override
+    public int precedence() {
+        return BACKUP;
+    }
+
+    /** Until it is removed or unloaded, which ends its claims at once, so another provider takes over. */
+    @Override
+    public boolean providing() {
+        return !isRemoved();
+    }
+
     /**
      * What a step costs, as of its last: its own draw and that of every part it covered, at what each
-     * drew then, whether or not it could pay and whether or not another provider paid for some
-     * (CONT-120). A central controller tops its buffer up to this, so a part whose next charge comes
+     * drew then, whether or not it could pay and whether or not another controller paid for some,
+     * leaving out those a provider of higher precedence holds (CONT-120). A central controller tops its buffer up to this, so a part whose next charge comes
      * due finds it there. 0 before its first step.
      */
     public long demand() {

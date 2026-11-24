@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
@@ -13,7 +14,6 @@ import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
 import io.github.west3436.zas.atmos.heater.ThermoStatus;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -119,7 +119,7 @@ public final class AirConditionerTests {
                     ac.battery().insertItem(0, new ItemStack(Items.COAL), false).getCount(), 1, "coal went in");
 
             // A full battery: 5 kW, 60 FE/t over the step.
-            BatteryTests.swap(ac.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(ac.battery(), FrameworkItems.BATTERY.get().full());
             double c = GasProperties.heatCapacity(s.zone(2, 2, 2).mixture().moles());
             double before = temperature(s, 2, 2, 2);
             s.cycle(ac);
@@ -163,7 +163,7 @@ public final class AirConditionerTests {
                 menu.clickMenuButton(hand, AirConditionerMenu.SETPOINT_DOWN_10);
             }
             s.close(ac.setpoint(), AirConditionerMath.MIN_SETPOINT, 0, "the lowest setpoint");
-            BatteryTests.swap(ac.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), 300));
+            BatteryTests.swap(ac.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), 300));
             s.cycle(ac);
             h.assertValueEqual(ac.status(), ThermoStatus.COOLING, "the air conditioner on its last 300 FE");
             s.close(
@@ -179,7 +179,7 @@ public final class AirConditionerTests {
 
             // In open air it has no room, and leaves its battery alone.
             AirConditionerBlockEntity outside = airConditioner(s, 8, 1, 2);
-            BatteryTests.swap(outside.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(outside.battery(), FrameworkItems.BATTERY.get().full());
             outside.setSetpoint(AirConditionerMath.MIN_SETPOINT);
             outside.setOn(true);
             s.cycle(outside);
@@ -201,7 +201,7 @@ public final class AirConditionerTests {
                             .getEntitiesOfClass(
                                     net.minecraft.world.entity.item.ItemEntity.class,
                                     new net.minecraft.world.phys.AABB(s.abs(8, 1, 2)).inflate(1),
-                                    e -> e.getItem().is(AtmosItems.BATTERY.get()))
+                                    e -> e.getItem().is(FrameworkItems.BATTERY.get()))
                             .isEmpty(),
                     "the broken air conditioner dropped no battery");
             h.succeed();
@@ -225,7 +225,7 @@ public final class AirConditionerTests {
             s.room(0, 4); // interior x 1–3
             AirConditionerBlockEntity ac = airConditioner(s, 2, 1, 2);
             BatteryTests.swap(
-                    ac.battery(), AtmosItems.HIGH_CAPACITY_BATTERY.get().full());
+                    ac.battery(), FrameworkItems.HIGH_CAPACITY_BATTERY.get().full());
             double setpoint = 288;
             ac.setSetpoint(setpoint);
             ac.setOn(true);
@@ -264,7 +264,7 @@ public final class AirConditionerTests {
                     "holding the room should take some of the power: " + ac.watts() + " W");
 
             // On 500 FE it holds the room, then stops, and the walls warm the room.
-            BatteryTests.swap(ac.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), 500));
+            BatteryTests.swap(ac.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), 500));
             int cooled = 0;
             for (int sec = 0; sec < 120 && ac.status() != ThermoStatus.BATTERY_EMPTY; sec++) {
                 s.cycle(ac);
@@ -297,11 +297,11 @@ public final class AirConditionerTests {
             s.set(2, 2, 0, TestParts.battery().defaultBlockState());
             AreaAirControllerBlockEntity c = s.controller(2);
             AirConditionerBlockEntity ac = airConditioner(s, 2, 1, 3);
-            BatteryTests.swap(ac.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(ac.battery(), FrameworkItems.BATTERY.get().full());
             ac.setSetpoint(AirConditionerMath.MIN_SETPOINT);
             ac.setOn(true);
             Object part = ac;
-            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "it is a part");
+            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredPart, "it is a part");
             int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             for (int i = 0; i < 4 && ac.status() != ThermoStatus.COOLING; i++) {
                 s.cycle(c, ac);

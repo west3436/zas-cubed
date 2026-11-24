@@ -11,6 +11,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.ss13.api.FrameworkApi;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkComponents;
 import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -41,6 +42,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -56,6 +58,8 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
@@ -326,26 +330,38 @@ public final class SavedWorldTests {
     }
 
     /**
-     * A world saved by 1.2.0 loads with every crafting component it held, now SS13 Framework's
-     * (#534): a chest of the 19 components and a player whose inventory holds them, each stack under
-     * its old {@code zas_atmos:} id, come back as the framework's items, with their counts and in
-     * their slots. The chest's chunk is read as an upgraded server reads it when it loads, and the
-     * player's file as the server reads it when that player joins.
+     * A world saved by 1.2.0 loads with every crafting component and battery it held, now SS13
+     * Framework's (#534, #539): a chest of the 19 components and a player whose inventory holds them,
+     * each stack under its old {@code zas_atmos:} id, come back as the framework's items, with their
+     * counts and in their slots. A chest of batteries, each tier under its old id and charged in the
+     * old {@code zas_atmos:energy} component, comes back as the framework's batteries, each holding
+     * the FE it held. The chests' chunks are read as an upgraded server reads them when they load,
+     * and the player's file as the server reads it when that player joins.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
-    public static void a_world_saved_by_1_2_0_keeps_its_crafting_components(GameTestHelper h) {
+    public static void a_world_saved_by_1_2_0_keeps_its_crafting_components_and_batteries(GameTestHelper h) {
         ServerLevel level = h.getLevel();
         JsonObject expected = expected(level, "expected-1.2.0.json", "1.2.0");
         JsonArray at = expected.getAsJsonArray("chunks").get(0).getAsJsonArray();
         ChunkPos chunk = new ChunkPos(at.get(0).getAsInt(), at.get(1).getAsInt());
         BlockPos chestAt = pos(expected.getAsJsonArray("chest_at"));
-        h.assertFalse(level.getChunkSource().hasChunk(chunk.x, chunk.z), "chunk " + chunk + " loaded before this test");
-        PipeSaveTests.hold(level, chunk, true);
-        CLEANUP.add(() -> PipeSaveTests.hold(level, chunk, false));
+        JsonObject batteries = expected.getAsJsonObject("batteries");
+        JsonArray batteriesAt = batteries.getAsJsonArray("chunk");
+        ChunkPos batteryChunk =
+                new ChunkPos(batteriesAt.get(0).getAsInt(), batteriesAt.get(1).getAsInt());
+        BlockPos batteryChestAt = pos(batteries.getAsJsonArray("chest_at"));
+        for (ChunkPos c : List.of(chunk, batteryChunk)) {
+            h.assertFalse(level.getChunkSource().hasChunk(c.x, c.z), "chunk " + c + " loaded before this test");
+            PipeSaveTests.hold(level, c, true);
+            CLEANUP.add(() -> PipeSaveTests.hold(level, c, false));
+        }
 
         h.startSequence()
-                .thenWaitUntil(() -> h.assertTrue(
-                        level.getChunkSource().hasChunk(chunk.x, chunk.z), "chunk " + chunk + " hasn't loaded"))
+                .thenWaitUntil(() -> {
+                    for (ChunkPos c : List.of(chunk, batteryChunk)) {
+                        h.assertTrue(level.getChunkSource().hasChunk(c.x, c.z), "chunk " + c + " hasn't loaded");
+                    }
+                })
                 .thenExecute(() -> {
                     if (!(level.getBlockEntity(chestAt) instanceof ChestBlockEntity chest)) {
                         throw new GameTestAssertException("no chest at " + chestAt);
@@ -372,6 +388,16 @@ public final class SavedWorldTests {
                             "the player's inventory",
                             differ);
                     inventory.clearContent();
+
+                    if (!(level.getBlockEntity(batteryChestAt) instanceof ChestBlockEntity batteryChest)) {
+                        throw new GameTestAssertException("no chest at " + batteryChestAt);
+                    }
+                    sameBatteries(
+                            batteryChest::getItem,
+                            batteryChest.getContainerSize(),
+                            batteries.getAsJsonArray("chest"),
+                            "the chest of batteries",
+                            differ);
                     h.assertTrue(differ.isEmpty(), differ.size() + " stacks differ: " + differ);
                 })
                 .thenSucceed();
@@ -412,6 +438,43 @@ public final class SavedWorldTests {
         if (bySlot.size() != MovedItems.TO_FRAMEWORK.size()) {
             differ.add(
                     where + " was saved with " + bySlot.size() + " components, not " + MovedItems.TO_FRAMEWORK.size());
+        }
+    }
+
+    /**
+     * Each slot a release listed holds the framework's battery of the same name as the release's id,
+     * one, holding the FE the release listed, or no charge at all where it listed none; every other
+     * slot is empty. What differs goes to {@code differ}.
+     */
+    private static void sameBatteries(
+            IntFunction<ItemStack> slot, int size, JsonArray told, String where, List<String> differ) {
+        Map<Integer, JsonObject> bySlot = new TreeMap<>();
+        told.forEach(e -> bySlot.put(e.getAsJsonObject().get("slot").getAsInt(), e.getAsJsonObject()));
+        Set<Item> batteries = new HashSet<>();
+        FrameworkItems.batteries().forEach(b -> batteries.add(b.get()));
+        for (int i = 0; i < size; i++) {
+            ItemStack stack = slot.apply(i);
+            JsonObject then = bySlot.get(i);
+            if (then == null) {
+                if (!stack.isEmpty()) {
+                    differ.add(where + " holds " + stack + " in slot " + i + ", which was empty");
+                }
+                continue;
+            }
+            ResourceLocation old = ResourceLocation.parse(then.get("id").getAsString());
+            ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            Integer energy = then.has("energy") ? then.get("energy").getAsInt() : null;
+            if (!old.getNamespace().equals(ZasAtmosMod.MOD_ID) || !MovedItems.BATTERIES.contains(old.getPath())) {
+                differ.add(where + "'s slot " + i + " was saved as " + old + ", not a zas_atmos battery");
+            } else if (!key.equals(MovedItems.framework(old.getPath())) || !batteries.contains(stack.getItem())) {
+                differ.add(where + "'s slot " + i + " held " + old + " and now holds " + stack + " (" + key + ")");
+            } else if (!Objects.equals(stack.get(FrameworkComponents.ENERGY.get()), energy)) {
+                differ.add(where + "'s slot " + i + " held " + old + " at " + energy + " FE and now holds "
+                        + stack.get(FrameworkComponents.ENERGY.get()));
+            } else if (stack.getCount() != then.get("count").getAsInt()) {
+                differ.add(where + "'s slot " + i + " held " + then.get("count") + " " + old + " and now holds "
+                        + stack.getCount());
+            }
         }
     }
 
@@ -501,7 +564,7 @@ public final class SavedWorldTests {
                 differ.add("no block entity at " + e.getKey());
                 continue;
             }
-            CompoundTag then = tag(e.getValue().getAsString());
+            CompoundTag then = (CompoundTag) moved(tag(e.getValue().getAsString()));
             resolveItemIds(then);
             if (ORDERED.contains(then.getString("id")) && then.contains(ORDERS.get(0))) {
                 ORDERS.forEach(then::remove);
@@ -515,6 +578,39 @@ public final class SavedWorldTests {
         }
         h.assertTrue(differ.isEmpty(), differ.size() + " block entities differ: " + differ);
         h.assertValueEqual(underOrders, 1, "the devices that were under a controller's orders when 0.1.0 stopped");
+    }
+
+    /**
+     * A release's saved data as it saves now, with the ids that moved to SS13 Framework in its
+     * namespace: the batteries, saved by the portables and the recharger, and their charge, the {@code
+     * zas_atmos:energy} component (CONT-111).
+     */
+    private static Tag moved(Tag tag) {
+        if (tag instanceof CompoundTag c) {
+            CompoundTag out = new CompoundTag();
+            c.getAllKeys().forEach(key -> out.put(movedId(key), moved(c.get(key))));
+            return out;
+        }
+        if (tag instanceof ListTag l) {
+            ListTag out = new ListTag();
+            l.forEach(t -> out.add(moved(t)));
+            return out;
+        }
+        if (tag instanceof StringTag s) {
+            return StringTag.valueOf(movedId(s.getAsString()));
+        }
+        return tag;
+    }
+
+    /** The id a moved battery or component saves under now; any other string as it is. */
+    private static String movedId(String id) {
+        ResourceLocation old = ResourceLocation.tryParse(id);
+        boolean moved = old != null
+                && old.getNamespace().equals(ZasAtmosMod.MOD_ID)
+                && (MovedItems.BATTERIES.contains(old.getPath())
+                        || MovedItems.COMPONENTS.contains(old.getPath())
+                        || MovedItems.TO_FRAMEWORK.contains(old.getPath()));
+        return moved ? MovedItems.framework(old.getPath()).toString() : id;
     }
 
     /**
@@ -548,7 +644,8 @@ public final class SavedWorldTests {
                 TransferValveItem.tank(valve, 1).get(AtmosComponents.GAS.get()),
                 new GasParcel(Map.of(ResourceLocation.fromNamespaceAndPath("zas", "hydrogen"), 2.25), 293.0),
                 "the TTV's second tank");
-        h.assertValueEqual(chest.getItem(4).get(AtmosComponents.ENERGY.get()), 2468, "the battery's charge");
+        h.assertTrue(chest.getItem(4).is(FrameworkItems.BATTERY.get()), "the battery isn't the framework's");
+        h.assertValueEqual(chest.getItem(4).get(FrameworkComponents.ENERGY.get()), 2468, "the battery's charge");
         h.assertTrue(
                 chest.getItem(7).is(FrameworkItems.MULTITOOL.get()),
                 "the multitool isn't SS13 Framework's: " + chest.getItem(7));

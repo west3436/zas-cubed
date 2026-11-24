@@ -3,13 +3,14 @@ package io.github.west3436.zas.atmos.compat.cc;
 import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.peripheral.IPeripheral;
 import dan200.computercraft.api.peripheral.PeripheralCapability;
+import io.github.west3436.ss13.power.Batteries;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.atmos.airlock.AirSensorBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerMenu;
-import io.github.west3436.zas.atmos.battery.Batteries;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
@@ -45,7 +46,6 @@ import io.github.west3436.zas.atmos.pump.PumpBlockEntity;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
@@ -347,7 +347,7 @@ public final class CcReadTests {
         Spot s = new Spot(h, 34);
         Devices.clear(s);
         Player player = player(h);
-        ItemStack battery = new ItemStack(AtmosItems.BATTERY.get());
+        ItemStack battery = new ItemStack(FrameworkItems.BATTERY.get());
         Batteries.energy(battery).receiveEnergy(1234, false);
 
         HeaterBlockEntity heater = (HeaterBlockEntity) Devices.place(s, "zas_heater", 1, 1, 1);
@@ -498,7 +498,8 @@ public final class CcReadTests {
                     "z", part.pos().getZ(),
                     "inZone", part.inZone(),
                     "linked", part.linked(),
-                    "powered", part.powered());
+                    "powered", part.powered(),
+                    "byAnother", part.byAnother());
             h.assertValueEqual(parts.get(i), expected, "part " + i);
         }
         h.assertValueEqual(parts.get(0).get("block"), "zas_atmos:vent", "the part's block");

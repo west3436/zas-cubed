@@ -28,7 +28,7 @@ import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockLogic;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.power.PoweredPart;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.vent.VentBlock;
@@ -319,7 +319,7 @@ public final class LabelTests {
                 labelled.add(id.getPath());
                 h.assertTrue(be instanceof AtmosDevice, id + " takes a label but isn't a device that keeps one");
             }
-            if (be instanceof PoweredDevice
+            if (be instanceof PoweredPart
                     || be instanceof FirelockLogic.Holder
                     || be instanceof AirSensorBlockEntity
                     || be instanceof AirlockControllerBlockEntity

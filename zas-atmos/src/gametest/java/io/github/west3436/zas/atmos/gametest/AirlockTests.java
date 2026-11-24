@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.tool.MultitoolItem;
@@ -28,7 +29,6 @@ import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.Multitool;

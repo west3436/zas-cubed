@@ -1,5 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -24,9 +27,7 @@ import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
-import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.pump.PumpFlow;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
@@ -518,13 +519,15 @@ public final class ElectrolyzerTests {
             s.ticks(2);
             s.settle(GasMutations.add(s.level, s.point(4, 3, 3), new GasParcel(Map.of(N2, 1.0), T), Site.SOURCE));
 
-            h.assertValueEqual(e.power().priority(), PowerPriority.AUXILIARY, "its group");
+            h.assertValueEqual(e.power().channel(), PowerChannel.EQUIPMENT, "its channel");
+
+            h.assertValueEqual(e.power().priority(), PowerPriority.NORMAL, "its priority");
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.ELECTROLYZER_DRAW), 80, "its draw");
             h.assertValueEqual(e.power().draw(), 0, "the draw of one that's off");
-            h.assertValueEqual(e.power().drawPerAtmosTick(), 0L, "the bill of one that's off");
+            h.assertValueEqual(e.power().drawPerStep(), 0L, "the bill of one that's off");
             e.setOn(true);
             h.assertValueEqual(e.power().draw(), 80, "the draw of one that's on");
-            h.assertValueEqual(e.power().drawPerAtmosTick(), 80L * DeviceTicks.PERIOD, "the bill of one that's on");
+            h.assertValueEqual(e.power().drawPerStep(), 80L * DeviceTicks.PERIOD, "the bill of one that's on");
 
             // No controller: no power, on and beside a burning generator.
             s.cycles(3, e);

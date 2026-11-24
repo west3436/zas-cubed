@@ -1,6 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
@@ -13,10 +15,8 @@ import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmStatus;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.Map;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
@@ -99,7 +99,7 @@ public final class PowerCutTests {
                     2,
                     AtmosBlocks.RECHARGER.get().defaultBlockState().setValue(RechargerBlock.FACING, Direction.NORTH),
                     RechargerBlockEntity.class);
-            BatteryTests.swap(recharger.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            BatteryTests.swap(recharger.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             BlockState alarmState =
                     AtmosBlocks.FIRE_ALARM.get().defaultBlockState().setValue(FireAlarmBlock.FACING, Direction.SOUTH);
             h.assertTrue(alarmState.canSurvive(s.level, s.abs(4, 2, 1)), "the alarm has no wall behind it");

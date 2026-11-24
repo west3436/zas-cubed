@@ -6,6 +6,8 @@ import static io.github.west3436.zas.atmos.gametest.Area.REL;
 
 import com.mojang.logging.LogUtils;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkComponents;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -1327,8 +1329,8 @@ public final class StationSaveTests {
     }
 
     static ItemStack battery(int energy) {
-        ItemStack battery = AtmosItems.BATTERY.get().full();
-        battery.set(AtmosComponents.ENERGY.get(), energy);
+        ItemStack battery = FrameworkItems.BATTERY.get().full();
+        battery.set(FrameworkComponents.ENERGY.get(), energy);
         return battery;
     }
 

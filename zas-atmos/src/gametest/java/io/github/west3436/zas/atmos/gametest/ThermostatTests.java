@@ -224,7 +224,7 @@ public final class ThermostatTests {
         // Every step here runs in one game tick, so the vent's lease, paid at the first, still runs:
         // the controller pays its own draw and the heat. PowerChargeTests show a part paid each
         // atmos tick in game time.
-        h.assertTrue(vent.power().suppliedThisAtmosTick(), "the vent's lease ran out");
+        h.assertTrue(vent.power().suppliedThisStep(), "the vent's lease ran out");
         controller.buffer().set(full);
         a.step();
         h.assertValueEqual((long) (full - controller.buffer().getEnergyStored()), own + heating, "a step at full heat");

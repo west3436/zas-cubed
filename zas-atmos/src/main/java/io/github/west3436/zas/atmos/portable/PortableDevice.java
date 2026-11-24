@@ -3,7 +3,7 @@ package io.github.west3436.zas.atmos.portable;
 import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.ss13.device.RedstoneControlled;
-import io.github.west3436.zas.atmos.battery.Batteries;
+import io.github.west3436.ss13.power.Batteries;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -25,7 +25,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 /**
  * A portable's block entity (CONT-018, D-73): its battery slot (CONT-112), its switch and the air it
  * works on. It isn't a controller's part: it doesn't implement {@link
- * io.github.west3436.zas.atmos.power.PoweredDevice}, so no area air controller powers, orders or
+ * io.github.west3436.zas.atmos.power.PoweredPart}, so no area air controller powers, orders or
  * lists it, and a link to it doesn't hold.
  */
 public abstract class PortableDevice extends AtmosDevice implements MenuProvider, RedstoneControlled {

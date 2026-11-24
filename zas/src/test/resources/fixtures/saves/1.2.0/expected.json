@@ -207,5 +207,41 @@
       "id": "zas_atmos:reinforced_glass",
       "count": 46
     }
-  ]
+  ],
+  "batteries": {
+    "chunk": [
+      96,
+      0
+    ],
+    "chest_at": [
+      1542,
+      -60,
+      6
+    ],
+    "chest": [
+      {
+        "slot": 0,
+        "id": "zas_atmos:battery",
+        "count": 1
+      },
+      {
+        "slot": 1,
+        "id": "zas_atmos:battery",
+        "count": 1,
+        "energy": 50000
+      },
+      {
+        "slot": 2,
+        "id": "zas_atmos:high_capacity_battery",
+        "count": 1,
+        "energy": 750000
+      },
+      {
+        "slot": 3,
+        "id": "zas_atmos:super_capacity_battery",
+        "count": 1,
+        "energy": 2000000
+      }
+    ]
+  }
 }

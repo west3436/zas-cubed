@@ -13,7 +13,7 @@ import net.minecraft.gametest.framework.GameTestSequence;
  * What an FE store pays over time, read at every game tick, for a GameTest that lets the game step
  * its devices in real time. A test that steps them itself, within one game tick, can't see a repeat
  * charge: the game clock stands still there, so a part once supplied counts as supplied for the rest
- * of the test ({@code DevicePower#suppliedThisAtmosTick}).
+ * of the test ({@code DevicePower#suppliedThisStep}).
  *
  * <p>It suits a store that only falls, such as a controller's buffer with nothing beside it to fill
  * it, or an FE block it draws from. Give the test a batch of its own and force-load its chunks, and

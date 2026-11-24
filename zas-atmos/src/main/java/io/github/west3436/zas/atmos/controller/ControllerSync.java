@@ -95,6 +95,7 @@ public record ControllerSync(
             buf.writeBoolean(p.inZone());
             buf.writeBoolean(p.linked());
             buf.writeBoolean(p.powered());
+            buf.writeBoolean(p.byAnother());
             buf.writeUtf(p.label());
         }
         buf.writeUtf(pin);
@@ -139,7 +140,13 @@ public record ControllerSync(
             ResourceLocation block = buf.readResourceLocation();
             BlockPos pos = buf.readBlockPos();
             parts.add(new AreaAirControllerBlockEntity.Part(
-                    block, pos, buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), Labels.clean(buf.readUtf())));
+                    block,
+                    pos,
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    Labels.clean(buf.readUtf())));
         }
         String pin = buf.readUtf();
         boolean breach = buf.readBoolean();

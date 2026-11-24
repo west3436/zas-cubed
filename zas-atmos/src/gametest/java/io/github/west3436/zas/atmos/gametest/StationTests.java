@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.ss13.device.DeviceTicker;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.registry.FrameworkItems;
@@ -39,7 +40,6 @@ import io.github.west3436.zas.atmos.firelock.Lockdown;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -240,7 +240,7 @@ public final class StationTests {
             int ventDraw = AtmosServerConfig.get(AtmosServerConfig.VENT_DRAW) * DeviceTicks.PERIOD;
             h.assertValueEqual(own, 100, "the controller's 5 FE/t per atmos tick");
             h.assertValueEqual(ventDraw, 200, "the vent's 10 FE/t per atmos tick");
-            h.assertValueEqual(vent.power().drawPerAtmosTick(), (long) ventDraw, "the blowing vent's draw");
+            h.assertValueEqual(vent.power().drawPerStep(), (long) ventDraw, "the blowing vent's draw");
             h.assertTrue(fe >= own + ventDraw && fe < own + ventDraw + 400, "the generator's FE: " + fe);
 
             ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());

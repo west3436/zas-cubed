@@ -1,5 +1,8 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.DevicePower;
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTags;
@@ -23,9 +26,7 @@ import io.github.west3436.zas.atmos.mixer.MixerMenu;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
-import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.pump.PumpFlow;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -855,9 +856,11 @@ public final class FilterMixerTests {
             s.ticks(2);
             s.settle(GasMutations.add(s.level, s.point(4, 3, 3), new GasParcel(Map.of(N2, 1.0), T), Site.SOURCE));
 
-            h.assertValueEqual(device.power().priority(), PowerPriority.GAS_HANDLING, "the device's group");
+            h.assertValueEqual(device.power().channel(), PowerChannel.ENVIRONMENT, "the device's channel");
+
+            h.assertValueEqual(device.power().priority(), PowerPriority.NORMAL, "the device's priority");
             h.assertValueEqual(device.power().draw(), 0, "the draw of a device that's off");
-            h.assertValueEqual(device.power().drawPerAtmosTick(), 0L, "the bill of a device that's off");
+            h.assertValueEqual(device.power().drawPerStep(), 0L, "the bill of a device that's off");
 
             // Plenty of gas for the seconds below, far from the target, and well short of a burst.
             back(device).add(new GasParcel(Map.of(N2, 300.0), T));
@@ -866,7 +869,7 @@ public final class FilterMixerTests {
             device.setOn(true);
             h.assertValueEqual(device.power().draw(), 20, "the draw of a device that's on");
             h.assertValueEqual(
-                    device.power().drawPerAtmosTick(), 20L * DeviceTicks.PERIOD, "the bill of a device that's on");
+                    device.power().drawPerStep(), 20L * DeviceTicks.PERIOD, "the bill of a device that's on");
 
             // No controller: no power.
             s.cycles(3, device);

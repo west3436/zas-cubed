@@ -1,17 +1,17 @@
 package io.github.west3436.zas.atmos.teg;
 
+import io.github.west3436.ss13.api.power.EnergyStore;
 import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.device.LoadedBlocks;
 import io.github.west3436.ss13.device.RedstoneControl;
 import io.github.west3436.ss13.device.RedstoneControlled;
+import io.github.west3436.ss13.power.WorkToFe;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.gas.GasStore;
-import io.github.west3436.zas.atmos.power.EnergyStore;
-import io.github.west3436.zas.atmos.power.WorkToFe;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Arrays;

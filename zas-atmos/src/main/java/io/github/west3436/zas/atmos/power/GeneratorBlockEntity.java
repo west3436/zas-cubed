@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.power;
 
+import io.github.west3436.ss13.api.power.EnergyStore;
 import io.github.west3436.ss13.device.Comparators;
 import io.github.west3436.ss13.device.DeviceActivity;
 import io.github.west3436.ss13.device.DeviceData;

@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -149,7 +150,7 @@ public final class PortablePumpTests {
 
             // A full battery: it waits for the air to settle, then siphons 150 L of the air each second, in
             // the air's proportions, and costs 20 FE/t.
-            BatteryTests.swap(pump.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(pump.battery(), FrameworkItems.BATTERY.get().full());
             for (int i = 0; i < 6 && pump.status() != PortableStatus.WORKING; i++) {
                 s.cycle(pump);
             }
@@ -210,7 +211,7 @@ public final class PortablePumpTests {
             // Too little charge: it moves what the charge pays for, then stops.
             pump.store().set(new GasParcel(Map.of(O2, 100.0), T));
             pump.setTarget(4_500);
-            BatteryTests.swap(pump.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), STEP / 2));
+            BatteryTests.swap(pump.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), STEP / 2));
             room = air(s);
             s.cycle(pump);
             h.assertValueEqual(pump.status(), PortableStatus.WORKING, "the pump on its last charge");
@@ -223,7 +224,7 @@ public final class PortablePumpTests {
             h.assertFalse(lit(s, pump), "lit on an empty battery");
 
             // With an empty store it has nothing to release, and draws nothing.
-            BatteryTests.swap(pump.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(pump.battery(), FrameworkItems.BATTERY.get().full());
             pump.store().drain();
             s.cycle(pump);
             h.assertValueEqual(pump.status(), PortableStatus.NOTHING_TO_MOVE, "the pump with an empty store");
@@ -231,7 +232,7 @@ public final class PortablePumpTests {
 
             // In open air it has no room, and leaves its battery alone.
             PortablePumpBlockEntity outside = pump(s, 8, 1, 2);
-            BatteryTests.swap(outside.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(outside.battery(), FrameworkItems.BATTERY.get().full());
             outside.setOn(true);
             s.cycles(5, outside);
             h.assertValueEqual(outside.status(), PortableStatus.NO_ROOM, "the pump in open air");
@@ -240,7 +241,7 @@ public final class PortablePumpTests {
             // Broken, it drops its battery and its tank.
             outside.tank().insertItem(0, tank(new GasParcel(Map.of(O2, 1.0), T)), false);
             s.set(8, 1, 2, Site.AIR);
-            h.assertTrue(dropped(s, 8, 1, 2, AtmosItems.BATTERY.get()), "it dropped no battery");
+            h.assertTrue(dropped(s, 8, 1, 2, FrameworkItems.BATTERY.get()), "it dropped no battery");
             h.assertTrue(dropped(s, 8, 1, 2, AtmosItems.EMPTY_TANK.get()), "it dropped no tank");
             h.succeed();
         } finally {
@@ -263,7 +264,7 @@ public final class PortablePumpTests {
             PortablePumpBlockEntity pump = pump(s, 2, 1, 2);
             BatteryTests.formZone(s, 2, 2, 2);
             GasMixture room = air(s);
-            BatteryTests.swap(pump.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(pump.battery(), FrameworkItems.BATTERY.get().full());
             pump.store().set(new GasParcel(Map.of(O2, 100.0), T));
             pump.tank().insertItem(0, new ItemStack(AtmosItems.EMPTY_TANK.get()), false);
             pump.setTarget(1_000);
@@ -319,7 +320,7 @@ public final class PortablePumpTests {
 
             // Half a step's charge moves half; then an empty battery stops it.
             pump.setSiphon(false);
-            BatteryTests.swap(pump.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), STEP / 2));
+            BatteryTests.swap(pump.battery(), BatteryTests.charged(FrameworkItems.BATTERY.get(), STEP / 2));
             s.cycle(pump);
             h.assertValueEqual(pump.status(), PortableStatus.WORKING, "the pump on its last charge");
             s.close(tankGas(pump).moles(O2), 100.0 * 150 / 2000 / 2, 1e-9, "the tank's O2 at half a step");
@@ -349,7 +350,7 @@ public final class PortablePumpTests {
 
             // In open air, a held tank still works: it needs no zone.
             PortablePumpBlockEntity outside = pump(s, 8, 1, 2);
-            BatteryTests.swap(outside.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(outside.battery(), FrameworkItems.BATTERY.get().full());
             outside.tank().insertItem(0, tank(new GasParcel(Map.of(O2, 5.0), T)), false);
             outside.setSiphon(true);
             outside.setTarget(1_000);
@@ -376,13 +377,13 @@ public final class PortablePumpTests {
             s.set(2, 2, 0, TestParts.battery().defaultBlockState());
             AreaAirControllerBlockEntity c = s.controller(2);
             PortablePumpBlockEntity pump = pump(s, 2, 1, 3);
-            BatteryTests.swap(pump.battery(), AtmosItems.BATTERY.get().full());
+            BatteryTests.swap(pump.battery(), FrameworkItems.BATTERY.get().full());
             pump.setSiphon(true);
             pump.setTarget(4_500);
             pump.setOn(true);
             BatteryTests.formZone(s, 2, 2, 2);
             Object part = pump;
-            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "it is a part");
+            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredPart, "it is a part");
             for (int i = 0; i < 6 && pump.status() != PortableStatus.WORKING; i++) {
                 s.cycle(c, pump);
             }

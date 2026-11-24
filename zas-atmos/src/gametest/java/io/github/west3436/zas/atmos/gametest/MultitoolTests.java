@@ -18,7 +18,6 @@ import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.ArrayList;
@@ -203,7 +202,7 @@ public final class MultitoolTests {
                     AtmosBlocks.FIRE_ALARM.get().defaultBlockState().setValue(FireAlarmBlock.FACING, Direction.SOUTH));
             placed.add(s.abs(13, 2, 1));
             RechargerBlockEntity recharger = s.entity(10, 1, 3, RechargerBlockEntity.class);
-            recharger.battery().setStackInSlot(0, new ItemStack(AtmosItems.BATTERY.get()));
+            recharger.battery().setStackInSlot(0, new ItemStack(FrameworkItems.BATTERY.get()));
             h.assertTrue(
                     s.level.getBlockState(recharger.getBlockPos()).getValue(RechargerBlock.BATTERY),
                     "the recharger doesn't show its battery");

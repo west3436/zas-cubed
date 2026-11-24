@@ -1,12 +1,16 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.ss13.api.power.PowerChannel;
+import io.github.west3436.ss13.api.power.PowerPriority;
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.power.Batteries;
+import io.github.west3436.ss13.power.BatteryItem;
+import io.github.west3436.ss13.registry.FrameworkComponents;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.battery.Batteries;
-import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
@@ -15,10 +19,7 @@ import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
 import io.github.west3436.zas.atmos.heater.ThermoStatus;
-import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosComponents;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -58,7 +59,7 @@ public final class BatteryTests {
     /** A stack of an FE item holding {@code fe}. */
     static ItemStack charged(Item item, int fe) {
         ItemStack stack = new ItemStack(item);
-        stack.set(AtmosComponents.ENERGY.get(), fe);
+        stack.set(FrameworkComponents.ENERGY.get(), fe);
         return stack;
     }
 
@@ -129,9 +130,9 @@ public final class BatteryTests {
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_111_batteries_fill_to_their_capacity(GameTestHelper h) {
         List<Item> batteries = List.of(
-                AtmosItems.BATTERY.get(),
-                AtmosItems.HIGH_CAPACITY_BATTERY.get(),
-                AtmosItems.SUPER_CAPACITY_BATTERY.get());
+                FrameworkItems.BATTERY.get(),
+                FrameworkItems.HIGH_CAPACITY_BATTERY.get(),
+                FrameworkItems.SUPER_CAPACITY_BATTERY.get());
         int[] capacities = {100_000, 1_000_000, 2_000_000};
         for (int i = 0; i < batteries.size(); i++) {
             Item item = batteries.get(i);
@@ -165,8 +166,8 @@ public final class BatteryTests {
     // ---- CONT-112 -------------------------------------------------------------------------
 
     /**
-     * Another mod's FE item, added to {@code zas_atmos:batteries} by a data pack, runs a heater and
-     * charges in a recharger; an FE item outside the tag, and an item with no FE, are refused by
+     * Another mod's FE item, added to {@code zas_atmos:batteries} by a data pack, and so in SS13
+     * Framework's {@code ss13_framework:batteries}, runs a heater and charges in a recharger; an FE item outside the tag, and an item with no FE, are refused by
      * both slots (CONT-112).
      */
     @GameTest(template = "empty", batch = BATCH)
@@ -242,7 +243,8 @@ public final class BatteryTests {
             int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.RECHARGER_DRAW), 40, "the configured draw");
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.RECHARGER_RATE), 28, "the configured rate");
-            h.assertValueEqual(r.power().priority(), PowerPriority.AUXILIARY, "the recharger's group");
+            h.assertValueEqual(r.power().channel(), PowerChannel.EQUIPMENT, "the recharger's channel");
+            h.assertValueEqual(r.power().priority(), PowerPriority.NORMAL, "the recharger's priority");
 
             // Empty: it draws nothing.
             s.cycle(r);
@@ -251,11 +253,11 @@ public final class BatteryTests {
             h.assertFalse(s.level.getBlockState(r.getBlockPos()).getValue(RechargerBlock.BATTERY), "a battery shown");
 
             // An empty battery: 40 FE/t from the buffer, 28 FE/t into the battery.
-            swap(r.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            swap(r.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             BlockState shown = s.level.getBlockState(r.getBlockPos());
             h.assertTrue(shown.getValue(RechargerBlock.BATTERY), "no battery shown");
             h.assertValueEqual(shown.getValue(RechargerBlock.CHARGE), 0, "the empty battery's gauge");
-            h.assertValueEqual(r.power().drawPerAtmosTick(), 40L * DeviceTicks.PERIOD, "the draw per atmos tick");
+            h.assertValueEqual(r.power().drawPerStep(), 40L * DeviceTicks.PERIOD, "the draw per atmos tick");
             for (int i = 0; i < 4 && !r.power().isPowered(); i++) {
                 s.cycle(c, r);
             }
@@ -278,7 +280,7 @@ public final class BatteryTests {
                     "the gauge, part charged");
 
             // Nearly full: it tops the battery up, then stops drawing.
-            swap(r.battery(), charged(AtmosItems.BATTERY.get(), 100_000 - 100));
+            swap(r.battery(), charged(FrameworkItems.BATTERY.get(), 100_000 - 100));
             s.cycle(c, r);
             h.assertValueEqual(r.energy(), 100_000, "the battery topped up");
             s.cycle(c, r);
@@ -293,7 +295,7 @@ public final class BatteryTests {
             s.room(6, 10);
             AreaAirControllerBlockEntity d = s.controller(8);
             RechargerBlockEntity unpowered = recharger(s, 8, 1, 3);
-            swap(unpowered.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            swap(unpowered.battery(), new ItemStack(FrameworkItems.BATTERY.get()));
             s.cycles(4, d, unpowered);
             h.assertFalse(d.powered(), "the controller with no FE is powered");
             h.assertValueEqual(
@@ -308,7 +310,7 @@ public final class BatteryTests {
                             .getEntitiesOfClass(
                                     ItemEntity.class,
                                     new AABB(pos).inflate(1),
-                                    e -> e.getItem().is(AtmosItems.BATTERY.get()))
+                                    e -> e.getItem().is(FrameworkItems.BATTERY.get()))
                             .isEmpty(),
                     "the broken recharger dropped no battery");
             h.succeed();
@@ -338,7 +340,7 @@ public final class BatteryTests {
             h.assertTrue(player.getMainHandItem().is(Items.STICK), "the stick left the hand");
 
             // In: it leaves the hand, with its charge, and the block shows it.
-            player.setItemInHand(InteractionHand.MAIN_HAND, charged(AtmosItems.BATTERY.get(), 100));
+            player.setItemInHand(InteractionHand.MAIN_HAND, charged(FrameworkItems.BATTERY.get(), 100));
             rightClick(s, r, player);
             h.assertTrue(player.getMainHandItem().isEmpty(), "the battery stayed in hand");
             h.assertValueEqual(r.energy(), 100, "the battery's charge in the recharger");
@@ -346,14 +348,15 @@ public final class BatteryTests {
 
             // Out, to the empty hand.
             rightClick(s, r, player);
-            h.assertTrue(player.getMainHandItem().is(AtmosItems.BATTERY.get()), "the battery didn't reach the hand");
+            h.assertTrue(
+                    player.getMainHandItem().is(FrameworkItems.BATTERY.get()), "the battery didn't reach the hand");
             h.assertValueEqual(Batteries.energy(player.getMainHandItem()).getEnergyStored(), 100, "its charge");
             h.assertTrue(r.battery().battery().isEmpty(), "the battery stayed in");
             h.assertFalse(s.level.getBlockState(r.getBlockPos()).getValue(RechargerBlock.BATTERY), "a battery shown");
 
             // A second battery swaps with the first.
             rightClick(s, r, player);
-            player.setItemInHand(InteractionHand.MAIN_HAND, charged(AtmosItems.BATTERY.get(), 200));
+            player.setItemInHand(InteractionHand.MAIN_HAND, charged(FrameworkItems.BATTERY.get(), 200));
             rightClick(s, r, player);
             h.assertValueEqual(r.energy(), 200, "the charge of the battery swapped in");
             h.assertValueEqual(
@@ -365,7 +368,7 @@ public final class BatteryTests {
             h.assertTrue(r.battery().battery().isEmpty(), "the battery stayed in, with a stick in hand");
             h.assertTrue(player.getMainHandItem().is(Items.STICK), "the stick left the hand");
             h.assertTrue(
-                    player.getInventory().items.stream().anyMatch(i -> i.is(AtmosItems.BATTERY.get())),
+                    player.getInventory().items.stream().anyMatch(i -> i.is(FrameworkItems.BATTERY.get())),
                     "no battery in the inventory");
             h.succeed();
         } finally {
@@ -388,11 +391,11 @@ public final class BatteryTests {
             s.set(2, 2, 0, TestParts.battery().defaultBlockState());
             AreaAirControllerBlockEntity c = s.controller(2);
             HeaterBlockEntity heater = heater(s, 2, 1, 3);
-            swap(heater.battery(), ((BatteryItem) AtmosItems.BATTERY.get()).full());
+            swap(heater.battery(), ((BatteryItem) FrameworkItems.BATTERY.get()).full());
             heater.setSetpoint(HeaterMath.MAX_SETPOINT);
             heater.setOn(true);
             Object part = heater;
-            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "the heater is a part");
+            h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredPart, "the heater is a part");
             int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * DeviceTicks.PERIOD;
             for (int i = 0; i < 4 && heater.status() != ThermoStatus.HEATING; i++) {
                 s.cycle(c, heater);

@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.gametest;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.ss13.device.DeviceData;
 import io.github.west3436.ss13.device.ItemData;
+import io.github.west3436.ss13.registry.FrameworkComponents;
 import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -94,8 +95,8 @@ public final class ItemDataTests {
         canister.set(AtmosComponents.GAS.get(), GAS);
         items.put("{id:\"zas_atmos:canister\",count:1,components:{\"zas_atmos:gas\":" + OLD_GAS + "}}", canister);
 
-        ItemStack battery = new ItemStack(AtmosItems.BATTERY.get());
-        battery.set(AtmosComponents.ENERGY.get(), 1234);
+        ItemStack battery = new ItemStack(FrameworkItems.BATTERY.get());
+        battery.set(FrameworkComponents.ENERGY.get(), 1234);
         items.put("{id:\"zas_atmos:battery\",count:1,components:{\"zas_atmos:energy\":1234}}", battery);
 
         ItemStack extinguisher = new ItemStack(AtmosItems.FIRE_EXTINGUISHER.get());
@@ -171,7 +172,6 @@ public final class ItemDataTests {
         samples.put(AtmosComponents.LEAKING.get(), 1.5f);
         samples.put(AtmosComponents.SUIT_TANK.get(), ItemContainerContents.fromItems(List.of(tank())));
         samples.put(AtmosComponents.MAGNETIZED.get(), true);
-        samples.put(AtmosComponents.ENERGY.get(), 1234);
         samples.put(AtmosComponents.CHARGES.get(), 3);
         samples.put(AtmosComponents.TTV_TANKS.get(), ItemContainerContents.fromItems(List.of(tank(), tank())));
         samples.put(AtmosComponents.TTV_OPEN.get(), true);

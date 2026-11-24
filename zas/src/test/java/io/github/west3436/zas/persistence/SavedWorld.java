@@ -32,7 +32,10 @@ import net.minecraft.nbt.NbtIo;
  * components, which SS13 Framework now registers, in one chunk of its own region file, and a player
  * whose inventory holds them, in {@code playerdata}. A console can't make a player, so a GameTest
  * added to a checkout of the release's tag wrote both, saved the world and listed them in {@code
- * expected.json}.
+ * expected.json}. It also holds a chest of batteries, which SS13 Framework registers too, charged in
+ * the old {@code zas_atmos:energy} component, in chunk (96, 0) of a region file of its own, {@code
+ * r.3.0.mca}: the release's dedicated server built it by console commands on a new flat world, and
+ * {@code expected.json} lists it under {@code batteries}.
  *
  * <p>Nothing here needs the game to be running, so the content mod's unit tests read it too.
  */

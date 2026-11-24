@@ -5,6 +5,7 @@ import io.github.west3436.ss13.client.tgui.TguiScreen;
 import io.github.west3436.ss13.client.tgui.Ui;
 import io.github.west3436.ss13.client.tgui.Ui.Face;
 import io.github.west3436.ss13.device.RedstoneControl;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.portable.PortableGasMenu;
 import io.github.west3436.zas.atmos.portable.PortableStatus;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -81,7 +82,7 @@ abstract class PortableGasScreen<M extends PortableGasMenu> extends TguiScreen<M
         int batteryY = topPos + PortableGasMenu.BATTERY_Y + shift;
         int tankY = topPos + PortableGasMenu.TANK_Y + shift;
         if (!menu.getSlot(BATTERY_SLOT).hasItem()) {
-            ui.ghost(slotX, batteryY, new ItemStack(AtmosItems.BATTERY.get()));
+            ui.ghost(slotX, batteryY, new ItemStack(FrameworkItems.BATTERY.get()));
         }
         if (!menu.getSlot(TANK_SLOT).hasItem()) {
             ui.ghost(slotX, tankY, new ItemStack(AtmosItems.EMPTY_TANK.get()));

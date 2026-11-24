@@ -5,6 +5,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.api.power.DevicePower;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
@@ -19,7 +20,6 @@ import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
-import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.vent.VentBlock;

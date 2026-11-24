@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
@@ -317,7 +318,7 @@ public final class TankHolderTests {
                 new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get()),
                 new ItemStack(AtmosItems.CANISTER.get()),
                 suit,
-                new ItemStack(AtmosItems.BATTERY.get()));
+                new ItemStack(FrameworkItems.BATTERY.get()));
         for (ItemStack other : others) {
             ItemStack inHand = other.copy();
             p.setItemInHand(InteractionHand.MAIN_HAND, inHand);
