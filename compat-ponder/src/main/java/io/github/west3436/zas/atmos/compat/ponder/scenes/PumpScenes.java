@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Gas;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;
@@ -9,7 +10,6 @@ import io.github.west3436.zas.atmos.compat.ponder.scene.Stage;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -84,7 +84,7 @@ public final class PumpScenes {
 
         // Each use of a wrench on its top turns it a quarter turn about the vertical, across the run and
         // then round, while its line is up. Then its gas goes the other way.
-        ItemStack wrench = new ItemStack(AtmosItems.WRENCH.get());
+        ItemStack wrench = new ItemStack(FrameworkItems.WRENCH.get());
         List<Direction> turns = List.of(Direction.SOUTH, Direction.WEST);
         Say.over(
                 scene,

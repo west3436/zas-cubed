@@ -3,7 +3,9 @@ package io.github.west3436.zas.atmos.gametest;
 import com.mojang.authlib.GameProfile;
 import io.github.west3436.ss13.device.DeviceTicks;
 import io.github.west3436.ss13.device.LoadedBlocks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
@@ -23,7 +25,7 @@ import io.github.west3436.zas.atmos.controller.ZonePriority;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -606,7 +608,7 @@ public final class CentralControllerTests {
             // Right-clicked on the controller, then on the second console's upper right block. With no
             // controller selected, it has nothing to move, and the console opens its window.
             ServerPlayer player = player(s, 6, 1, 3);
-            ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
+            ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, tool);
             use(player, second.parts().get(3));
             h.assertTrue(
@@ -616,12 +618,12 @@ public final class CentralControllerTests {
             player.closeContainer();
             use(player, c.getBlockPos());
             h.assertValueEqual(
-                    MultitoolItem.selected(tool, s.level).orElse(null), c.getBlockPos(), "the multitool's selection");
+                    MultitoolItem.source(tool, s.level).orElse(null), c.getBlockPos(), "the multitool's selection");
             use(player, second.parts().get(3));
             h.assertTrue(player.containerMenu == player.inventoryMenu, "moving the controller opened a window");
             h.assertValueEqual(owner(s, c), second.getBlockPos(), "the claim after the move");
             h.assertValueEqual(
-                    key(MultitoolItem.move(tool, s.level, second)),
+                    key(Multitool.link(tool, s.level, second.getBlockPos())),
                     "item.zas_atmos.multitool.moved",
                     "what the multitool says");
             h.assertValueEqual(claims(s).claimedBy(first.getBlockPos()), List.of(), "the first's claims");

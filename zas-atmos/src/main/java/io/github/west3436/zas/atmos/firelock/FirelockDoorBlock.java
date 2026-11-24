@@ -2,12 +2,13 @@ package io.github.west3436.zas.atmos.firelock;
 
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.ss13.api.label.LabelledPart;
+import io.github.west3436.ss13.api.tool.ToolTags;
 import io.github.west3436.zas.atmos.airlock.AirlockFirelock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
-import io.github.west3436.zas.atmos.tool.CrowbarItem;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Crowbar;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -168,8 +169,8 @@ public class FirelockDoorBlock extends DoorBlock implements EntityBlock, Labelle
     // ---- Using it -----------------------------------------------------------------------------
 
     /**
-     * The crowbar works it in its own useOn (CONT-094), and doesn't open it. The multitool links it
-     * before this is asked ({@link MultitoolItem#onItemUseFirst}, CONT-137).
+     * A crowbar works it once this has passed ({@link Crowbar}, CONT-094), and doesn't open it. The
+     * multitool links it before this is asked ({@link Multitool}, CONT-137).
      */
     @Override
     protected ItemInteractionResult useItemOn(
@@ -180,7 +181,7 @@ public class FirelockDoorBlock extends DoorBlock implements EntityBlock, Labelle
             Player player,
             InteractionHand hand,
             BlockHitResult hit) {
-        if (stack.getItem() instanceof CrowbarItem) {
+        if (stack.is(ToolTags.CROWBARS)) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

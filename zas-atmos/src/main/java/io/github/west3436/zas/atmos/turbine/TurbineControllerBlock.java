@@ -2,7 +2,7 @@ package io.github.west3436.zas.atmos.turbine;
 
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  * A gas turbine controller (CONT-163, CONT-190): a full block, its screen facing the player who
  * places it, set anywhere in reach of the engine's parts and of cables, outside the chamber. The
  * multitool selects it and then links a turbine, a compressor and an igniter to it ({@link
- * MultitoolItem}). It holds the engine's FE and offers it on every face, and its window drives the
+ * Multitool}). It holds the engine's FE and offers it on every face, and its window drives the
  * engine. Its screen lights while the turbine runs ({@link #RUNNING}). Its redstone setting reads
  * the signal here (CONT-170), and a comparator here reads its store (CONT-175).
  */

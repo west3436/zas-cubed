@@ -2,8 +2,12 @@ package io.github.west3436.zas.atmos.pipe;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.west3436.ss13.api.structure.Dismantlable;
+import io.github.west3436.ss13.api.structure.Dismantled;
+import io.github.west3436.ss13.api.structure.Dismantling;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -57,7 +61,8 @@ import org.jetbrains.annotations.Nullable;
  * into it ({@link #insert}), and the casing's item used on a bare pipe goes round it ({@link
  * #encase}), the pipe keeping its block entity, so its network and its gas never notice. Mined, it
  * drops both. A wrench takes the pipe back out and leaves the casing ({@link #takeOut}), and so does
- * a burst ({@link #burst}).
+ * a burst ({@link #burst}). A tool that takes walls apart, such as a welder, takes the casing away
+ * and leaves the bare pipe ({@link #DISMANTLABLE}).
  */
 public class EncasedPipeBlock extends PipeBlock {
     public static final MapCodec<EncasedPipeBlock> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -272,4 +277,37 @@ public class EncasedPipeBlock extends PipeBlock {
         level.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, pos, Block.getId(state));
         level.setBlock(pos, shell().defaultBlockState(), Block.UPDATE_ALL);
     }
+
+    /**
+     * Takes the casing away and leaves the bare pipe, as a tool that takes a wall apart does through
+     * SS13 Framework's {@link Dismantling} (#25): the casing's own loot drops, none for a player in
+     * creative, and the pipe stays, in its dye, with its connections. It keeps its block entity, as
+     * when a casing goes on it ({@link #encase}), so its network and its gas never notice; only the
+     * cell it stands in stops being a full block, as when the casing is mined.
+     */
+    public static final Dismantlable DISMANTLABLE = new Dismantlable() {
+        @Override
+        public Dismantled dismantled(
+                ServerLevel level, BlockPos pos, BlockState state, @Nullable Player player, ItemStack tool) {
+            EncasedPipeBlock cased = (EncasedPipeBlock) state.getBlock();
+            List<ItemStack> drops = player != null && player.isCreative()
+                    ? List.of()
+                    : Block.getDrops(cased.shell().defaultBlockState(), level, pos, null, player, tool);
+            PipeBlock pipe = AtmosBlocks.PIPE.get();
+            return new Dismantled(pipe.connect(copy(state, pipe.defaultBlockState()), level, pos), drops);
+        }
+
+        /**
+         * Sets the bare pipe in place, which keeps the block entity ({@link PipeBlock#onRemove}), and
+         * tells the game its capabilities changed, as they are asked of its state.
+         */
+        @Override
+        public void apply(ServerLevel level, BlockPos pos, Dismantled result, @Nullable Player player) {
+            level.setBlock(pos, result.left(), Block.UPDATE_ALL);
+            level.invalidateCapabilities(pos);
+            for (ItemStack drop : result.drops()) {
+                Block.popResource(level, pos, drop.copy());
+            }
+        }
+    };
 }

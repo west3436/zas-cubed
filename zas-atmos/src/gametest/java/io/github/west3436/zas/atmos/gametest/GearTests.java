@@ -217,7 +217,7 @@ public final class GearTests {
         h.assertFalse(TankSettings.apply(o2, new TankSettings(main, -1)), "a negative button was taken");
         h.assertFalse(TankSettings.apply(o2, new TankSettings(2, TankSettings.UP_1)), "an unknown hand was taken");
         h.assertFalse(
-                TankSettings.apply(stack(AtmosItems.MULTITOOL), new TankSettings(main, TankSettings.UP_1)),
+                TankSettings.apply(stack(FrameworkItems.MULTITOOL), new TankSettings(main, TankSettings.UP_1)),
                 "a multitool was set");
         close(h, GasTankItem.distributionPressure(o2), 22.3, 1e-9, "after the refused presses");
         TankSettings.apply(o2, new TankSettings(main, TankSettings.CLOSE));
@@ -506,7 +506,7 @@ public final class GearTests {
         h.assertFalse(
                 chest.getItem()
                         .overrideOtherStackedOnMe(
-                                chest, stack(AtmosItems.MULTITOOL), slot, ClickAction.SECONDARY, p, access),
+                                chest, stack(FrameworkItems.MULTITOOL), slot, ClickAction.SECONDARY, p, access),
                 "the chestplate took a multitool");
         h.assertFalse(
                 chest.getItem()

@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Say;
@@ -10,7 +11,6 @@ import io.github.west3436.zas.atmos.controller.ConsoleScreen;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +102,7 @@ public final class CentralControllerScenes {
         Say.at(scene, util.vector().blockSurface(origin.above(), front), "central.screen");
 
         // A multitool takes an area air controller, then the console.
-        ItemStack multitool = new ItemStack(AtmosItems.MULTITOOL.get());
+        ItemStack multitool = new ItemStack(FrameworkItems.MULTITOOL.get());
         Hand.use(scene, util, controllers.get(0), Direction.NORTH, multitool);
         scene.idle(10);
         Hand.use(scene, util, origin, front, multitool);

@@ -21,6 +21,7 @@ import io.github.west3436.zas.atmos.compat.ponder.scenes.TransferValveScenes;
 import io.github.west3436.zas.atmos.compat.ponder.scenes.ValveScenes;
 import io.github.west3436.zas.atmos.compat.ponder.scenes.VentScenes;
 import java.util.List;
+import java.util.Set;
 import net.createmod.ponder.api.registration.PonderPlugin;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
 import net.createmod.ponder.api.registration.PonderTagRegistrationHelper;
@@ -34,6 +35,12 @@ import net.minecraft.resources.ResourceLocation;
  */
 final class ZasPonderPlugin implements PonderPlugin {
     private static final ResourceLocation TAG = ZasPonderScenes.id("atmospherics");
+
+    /**
+     * The tools with a scene that are SS13 Framework's items now, under its id: what they do to this
+     * mod's blocks is still this mod's.
+     */
+    private static final Set<String> FRAMEWORK_TOOLS = Set.of("multitool", "crowbar", "wrench");
 
     /** Every item with a scene, in the index's order. */
     private static final List<String> ITEMS = List.of(
@@ -122,13 +129,13 @@ final class ZasPonderPlugin implements PonderPlugin {
         helper.forComponents(atmos("electrolyzer")).addStoryBoard(Stage.MEDIUM, ElectrolyzerScenes::electrolyzer, TAG);
         helper.forComponents(atmos("central_atmos_controller"))
                 .addStoryBoard(Stage.LARGE, CentralControllerScenes::central, TAG);
-        helper.forComponents(atmos("multitool")).addStoryBoard(Stage.LARGE, ToolScenes::multitool, TAG);
-        helper.forComponents(atmos("crowbar")).addStoryBoard(Stage.MEDIUM, ToolScenes::crowbar, TAG);
+        helper.forComponents(item("multitool")).addStoryBoard(Stage.LARGE, ToolScenes::multitool, TAG);
+        helper.forComponents(item("crowbar")).addStoryBoard(Stage.MEDIUM, ToolScenes::crowbar, TAG);
         helper.forComponents(atmos("fire_extinguisher")).addStoryBoard(Stage.MEDIUM, ToolScenes::fireExtinguisher, TAG);
         helper.forComponents(atmos("tank_transfer_valve"))
                 .addStoryBoard(Stage.SMALL, TransferValveScenes::transferValve, TAG);
         helper.forComponents(atmos("atmos_analyzer")).addStoryBoard(Stage.MEDIUM, ToolScenes::analyzer, TAG);
-        helper.forComponents(atmos("wrench")).addStoryBoard(Stage.MEDIUM, ToolScenes::wrench, TAG);
+        helper.forComponents(item("wrench")).addStoryBoard(Stage.MEDIUM, ToolScenes::wrench, TAG);
 
         // Batch 5: the tank holder, radiators, heat exchangers and airlocks.
         helper.forComponents(atmos("tank_holder")).addStoryBoard(Stage.MEDIUM, HolderScenes::tankHolder, TAG);
@@ -155,10 +162,17 @@ final class ZasPonderPlugin implements PonderPlugin {
                 .item(BuiltInRegistries.ITEM.get(atmos("pipe")), true, false)
                 .register();
         var tag = helper.addToTag(TAG);
-        ITEMS.forEach(item -> tag.add(atmos(item)));
+        ITEMS.forEach(item -> tag.add(item(item)));
     }
 
     private static ResourceLocation atmos(String path) {
         return ResourceLocation.fromNamespaceAndPath("zas_atmos", path);
+    }
+
+    /** An item with a scene by its path: ZAS³'s, or SS13 Framework's for the tools that moved there. */
+    private static ResourceLocation item(String path) {
+        return FRAMEWORK_TOOLS.contains(path)
+                ? ResourceLocation.fromNamespaceAndPath("ss13_framework", path)
+                : atmos(path);
     }
 }

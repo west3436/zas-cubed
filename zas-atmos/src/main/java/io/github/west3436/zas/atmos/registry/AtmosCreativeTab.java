@@ -106,9 +106,6 @@ public final class AtmosCreativeTab {
         });
         out.accept(AtmosItems.ATMOS_ANALYZER.get());
         AtmosItems.stationBlocks().forEach(b -> out.accept(b.get()));
-        out.accept(AtmosItems.MULTITOOL.get());
-        out.accept(AtmosItems.CROWBAR.get());
-        out.accept(AtmosItems.WRENCH.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());
         out.accept(AtmosItems.TANK_TRANSFER_VALVE.get());
         out.accept(AtmosItems.REMOTE_SIGNALER.get());

@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.ListeningPlayer;
 import io.github.west3436.ss13.testkit.SoundLog;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -427,7 +428,7 @@ public final class TransferValveTests {
                 "a left click fitted a tank");
         h.assertFalse(
                 item.overrideOtherStackedOnMe(
-                        stack, new ItemStack(AtmosItems.MULTITOOL.get()), slot, ClickAction.SECONDARY, p, access),
+                        stack, new ItemStack(FrameworkItems.MULTITOOL.get()), slot, ClickAction.SECONDARY, p, access),
                 "it took a multitool");
 
         h.assertTrue(
@@ -492,7 +493,7 @@ public final class TransferValveTests {
 
         h.assertFalse(menu.clickMenuButton(p, TransferValveMenu.START + 1), "an unknown button");
         h.assertFalse(menu.clickMenuButton(p, -1), "a negative button");
-        p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AtmosItems.MULTITOOL.get()));
+        p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(FrameworkItems.MULTITOOL.get()));
         h.assertFalse(menu.clickMenuButton(p, TransferValveMenu.VALVE), "a hand holding no TTV");
 
         ItemStack empty = new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get());

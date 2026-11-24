@@ -4,6 +4,8 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.ss13.api.tool.Wrenchable;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -21,7 +23,7 @@ import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
-import io.github.west3436.zas.atmos.tool.WrenchItem;
+import io.github.west3436.zas.atmos.tool.Wrench;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import java.util.ArrayList;
@@ -83,7 +85,7 @@ public final class WrenchTests {
     /** A survival player holding a wrench. */
     private static Player holding(GameTestHelper h) {
         Player player = h.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AtmosItems.WRENCH.get()));
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(FrameworkItems.WRENCH.get()));
         return player;
     }
 
@@ -209,7 +211,7 @@ public final class WrenchTests {
         for (Direction facing : Direction.values()) {
             BlockState state = mirrored.setValue(InlineDeviceBlock.FACING, facing);
             for (Direction face : Direction.values()) {
-                BlockState turned = WrenchItem.turned(state, face);
+                BlockState turned = Wrench.turned(state, face);
                 h.assertTrue(turned.getValue(SidePortBlock.MIRRORED), facing + " clicked " + face + " unmirrored it");
                 h.assertTrue(
                         turned.getValue(InlineDeviceBlock.FACING) != facing,
@@ -270,7 +272,7 @@ public final class WrenchTests {
         for (Direction way : Direction.Plane.HORIZONTAL) {
             BlockState state = lit.setValue(BlockStateProperties.HORIZONTAL_FACING, way);
             for (Direction face : Direction.values()) {
-                BlockState turned = WrenchItem.turned(state, face);
+                BlockState turned = Wrench.turned(state, face);
                 Direction expected = face == Direction.DOWN ? way.getCounterClockWise() : way.getClockWise();
                 h.assertValueEqual(
                         turned.getValue(BlockStateProperties.HORIZONTAL_FACING), expected, way + " clicked " + face);
@@ -278,7 +280,7 @@ public final class WrenchTests {
             }
             BlockState around = state;
             for (int i = 0; i < 4; i++) {
-                around = WrenchItem.turned(around, Direction.UP);
+                around = Wrench.turned(around, Direction.UP);
             }
             h.assertTrue(around == state, way + " didn't come back after four turns");
         }
@@ -305,14 +307,29 @@ public final class WrenchTests {
         PipeNetwork net = network(a, 2, 1, 2);
         double kpa = ambient + 3 * StandardAir.PRESSURE;
         net.gas().add(new GasParcel(Map.of(N2, kpa * net.volume() / (GasMixture.GAS_CONSTANT * T)), T));
-        a.close(WrenchItem.overAmbient(a.level, at), 3 * StandardAir.PRESSURE, "the pipe's pressure over the room's");
+        a.close(Wrench.overAmbient(a.level, at), 3 * StandardAir.PRESSURE, "the pipe's pressure over the room's");
         double held = net.gas().totalMoles();
         Player player = holding(h);
 
-        // Refused, by the click and by the call, which says why.
+        // Refused, by the click and by the call, which says why: the framework's wrench asks the pipe's
+        // Wrenchable, whose refusal is the lock.
         use(a, player, 2, 1, 2, Direction.UP, true);
         h.assertTrue(a.get(2, 1, 2).is(AtmosBlocks.PIPE.get()), "the pipe came off at 3 atm over");
-        Optional<Component> refusal = WrenchItem.remove(a.level, at, player, player.getMainHandItem());
+        Wrenchable wrenchable = a.level.getCapability(Wrenchable.BLOCK, at);
+        h.assertTrue(wrenchable != null, "the pipe isn't Wrenchable");
+        Optional<Component> vetoed = wrenchable.refusal(
+                a.level,
+                at,
+                new UseOnContext(
+                        player,
+                        InteractionHand.MAIN_HAND,
+                        new BlockHitResult(Vec3.atCenterOf(at), Direction.UP, at, false)));
+        h.assertTrue(
+                vetoed.isPresent()
+                        && vetoed.get().getContents() instanceof TranslatableContents t
+                        && t.getKey().equals("item.zas_atmos.wrench.pressurized"),
+                "the Wrenchable's refusal: " + vetoed);
+        Optional<Component> refusal = Wrench.remove(a.level, at, player, player.getMainHandItem());
         h.assertTrue(a.get(2, 1, 2).is(AtmosBlocks.PIPE.get()), "the call removed the pipe at 3 atm over");
         h.assertTrue(
                 refusal.isPresent()
@@ -325,12 +342,12 @@ public final class WrenchTests {
         // The east cap turned away, the run vents into the room through its open end.
         use(a, player, 4, 1, 2, Direction.UP, false);
         h.assertValueEqual(a.get(4, 1, 2).getValue(PipeCapBlock.FACING), Direction.NORTH, "the cap's facing");
-        for (int i = 0; i < 40 && WrenchItem.overAmbient(a.level, at) > WrenchItem.LOCK_KPA; i++) {
+        for (int i = 0; i < 40 && Wrench.overAmbient(a.level, at) > Wrench.LOCK_KPA; i++) {
             a.step();
         }
         h.assertTrue(
-                WrenchItem.overAmbient(a.level, at) <= WrenchItem.LOCK_KPA,
-                "the run didn't vent: " + WrenchItem.overAmbient(a.level, at) + " kPa over");
+                Wrench.overAmbient(a.level, at) <= Wrench.LOCK_KPA,
+                "the run didn't vent: " + Wrench.overAmbient(a.level, at) + " kPa over");
         watchDrops();
         use(a, player, 2, 1, 2, Direction.UP, true);
         h.assertTrue(a.get(2, 1, 2).isAir(), "the vented pipe didn't come off");

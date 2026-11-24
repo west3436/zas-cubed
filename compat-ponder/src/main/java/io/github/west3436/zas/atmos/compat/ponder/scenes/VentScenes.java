@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.compat.ponder.scenes;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Build;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Gas;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Hand;
@@ -7,9 +8,8 @@ import io.github.west3436.zas.atmos.compat.ponder.scene.Power;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Say;
 import io.github.west3436.zas.atmos.compat.ponder.scene.Stage;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
-import io.github.west3436.zas.atmos.tool.WrenchItem;
+import io.github.west3436.zas.atmos.tool.Wrench;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -140,11 +140,11 @@ public final class VentScenes {
         // Its grille down, so its back isn't on the pipe. A wrench on its top turns it to face up.
         BlockState wrong = state.setValue(BlockStateProperties.FACING, Direction.DOWN);
         Build.sink(scene, util, device, wrong);
-        ItemStack wrench = new ItemStack(AtmosItems.WRENCH.get());
+        ItemStack wrench = new ItemStack(FrameworkItems.WRENCH.get());
         Say.over(scene, WRONG_WAY + Hand.PAUSE + Say.LINE, util.vector().topOf(device), "wrench.turns");
         scene.idle(WRONG_WAY);
         Hand.use(scene, util, device, Direction.UP, wrench);
-        Build.change(scene, device, s -> WrenchItem.turned(s, Direction.UP));
+        Build.change(scene, device, s -> Wrench.turned(s, Direction.UP));
         scene.idle(Say.LINE + 10);
 
         // The floor in front of it comes away and it lifts, to show the pipe under it.

@@ -1,7 +1,9 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.ss13.device.DeviceTicks;
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.ss13.testkit.SoundLog;
+import io.github.west3436.ss13.tool.MultitoolItem;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
@@ -20,9 +22,8 @@ import io.github.west3436.zas.atmos.controller.Thresholds;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.Multitool;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
 import java.util.ArrayList;
@@ -443,12 +444,12 @@ public final class ControllerTests {
             h.assertValueEqual(c.parts().size(), 1, "parts listed");
             h.assertTrue(c.parts().get(0).inZone() && !c.parts().get(0).linked(), "the vent is listed from the zone");
 
-            ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-            h.assertTrue(MultitoolItem.selected(tool, s.level).isEmpty(), "a new multitool has a selection");
-            MultitoolItem.link(tool, s.level, pump.getBlockPos());
+            ItemStack tool = new ItemStack(FrameworkItems.MULTITOOL.get());
+            h.assertTrue(MultitoolItem.source(tool, s.level).isEmpty(), "a new multitool has a selection");
+            Multitool.link(tool, s.level, pump.getBlockPos());
             h.assertTrue(c.links().isEmpty(), "linked with no controller selected");
-            MultitoolItem.select(tool, s.level, c.getBlockPos());
-            MultitoolItem.link(tool, s.level, pump.getBlockPos());
+            MultitoolItem.store(tool, s.level, c.getBlockPos());
+            Multitool.link(tool, s.level, pump.getBlockPos());
             h.assertValueEqual(c.links(), java.util.Set.of(pump.getBlockPos()), "the controller's links");
 
             s.cycle(c, vent, pump, heater);
@@ -461,7 +462,7 @@ public final class ControllerTests {
             h.assertValueEqual(
                     listed.block(), ResourceLocation.fromNamespaceAndPath("zas_atmos", "test_pump"), "the pump's id");
 
-            MultitoolItem.link(tool, s.level, pump.getBlockPos());
+            Multitool.link(tool, s.level, pump.getBlockPos());
             h.assertTrue(c.links().isEmpty(), "using the multitool on a linked part again didn't unlink it");
         });
     }

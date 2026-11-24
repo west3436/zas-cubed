@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.compat.ponder.scene;
 
+import io.github.west3436.ss13.registry.FrameworkItems;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
-import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.UnaryOperator;
@@ -84,7 +84,7 @@ public final class Power {
      * @param device the device
      */
     public static void multitool(SceneBuilder scene, SceneBuildingUtil util, BlockPos device) {
-        Hand.use(scene, util, device, Direction.UP, new ItemStack(AtmosItems.MULTITOOL.get()));
+        Hand.use(scene, util, device, Direction.UP, new ItemStack(FrameworkItems.MULTITOOL.get()));
         Say.at(scene, util.vector().topOf(device), "power.multitool");
     }
 }
